@@ -15,7 +15,9 @@ AWS_PERSONAS = {
         "name": "Cloud Practitioner Coach",
         "cert": "AWS Certified Cloud Practitioner",
         "level": "foundational",
-        "focus": ["AWS basics", "cloud concepts", "billing", "support plans", "shared responsibility"],
+        "focus": ["AWS basics", "cloud concepts", "billing", "support plans", "shared responsibility", 
+                  "S3 storage", "EC2 instances", "IAM security", "VPC networking", "CloudWatch monitoring",
+                  "RDS databases", "Lambda serverless", "global infrastructure", "Well-Architected Framework"],
         "style": "Patient, uses analogies, explains 'why cloud' before 'how cloud'",
         "prompt": """You coach for the AWS Cloud Practitioner certification.
 Focus: Cloud concepts, AWS services overview, pricing, billing, support.
@@ -504,6 +506,7 @@ Business Context: {business_context}
 CERTIFICATION FOCUS: {cert_name}
 Key Topics: {focus_areas}
 Certification Level: {level}
+User Skill Level: {user_level}
 
 Create a scenario that:
 1. Directly tests skills needed for {cert_name}
@@ -511,14 +514,26 @@ Create a scenario that:
 3. Feels like a real-world situation you'd face with this certification
 4. Includes challenges that map to exam objectives
 
-For {level} level:
+ADAPT TO USER'S SKILL LEVEL ({user_level}):
+- beginner: Provide more guidance, explain WHY each step matters, simpler architectures, more hints
+- intermediate: Expect some AWS knowledge, discuss trade-offs, introduce best practices
+- advanced: Minimal hand-holding, complex multi-service scenarios, expect them to know basics
+- expert: Peer-level challenges, edge cases, cost optimization, enterprise-scale decisions
+
+For {level} certification level:
 - foundational: Basic concepts, clear guidance, single-service focus
 - associate: Multi-service integration, best practices, trade-offs
 - professional: Complex multi-account, hybrid, enterprise-scale decisions
 - specialty: Deep expertise in the specialty domain, edge cases
 
 Include 3-5 progressive challenges that build certification-relevant skills.
-Each challenge should map to specific {cert_name} exam domains."""
+Each challenge should map to specific {cert_name} exam domains.
+
+CRITICAL - TITLE VARIETY:
+- Do NOT use generic titles like "Understanding X", "Exploring Y", "Identifying Z"
+- Use ACTION-ORIENTED titles: "Slash Costs with Reserved Instances", "Lock Down IAM Permissions", "Survive a Region Outage"
+- Make titles specific to the company/industry context
+- Each title should feel like a real consulting deliverable"""
 
 
 PERSONA_FLASHCARD_PROMPT = """Generate flashcards for {cert_name} certification prep.

@@ -379,6 +379,13 @@ export default function WorldMap({
   
   // Check if we're on client side
   const [isClient] = useState(() => typeof window !== "undefined");
+  
+  // Close all popups when selectedBusiness is cleared
+  useEffect(() => {
+    if (!selectedBusiness && mapRef.current) {
+      mapRef.current.closePopup();
+    }
+  }, [selectedBusiness]);
 
   // Create route polyline from visited locations
   const routeCoordinates = useMemo(() => {

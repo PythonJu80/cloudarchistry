@@ -2812,17 +2812,34 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
             yield f"data: {json.dumps({'type': 'status', 'message': '📚 Searching AWS knowledge base...', 'step': 3, 'total_steps': 6})}\n\n"
             
             knowledge_context = ""
+            knowledge_topics = []  # Track specific topics for challenge variety
             try:
-                # Build search query based on industry and cert
-                kb_query = f"{research.company_info.industry} AWS architecture best practices"
-                if request.cert_code:
-                    kb_query += f" {request.cert_code}"
+                # Build SPECIFIC search query using cert focus areas + skill level for variety
+                import random as kb_random
+                
+                # Map skill level to complexity keywords
+                skill_keywords = {
+                    "beginner": "basics fundamentals getting started",
+                    "intermediate": "best practices configuration",
+                    "advanced": "optimization multi-region high availability",
+                    "expert": "enterprise scale architecture patterns"
+                }
+                skill_context = skill_keywords.get(request.user_level, "best practices")
+                
+                if request.cert_code and request.cert_code in CERTIFICATION_PERSONAS:
+                    cert_focus = CERTIFICATION_PERSONAS[request.cert_code]["focus"]
+                    # Randomly select 2-3 focus areas each time for variety
+                    selected_focus = kb_random.sample(cert_focus, min(3, len(cert_focus)))
+                    kb_query = f"{' '.join(selected_focus)} {skill_context} AWS {research.company_info.industry}"
+                    yield f"data: {json.dumps({'type': 'status', 'message': f'🎲 Focus: {', '.join(selected_focus)} ({request.user_level})'})}\n\n"
+                else:
+                    kb_query = f"{research.company_info.industry} {skill_context} AWS architecture"
                 
                 # Get embedding for the query
                 from openai import AsyncOpenAI
-                from utils import get_openai_api_key
+                from utils import get_request_api_key
                 
-                client = AsyncOpenAI(api_key=get_openai_api_key())
+                client = AsyncOpenAI(api_key=get_request_api_key())
                 embed_response = await client.embeddings.create(
                     model="text-embedding-3-small",
                     input=kb_query
@@ -2840,6 +2857,15 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                     for chunk in kb_results:
                         yield f"data: {json.dumps({'type': 'knowledge', 'url': chunk['url'], 'similarity': round(chunk['similarity'], 2)})}\n\n"
                         knowledge_context += f"\n\nAWS Knowledge ({chunk['url']}):\n{chunk['content'][:500]}"
+                        # Extract AWS services mentioned for topic variety
+                        chunk_content = chunk['content'].lower()
+                        for svc in ['s3', 'ec2', 'lambda', 'rds', 'dynamodb', 'cloudwatch', 'iam', 'vpc', 'cloudfront', 'sns', 'sqs', 'kms', 'cloudtrail', 'config']:
+                            if svc in chunk_content and svc.upper() not in knowledge_topics:
+                                knowledge_topics.append(svc.upper())
+                    
+                    # Add variety instruction based on found topics
+                    if knowledge_topics:
+                        knowledge_context += f"\n\n⚡ IMPORTANT: Base your challenge titles on these specific AWS topics found: {', '.join(knowledge_topics[:5])}. Create action-oriented titles like 'Secure the S3 Buckets' or 'Configure CloudWatch Alarms' - NOT generic titles like 'Understanding X'."
                 else:
                     yield f"data: {json.dumps({'type': 'status', 'message': '📖 No specific knowledge chunks found, using general AWS knowledge'})}\n\n"
             except Exception as kb_err:
@@ -3057,6 +3083,119 @@ Return JSON with: score (0-100), passed (boolean), strengths (list), improvement
         "strengths": result.get("strengths", []),
         "improvements": result.get("improvements", []),
     }
+
+
+class ChallengeQuestionsRequest(BaseModel):
+    """Request to generate questions for a specific challenge"""
+    challenge: Dict[str, Any]  # id, title, description, hints, success_criteria, aws_services_relevant
+    company_name: str
+    industry: str
+    business_context: str
+    user_level: str = "intermediate"
+    cert_code: Optional[str] = None
+    question_count: int = 5
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+class GradeChallengeAnswerRequest(BaseModel):
+    """Request to grade a challenge question answer"""
+    question: Dict[str, Any]  # The question object
+    user_answer: str
+    company_context: str
+    user_level: str = "intermediate"
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+@app.post("/api/learning/challenge-questions")
+async def generate_challenge_questions_endpoint(request: ChallengeQuestionsRequest):
+    """Generate questions for a specific challenge, tailored to the business case"""
+    from generators.challenge_questions import generate_challenge_questions
+    
+    try:
+        # Set request-scoped API key and model if provided (BYOK)
+        from utils import set_request_api_key, set_request_model
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        result = await generate_challenge_questions(
+            challenge=request.challenge,
+            company_name=request.company_name,
+            industry=request.industry,
+            business_context=request.business_context,
+            user_level=request.user_level,
+            cert_code=request.cert_code,
+            question_count=request.question_count,
+        )
+        
+        return {
+            "success": True,
+            "challenge_id": result.challenge_id,
+            "challenge_title": result.challenge_title,
+            "brief": result.brief,
+            "questions": [q.model_dump() for q in result.questions],
+            "total_points": result.total_points,
+            "estimated_time_minutes": result.estimated_time_minutes,
+        }
+    except Exception as e:
+        logger.error(f"Challenge questions generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        from utils import set_request_api_key, set_request_model
+        set_request_api_key(None)
+        set_request_model(None)
+
+
+@app.post("/api/learning/grade-challenge-answer")
+async def grade_challenge_answer_endpoint(request: GradeChallengeAnswerRequest):
+    """Grade a user's answer to a challenge question"""
+    from generators.challenge_questions import grade_challenge_answer, ChallengeQuestion, QuestionOption
+    
+    try:
+        # Set request-scoped API key and model if provided (BYOK)
+        from utils import set_request_api_key, set_request_model
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        # Reconstruct the question object
+        q = request.question
+        options = None
+        if q.get("options"):
+            options = [QuestionOption(**o) for o in q["options"]]
+        
+        question = ChallengeQuestion(
+            id=q.get("id", ""),
+            question=q.get("question", ""),
+            question_type=q.get("question_type", "multiple_choice"),
+            options=options,
+            correct_answer=q.get("correct_answer", ""),
+            explanation=q.get("explanation", ""),
+            hint=q.get("hint"),
+            points=q.get("points", 20),
+            aws_services=q.get("aws_services", []),
+            difficulty=q.get("difficulty", "intermediate"),
+        )
+        
+        result = await grade_challenge_answer(
+            question=question,
+            user_answer=request.user_answer,
+            company_context=request.company_context,
+            user_level=request.user_level,
+        )
+        
+        return {"success": True, **result}
+    except Exception as e:
+        logger.error(f"Grade challenge answer error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        from utils import set_request_api_key, set_request_model
+        set_request_api_key(None)
+        set_request_model(None)
 
 
 @app.post("/api/learning/generate-flashcards")

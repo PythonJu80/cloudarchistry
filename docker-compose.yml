@@ -268,7 +268,6 @@ services:
       - ./cloud-academy/.env
     environment:
       - PORT=6060
-      - NEXT_PUBLIC_LEARNING_AGENT_URL=http://learning-agent:1027
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     volumes:
       - ./cloud-academy:/app

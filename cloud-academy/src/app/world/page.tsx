@@ -20,7 +20,9 @@ import {
   Building2,
   Users,
   UserPlus,
-  HelpCircle
+  HelpCircle,
+  Trash2,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +31,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from "@/lib/utils";
 import { type SubscriptionTier, getTierFeatures, getUpgradeMessage } from "@/lib/academy/services/subscription";
 import { ScenarioGenerationModal } from "@/components/world/scenario-generation-modal";
+import { ChallengeWorkspaceModal } from "@/components/world/challenge-workspace-modal";
 
 // Dynamically import map components to avoid SSR issues
 const Globe3D = dynamic(() => import("@/components/world/globe-3d"), {
@@ -459,8 +462,98 @@ export default function WorldPage() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [expertOpen, setExpertOpen] = useState(false);
   
-  // User challenges (from database - empty for now)
-  const userChallenges: Location[] = [];
+  // User challenges (from database)
+  interface SavedChallenge {
+    id: string;
+    scenarioId: string;
+    status: string;
+    pointsEarned: number;
+    maxPoints: number;
+    scenario: { 
+      id: string;
+      title: string; 
+      description: string;
+      difficulty: string;
+      companyInfo: Record<string, unknown>;
+    };
+    location: { id: string; name: string; company: string; lat: number; lng: number; difficulty: string; industry: string };
+    challenges: Array<{
+      id: string;
+      title: string;
+      description: string;
+      difficulty: string;
+      points: number;
+      estimatedMinutes: number;
+      orderIndex: number;
+      hints: string[];
+      successCriteria: string[];
+      awsServices: string[];
+      status: string;
+      pointsEarned: number;
+    }>;
+    challengesCompleted: number;
+    totalChallenges: number;
+  }
+  const [userChallenges, setUserChallenges] = useState<SavedChallenge[]>([]);
+  const [isLoadingUserChallenges, setIsLoadingUserChallenges] = useState(false);
+  
+  // State for resuming a saved challenge
+  const [resumeChallenge, setResumeChallenge] = useState<SavedChallenge | null>(null);
+  const [resumeChallengeIndex, setResumeChallengeIndex] = useState(0);
+  
+  // State for deleting challenges
+  const [deletingChallengeId, setDeletingChallengeId] = useState<string | null>(null);
+  
+  // Delete a user challenge
+  const handleDeleteChallenge = async (attemptId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening the challenge
+    
+    if (!confirm("Are you sure you want to delete this challenge? This will remove all progress, questions, and answers permanently.")) {
+      return;
+    }
+    
+    setDeletingChallengeId(attemptId);
+    try {
+      const response = await fetch(`/api/user/challenges/${attemptId}`, {
+        method: "DELETE",
+      });
+      
+      if (response.ok) {
+        // Remove from local state
+        setUserChallenges(prev => prev.filter(c => c.id !== attemptId));
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to delete challenge");
+      }
+    } catch (error) {
+      console.error("Failed to delete challenge:", error);
+      alert("Failed to delete challenge");
+    } finally {
+      setDeletingChallengeId(null);
+    }
+  };
+
+  // Fetch user's accepted challenges
+  useEffect(() => {
+    const fetchUserChallenges = async () => {
+      if (!session?.user?.academyProfileId) return;
+      
+      setIsLoadingUserChallenges(true);
+      try {
+        const response = await fetch("/api/user/challenges");
+        if (response.ok) {
+          const data = await response.json();
+          setUserChallenges(data.challenges || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user challenges:", error);
+      } finally {
+        setIsLoadingUserChallenges(false);
+      }
+    };
+    
+    fetchUserChallenges();
+  }, [session?.user?.academyProfileId]);
   
   // Cohort/Team challenges (from database - empty for now)
   // TODO: Fetch from AcademyTeam -> TeamChallengeAttempt
@@ -705,19 +798,23 @@ export default function WorldPage() {
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats - Connected to database */}
             <div className="p-4 border-b border-border/50 grid grid-cols-3 gap-2">
               <div className="text-center">
-                <div className="text-lg font-bold text-cyan-400">{visitedLocations.length}</div>
-                <div className="text-xs text-muted-foreground">Visited</div>
+                <div className="text-lg font-bold text-cyan-400">{userChallenges.length}</div>
+                <div className="text-xs text-muted-foreground">Started</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-amber-400">0</div>
+                <div className="text-lg font-bold text-amber-400">
+                  {userChallenges.filter(c => c.status === "completed").length}
+                </div>
                 <div className="text-xs text-muted-foreground">Completed</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-green-400">{LOCATIONS.length}</div>
-                <div className="text-xs text-muted-foreground">Total</div>
+                <div className="text-lg font-bold text-green-400">
+                  {userChallenges.reduce((sum, c) => sum + c.pointsEarned, 0)}
+                </div>
+                <div className="text-xs text-muted-foreground">Points</div>
               </div>
             </div>
 
@@ -744,18 +841,68 @@ export default function WorldPage() {
                   {userChallengesOpen && (
                     <div className="p-2">
                       {userChallenges.length === 0 ? (
-                        <div className="text-center py-4 text-sm text-muted-foreground">
-                          No custom challenges yet
-                        </div>
+                        isLoadingUserChallenges ? (
+                          <div className="text-center py-4 text-sm text-muted-foreground">
+                            Loading...
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-sm text-muted-foreground">
+                            No custom challenges yet
+                          </div>
+                        )
                       ) : (
-                        <div className="space-y-1">
-                          {userChallenges.map((location) => (
-                            <LocationItem
-                              key={location.id}
-                              location={location}
-                              isSelected={selectedLocation?.id === location.id}
-                              onSelect={handleLocationSelect}
-                            />
+                        <div className="space-y-2">
+                          {userChallenges.map((challenge) => (
+                            <div
+                              key={challenge.id}
+                              className="relative group"
+                            >
+                              <button
+                                onClick={() => {
+                                  // Find the first incomplete challenge to resume, or start from 0
+                                  const firstIncomplete = challenge.challenges.findIndex(c => c.status !== "completed");
+                                  setResumeChallengeIndex(firstIncomplete >= 0 ? firstIncomplete : 0);
+                                  setResumeChallenge(challenge);
+                                }}
+                                disabled={deletingChallengeId === challenge.id}
+                                className="w-full text-left p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-transparent hover:border-cyan-500/30 transition-all disabled:opacity-50"
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-medium text-slate-200 truncate pr-6">
+                                    {challenge.location.company}
+                                  </span>
+                                  <span className={cn(
+                                    "text-[10px] px-1.5 py-0.5 rounded",
+                                    challenge.status === "completed" 
+                                      ? "bg-green-500/20 text-green-400"
+                                      : "bg-cyan-500/20 text-cyan-400"
+                                  )}>
+                                    {challenge.status === "completed" ? "Done" : "In Progress"}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-400 truncate mb-1">
+                                  {challenge.scenario.title}
+                                </p>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                  <span>{challenge.challengesCompleted}/{challenge.totalChallenges} challenges</span>
+                                  <span>•</span>
+                                  <span>{challenge.pointsEarned}/{challenge.maxPoints} pts</span>
+                                </div>
+                              </button>
+                              {/* Delete button - shows on hover, bottom-right corner */}
+                              <button
+                                onClick={(e) => handleDeleteChallenge(challenge.id, e)}
+                                disabled={deletingChallengeId === challenge.id}
+                                className="absolute bottom-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-all"
+                                title="Delete challenge"
+                              >
+                                {deletingChallengeId === challenge.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -1494,6 +1641,59 @@ export default function WorldPage() {
               console.log("Start coaching for:", scenario, companyInfo);
               // TODO: Navigate to AI coach
             }}
+          />
+        )}
+
+        {/* Resume Challenge Modal */}
+        {resumeChallenge && (
+          <ChallengeWorkspaceModal
+            isOpen={!!resumeChallenge}
+            onClose={() => {
+              setResumeChallenge(null);
+              setResumeChallengeIndex(0);
+              // Refresh user challenges to get updated progress
+              fetch("/api/user/challenges")
+                .then(res => res.json())
+                .then(data => setUserChallenges(data.challenges || []))
+                .catch(console.error);
+            }}
+            challenge={{
+              id: resumeChallenge.challenges[resumeChallengeIndex].id,
+              title: resumeChallenge.challenges[resumeChallengeIndex].title,
+              description: resumeChallenge.challenges[resumeChallengeIndex].description,
+              difficulty: resumeChallenge.challenges[resumeChallengeIndex].difficulty,
+              points: resumeChallenge.challenges[resumeChallengeIndex].points,
+              hints: resumeChallenge.challenges[resumeChallengeIndex].hints,
+              success_criteria: resumeChallenge.challenges[resumeChallengeIndex].successCriteria,
+              aws_services_relevant: resumeChallenge.challenges[resumeChallengeIndex].awsServices,
+              estimated_time_minutes: resumeChallenge.challenges[resumeChallengeIndex].estimatedMinutes,
+            }}
+            scenario={{
+              scenario_title: resumeChallenge.scenario.title,
+              scenario_description: resumeChallenge.scenario.description,
+              business_context: resumeChallenge.scenario.description,
+              company_name: resumeChallenge.location.company,
+            }}
+            companyInfo={resumeChallenge.scenario.companyInfo}
+            challengeIndex={resumeChallengeIndex}
+            totalChallenges={resumeChallenge.challenges.length}
+            onNextChallenge={() => {
+              if (resumeChallengeIndex < resumeChallenge.challenges.length - 1) {
+                setResumeChallengeIndex(prev => prev + 1);
+              }
+            }}
+            onPrevChallenge={() => {
+              if (resumeChallengeIndex > 0) {
+                setResumeChallengeIndex(prev => prev - 1);
+              }
+            }}
+            apiKey={userApiKey}
+            preferredModel={preferredModel}
+            certCode={selectedCert}
+            userLevel={resumeChallenge.scenario.difficulty}
+            industry={resumeChallenge.location.industry}
+            scenarioId={resumeChallenge.scenarioId}
+            attemptId={resumeChallenge.id}
           />
         )}
       </div>

@@ -75,7 +75,7 @@ async def _chat_json(
         model=model,
         messages=messages,
         response_format={"type": "json_object"},
-        temperature=0.7,
+        temperature=0.9,  # Higher temp for more creative/varied scenarios
     )
     return json.loads(response.choices[0].message.content)
 
@@ -109,6 +109,7 @@ async def generate_scenario(
             cert_name=persona_context.get("cert_name", "AWS Certification"),
             focus_areas=persona_context.get("focus_areas", ""),
             level=persona_context.get("level", "associate"),
+            user_level=user_level,
         )
     else:
         base_prompt = SCENARIO_GENERATOR_PROMPT.format(
@@ -117,6 +118,7 @@ async def generate_scenario(
             business_context=company_info.description,
             key_services=", ".join(company_info.key_services),
             research_data=research_data or "No additional research data",
+            user_level=user_level,
         )
     
     system_prompt = f"""You are a senior AWS Solutions Architect creating training scenarios.
