@@ -499,7 +499,8 @@ export default function SettingsPage() {
   }
 
   async function handleSendInvite(teamId: string) {
-    if (!inviteEmail.trim()) {
+    const emailToSend = inviteEmail.trim().toLowerCase();
+    if (!emailToSend) {
       setError("Email is required");
       return;
     }
@@ -511,7 +512,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           teamId,
-          email: inviteEmail,
+          email: emailToSend,
         }),
       });
       const data = await response.json();

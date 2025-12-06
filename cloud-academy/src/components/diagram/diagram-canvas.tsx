@@ -130,6 +130,39 @@ interface DiagramCanvasProps {
   onAuditComplete?: (result: AuditResult) => void;
 }
 
+// Helper: Sort nodes so parents come before children (required by React Flow)
+function sortNodesForReactFlow(nodes: DiagramNode[]): DiagramNode[] {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  const sorted: DiagramNode[] = [];
+  const visited = new Set<string>();
+  
+  function visit(node: DiagramNode) {
+    if (visited.has(node.id)) return;
+    
+    // If this node has a parent, visit the parent first
+    if (node.parentId) {
+      const parent = nodeMap.get(node.parentId);
+      if (parent) {
+        visit(parent);
+      } else {
+        // Parent doesn't exist - remove the invalid parentId reference
+        node = { ...node, parentId: undefined, extent: undefined };
+        nodeMap.set(node.id, node);
+      }
+    }
+    
+    visited.add(node.id);
+    sorted.push(node);
+  }
+  
+  // Visit all nodes
+  for (const node of nodes) {
+    visit(node);
+  }
+  
+  return sorted;
+}
+
 function DiagramCanvasInner({
   initialData,
   challengeContext,
@@ -143,8 +176,10 @@ function DiagramCanvasInner({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
   
-  // Diagram state
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes || []);
+  // Diagram state - sort nodes to ensure parents come before children
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    initialData?.nodes ? sortNodesForReactFlow(initialData.nodes) : []
+  );
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges || []);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   

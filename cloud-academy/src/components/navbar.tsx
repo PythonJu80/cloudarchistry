@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Globe, Settings, LogOut, Gamepad2 } from "lucide-react";
+import { Globe, Settings, LogOut, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
@@ -72,10 +72,10 @@ export function Navbar({ showNav = true, children }: NavbarProps) {
             </Link>
             <Link
               href="/game"
-              className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 font-medium"
             >
-              <Gamepad2 className="w-4 h-4" />
-              Game Mode
+              <Swords className="w-4 h-4" />
+              Game Zone
             </Link>
             <Link
               href="/leaderboard"

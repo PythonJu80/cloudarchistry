@@ -22,7 +22,9 @@ import {
   UserPlus,
   HelpCircle,
   Trash2,
-  Loader2
+  Loader2,
+  Swords,
+  Trophy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -992,6 +994,23 @@ export default function WorldPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Game Zone Section */}
+                <Link href="/game" className="block">
+                  <div className="rounded-lg border border-red-500/30 overflow-hidden bg-gradient-to-r from-red-500/10 to-orange-500/10 hover:from-red-500/20 hover:to-orange-500/20 transition-all">
+                    <div className="w-full flex items-center justify-between p-3">
+                      <div className="flex items-center gap-2">
+                        <Swords className="w-4 h-4 text-red-400" />
+                        <span className="font-medium text-sm text-red-400">Game Zone</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">BATTLE</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Trophy className="w-3 h-3 text-yellow-500" />
+                        <ChevronRight className="w-4 h-4 text-red-400" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
 
                 {/* System Challenges Section */}
                 <div className="rounded-lg border border-border/50 overflow-hidden">
