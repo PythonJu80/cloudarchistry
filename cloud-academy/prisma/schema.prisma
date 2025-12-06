@@ -838,7 +838,6 @@ model AcademyTenant {
   updatedAt DateTime @updatedAt
   
   users     AcademyUser[]
-  secrets   AcademySecret[]
   teams     AcademyTeam[]
   profiles  AcademyUserProfile[]
   activities AcademyActivity[]
@@ -869,22 +868,6 @@ model AcademyUser {
   teamMembers   AcademyTeamMember[]
   teamInvites   AcademyTeamInvite[]
   
-  @@index([tenantId])
-}
-
-// Academy-specific secrets storage
-model AcademySecret {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    AcademyTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  key       String
-  value     String   // Encrypted value
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@unique([tenantId, key])
   @@index([tenantId])
 }
 
@@ -1125,10 +1108,10 @@ model AcademyChallenge {
 // User's profile/preferences for Academy
 model AcademyUserProfile {
   id          String   @id @default(cuid())
-  userId      String?  @unique  // Legacy - to be removed
-  tenantId    String?  // Legacy - to be removed
+  userId      String?  @unique
+  tenantId    String?
   
-  // New: Reference to AcademyUser and AcademyTenant
+  // Reference to AcademyUser and AcademyTenant
   academyUserId   String?  @unique
   academyUser     AcademyUser? @relation(fields: [academyUserId], references: [id], onDelete: Cascade)
   academyTenantId String?
@@ -1191,6 +1174,15 @@ model AcademyUserProfile {
   openaiKeyAddedAt  DateTime?
   preferredModel    String?  @default("gpt-4.1") // User's preferred GPT model
   
+  // AWS Credentials (encrypted) - for diagram deployment
+  // Users can deploy their diagrams to real AWS infrastructure
+  awsAccessKeyId      String?  // Encrypted AWS Access Key ID
+  awsSecretAccessKey  String?  // Encrypted AWS Secret Access Key
+  awsRegion           String?  @default("us-east-1")
+  awsKeyLastFour      String?  // Last 4 chars of Access Key ID for display
+  awsKeyAddedAt       DateTime?
+  awsCredentialsValid Boolean  @default(false)  // Last validation result
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -1204,7 +1196,6 @@ model AcademyUserProfile {
   quizAttempts QuizAttempt[]
   customLocations CustomLocation[]
   
-  @@index([tenantId])
   @@index([academyUserId])
   @@index([academyTenantId])
   @@index([totalPoints])

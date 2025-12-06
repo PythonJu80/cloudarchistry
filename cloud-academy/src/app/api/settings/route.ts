@@ -41,12 +41,12 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.id) {
+    if (!session?.user?.academyProfileId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const profile = await prisma.academyUserProfile.findFirst({
-      where: { academyUserId: session.user.id },
+    const profile = await prisma.academyUserProfile.findUnique({
+      where: { id: session.user.academyProfileId },
       select: {
         id: true,
         openaiKeyLastFour: true,
@@ -84,15 +84,15 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.id) {
+    if (!session?.user?.academyProfileId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
     const { openaiApiKey, preferredModel, settings } = body;
 
-    const profile = await prisma.academyUserProfile.findFirst({
-      where: { academyUserId: session.user.id },
+    const profile = await prisma.academyUserProfile.findUnique({
+      where: { id: session.user.academyProfileId },
     });
 
     if (!profile) {
@@ -128,10 +128,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle preferred model
+    // Handle preferred model - accept any model string since OpenAI models are dynamic
     if (preferredModel !== undefined) {
-      const validModels = ["gpt-4.1", "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"];
-      if (!validModels.includes(preferredModel)) {
+      if (typeof preferredModel !== "string" || preferredModel.length > 100) {
         return NextResponse.json(
           { error: "Invalid model selection" },
           { status: 400 }
@@ -180,12 +179,12 @@ export async function DELETE() {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.id) {
+    if (!session?.user?.academyProfileId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const profile = await prisma.academyUserProfile.findFirst({
-      where: { academyUserId: session.user.id },
+    const profile = await prisma.academyUserProfile.findUnique({
+      where: { id: session.user.academyProfileId },
     });
 
     if (!profile) {

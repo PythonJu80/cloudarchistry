@@ -23,7 +23,14 @@ import {
   HelpCircle,
   Play,
   Key,
-  Database
+  Database,
+  PenTool,
+  Rocket,
+  Terminal,
+  Cloud,
+  Download,
+  Shield,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -50,27 +57,28 @@ export default function GuidePage() {
         <div className="space-y-4">
           <p className="text-muted-foreground">
             Welcome to Cloud Academy! This platform helps you prepare for AWS certifications through 
-            real-world business scenarios and AI-powered learning tools.
+            real-world business scenarios, AI-powered learning tools, hands-on diagram building, and 
+            real AWS deployment.
           </p>
           
           <div className="space-y-3">
             <h4 className="font-semibold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-400" />
-              Step 1: Set Up Your API Key
+              Step 1: Set Up Your API Keys
             </h4>
             <p className="text-sm text-muted-foreground pl-6">
-              Go to <Link href="/settings" className="text-cyan-400 hover:underline">Settings</Link> and 
-              add your OpenAI API key. This powers all AI features including challenge generation, 
-              quizzes, and coaching.
+              Go to <Link href="/dashboard/settings" className="text-cyan-400 hover:underline">Settings</Link> and 
+              add your <strong>OpenAI API key</strong> (powers AI features) and optionally your 
+              <strong> AWS credentials</strong> (for real deployments).
             </p>
             
             <h4 className="font-semibold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-400" />
-              Step 2: Choose Your Certification
+              Step 2: Set Up Your Profile
             </h4>
             <p className="text-sm text-muted-foreground pl-6">
-              Select your target AWS certification from the dropdown in the World Map sidebar. 
-              All generated challenges will be tailored to that certification focus areas.
+              Configure your skill level, target certification, and preferred industries. 
+              This personalizes all generated content to your learning goals.
             </p>
             
             <h4 className="font-semibold flex items-center gap-2">
@@ -80,6 +88,15 @@ export default function GuidePage() {
             <p className="text-sm text-muted-foreground pl-6">
               Click on any location on the 3D globe to zoom in and discover real businesses. 
               Each business can become a unique learning scenario.
+            </p>
+            
+            <h4 className="font-semibold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-400" />
+              Step 4: Build & Deploy
+            </h4>
+            <p className="text-sm text-muted-foreground pl-6">
+              Design AWS architectures visually with our diagram builder, get AI feedback, 
+              and deploy to real AWS infrastructure.
             </p>
           </div>
         </div>
@@ -298,36 +315,302 @@ export default function GuidePage() {
       ),
     },
     {
-      id: "settings",
-      title: "Settings & API Keys",
-      icon: <Settings className="w-5 h-5" />,
-      description: "Configure your API key and preferences",
+      id: "diagram-builder",
+      title: "AWS Diagram Builder",
+      icon: <PenTool className="w-5 h-5" />,
+      description: "Design AWS architectures visually with 47+ services",
       content: (
         <div className="space-y-4">
           <p className="text-muted-foreground">
-            Cloud Academy uses your own OpenAI API key for AI features. This gives you full 
-            control over costs and model selection.
+            Build AWS architecture diagrams visually using drag-and-drop. Get real-time AI feedback 
+            on your designs and export to CLI scripts or CloudFormation.
+          </p>
+          
+          <div className="grid gap-4">
+            <div className="p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+              <h4 className="font-semibold flex items-center gap-2 text-cyan-400 mb-2">
+                <Layers className="w-4 h-4" />
+                47+ AWS Services
+              </h4>
+              <p className="text-sm text-muted-foreground mb-2">
+                Drag services from the sidebar onto the canvas:
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                <span>• VPC, Subnets, Security Groups</span>
+                <span>• EC2, Lambda, ECS</span>
+                <span>• RDS, Aurora, DynamoDB</span>
+                <span>• S3, EFS, ElastiCache</span>
+                <span>• ALB, NLB, API Gateway</span>
+                <span>• SQS, SNS, EventBridge</span>
+                <span>• CloudFront, Route 53</span>
+                <span>• IAM, Cognito, WAF</span>
+              </div>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+              <h4 className="font-semibold flex items-center gap-2 text-green-400 mb-2">
+                <Building2 className="w-4 h-4" />
+                Container Nesting
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Drag EC2 instances inside Subnets, Subnets inside VPCs. The diagram builder 
+                understands AWS resource hierarchy and validates your architecture.
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+              <h4 className="font-semibold flex items-center gap-2 text-purple-400 mb-2">
+                <Brain className="w-4 h-4" />
+                AI Architecture Audit
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Click &quot;Audit Diagram&quot; to have the AI coach review your architecture. Get feedback 
+                on missing components, security issues, and best practices.
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <h4 className="font-semibold flex items-center gap-2 text-amber-400 mb-2">
+                <Sparkles className="w-4 h-4" />
+                Custom Services
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Need a service that is not listed? Create custom services with your own name, 
+                color, and category. They are saved locally for future use.
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "deployment",
+      title: "Deploy to AWS",
+      icon: <Rocket className="w-5 h-5" />,
+      description: "Generate CLI scripts, CloudFormation, and deploy directly",
+      content: (
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            Turn your diagrams into real AWS infrastructure. Generate deployment scripts, 
+            CloudFormation templates, or deploy directly from the browser.
+          </p>
+          
+          <div className="grid gap-4">
+            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+              <h4 className="font-semibold flex items-center gap-2 text-green-400 mb-2">
+                <Terminal className="w-4 h-4" />
+                CLI Script Generator
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Generate a complete bash script with AWS CLI commands. Includes proper dependency 
+                ordering (VPC → Subnet → EC2), error handling, and rollback scripts.
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <h4 className="font-semibold flex items-center gap-2 text-amber-400 mb-2">
+                <FileText className="w-4 h-4" />
+                CloudFormation Export
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Export your diagram as a CloudFormation YAML template. Includes parameters for 
+                secrets, outputs for cross-stack references, and proper resource dependencies.
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+              <h4 className="font-semibold flex items-center gap-2 text-cyan-400 mb-2">
+                <Cloud className="w-4 h-4" />
+                Direct Deployment
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Deploy resources directly to your AWS account from the browser. Track progress 
+                in real-time, pause/resume, and see detailed logs.
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+              <h4 className="font-semibold flex items-center gap-2 text-purple-400 mb-2">
+                <Download className="w-4 h-4" />
+                Download Scripts
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Download deployment and rollback scripts to run locally. Perfect for CI/CD 
+                pipelines or when you prefer manual control.
+              </p>
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+            <h4 className="font-semibold text-red-400 mb-2">⚠️ Important</h4>
+            <p className="text-sm text-muted-foreground">
+              Deploying creates real AWS resources that may incur costs. Always review generated 
+              scripts before deploying, and use the rollback script to clean up.
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "aws-terminal",
+      title: "AWS Terminal",
+      icon: <Terminal className="w-5 h-5" />,
+      description: "Run AWS CLI commands directly in the browser",
+      content: (
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            The built-in AWS terminal lets you run read-only AWS CLI commands to explore your 
+            account without leaving Cloud Academy.
+          </p>
+          
+          <div className="p-4 rounded-lg bg-slate-800/50 border border-border/50">
+            <h4 className="font-semibold mb-2">Supported Commands</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground font-mono">
+              <span>aws sts get-caller-identity</span>
+              <span>aws ec2 describe-vpcs</span>
+              <span>aws ec2 describe-subnets</span>
+              <span>aws ec2 describe-instances</span>
+              <span>aws s3 ls</span>
+              <span>aws lambda list-functions</span>
+              <span>aws rds describe-db-instances</span>
+              <span>aws dynamodb list-tables</span>
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+            <h4 className="font-semibold text-green-400 mb-2">Features</h4>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
+              <li>Command history (↑/↓ arrows)</li>
+              <li>Auto-complete suggestions</li>
+              <li>Copy output to clipboard</li>
+              <li>Real-time output display</li>
+            </ul>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+            <h4 className="font-semibold text-amber-400 mb-2">Security</h4>
+            <p className="text-sm text-muted-foreground">
+              Destructive commands (delete, terminate, remove) are blocked. The terminal is 
+              read-only to prevent accidental changes to your AWS account.
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "profile",
+      title: "Your Profile",
+      icon: <User className="w-5 h-5" />,
+      description: "Customize your learning experience",
+      content: (
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            Your profile settings personalize the learning experience. Set your skill level, 
+            target certification, and preferred industries.
+          </p>
+          
+          <div className="grid gap-4">
+            <div className="p-4 rounded-lg bg-slate-800/50 border border-border/50">
+              <h4 className="font-semibold flex items-center gap-2 mb-2">
+                <GraduationCap className="w-4 h-4 text-cyan-400" />
+                Skill Level
+              </h4>
+              <p className="text-sm text-muted-foreground mb-2">
+                Choose your current AWS experience level:
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <span className="p-2 rounded bg-slate-700/50">Beginner - New to AWS</span>
+                <span className="p-2 rounded bg-slate-700/50">Intermediate - Some experience</span>
+                <span className="p-2 rounded bg-slate-700/50">Advanced - Production experience</span>
+                <span className="p-2 rounded bg-slate-700/50">Expert - Deep expertise</span>
+              </div>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-slate-800/50 border border-border/50">
+              <h4 className="font-semibold flex items-center gap-2 mb-2">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                Target Certification
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Select your target AWS certification. All generated challenges, quizzes, and 
+                flashcards will focus on that exam objectives.
+              </p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-slate-800/50 border border-border/50">
+              <h4 className="font-semibold flex items-center gap-2 mb-2">
+                <Building2 className="w-4 h-4 text-green-400" />
+                Preferred Industries
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Select industries you are interested in (Finance, Healthcare, E-commerce, etc.). 
+                Challenges will feature scenarios from these sectors.
+              </p>
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+            <h4 className="font-semibold text-cyan-400 mb-2">Gamification</h4>
+            <p className="text-sm text-muted-foreground">
+              Track your progress with XP, levels, streaks, and achievements. Compete on the 
+              leaderboard and unlock new content as you level up.
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "settings",
+      title: "Settings & API Keys",
+      icon: <Settings className="w-5 h-5" />,
+      description: "Configure your API keys and preferences",
+      content: (
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            Cloud Academy uses your own API keys for AI features and AWS deployment. This gives 
+            you full control over costs and capabilities.
           </p>
           
           <div className="p-4 rounded-lg bg-slate-800/50 border border-border/50">
             <h4 className="font-semibold flex items-center gap-2 mb-2">
               <Key className="w-4 h-4 text-amber-400" />
-              Setting Up Your API Key
+              OpenAI API Key
             </h4>
             <ol className="text-sm text-muted-foreground space-y-2 list-decimal pl-5">
               <li>Go to <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">platform.openai.com</a></li>
               <li>Create an API key in your account settings</li>
               <li>Copy the key (starts with sk-)</li>
-              <li>Paste it in <Link href="/settings" className="text-cyan-400 hover:underline">Settings</Link></li>
+              <li>Paste it in <Link href="/dashboard/settings" className="text-cyan-400 hover:underline">Settings</Link></li>
+            </ol>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-slate-800/50 border border-border/50">
+            <h4 className="font-semibold flex items-center gap-2 mb-2">
+              <Cloud className="w-4 h-4 text-cyan-400" />
+              AWS Credentials
+            </h4>
+            <p className="text-sm text-muted-foreground mb-2">
+              Required for the AWS Terminal and deployment features:
+            </p>
+            <ol className="text-sm text-muted-foreground space-y-2 list-decimal pl-5">
+              <li>Go to AWS IAM Console → Users → Your User</li>
+              <li>Create an Access Key (CLI access)</li>
+              <li>Copy the Access Key ID and Secret Access Key</li>
+              <li>Paste them in <Link href="/dashboard/settings" className="text-cyan-400 hover:underline">Settings → AWS</Link></li>
             </ol>
           </div>
           
           <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
-            <h4 className="font-semibold text-green-400 mb-2">Security</h4>
-            <p className="text-sm text-muted-foreground">
-              Your API key is encrypted with AES-256-GCM before storage. Only the last 4 
-              characters are visible for identification.
-            </p>
+            <h4 className="font-semibold flex items-center gap-2 text-green-400 mb-2">
+              <Shield className="w-4 h-4" />
+              Security
+            </h4>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
+              <li>All keys are encrypted with AES-256-GCM before storage</li>
+              <li>Only the last 4 characters are visible for identification</li>
+              <li>AWS credentials are verified via STS before saving</li>
+              <li>Keys are never exposed in API responses</li>
+            </ul>
           </div>
           
           <div className="p-4 rounded-lg bg-slate-800/50 border border-border/50">
@@ -438,7 +721,7 @@ export default function GuidePage() {
         </div>
 
         {/* Quick Links */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12">
           <Link href="/world">
             <Card className="hover:border-cyan-500/50 transition-colors cursor-pointer h-full">
               <CardContent className="p-4 text-center">
@@ -448,12 +731,12 @@ export default function GuidePage() {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/settings">
+          <Link href="/dashboard/settings">
             <Card className="hover:border-cyan-500/50 transition-colors cursor-pointer h-full">
               <CardContent className="p-4 text-center">
                 <Key className="w-8 h-8 text-amber-400 mx-auto mb-2" />
                 <div className="font-medium">Settings</div>
-                <div className="text-xs text-muted-foreground">API key setup</div>
+                <div className="text-xs text-muted-foreground">API keys setup</div>
               </CardContent>
             </Card>
           </Link>
@@ -472,6 +755,15 @@ export default function GuidePage() {
                 <MessageSquare className="w-8 h-8 text-green-400 mx-auto mb-2" />
                 <div className="font-medium">AI Coach</div>
                 <div className="text-xs text-muted-foreground">Get help</div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/dashboard">
+            <Card className="hover:border-cyan-500/50 transition-colors cursor-pointer h-full">
+              <CardContent className="p-4 text-center">
+                <PenTool className="w-8 h-8 text-rose-400 mx-auto mb-2" />
+                <div className="font-medium">Diagram Builder</div>
+                <div className="text-xs text-muted-foreground">Build architectures</div>
               </CardContent>
             </Card>
           </Link>

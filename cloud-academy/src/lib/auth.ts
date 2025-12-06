@@ -134,17 +134,18 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account }) {
-      // For OAuth providers, create AcademyUser and AcademyTenant if they don't exist
+      // For OAuth providers, create AcademyUser, AcademyTenant, and AcademyUserProfile if they don't exist
       if (account?.provider === "google" || account?.provider === "azure-ad") {
         const email = user.email;
         if (!email) return false;
 
-        const existingUser = await prisma.academyUser.findUnique({
+        let existingUser = await prisma.academyUser.findUnique({
           where: { email },
+          include: { tenant: true },
         });
 
+        // Create user if doesn't exist
         if (!existingUser) {
-          // Create AcademyTenant and AcademyUser for OAuth sign-up
           const slug = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "-");
           const tenant = await prisma.academyTenant.create({
             data: {
@@ -153,7 +154,7 @@ export const authOptions: NextAuthOptions = {
             },
           });
 
-          const newUser = await prisma.academyUser.create({
+          existingUser = await prisma.academyUser.create({
             data: {
               email,
               name: user.name || "",
@@ -161,15 +162,25 @@ export const authOptions: NextAuthOptions = {
               role: "ADMIN",
               tenantId: tenant.id,
             },
+            include: { tenant: true },
           });
+        }
 
-          // Create AcademyUserProfile
+        // Always check if profile exists, create if missing
+        const existingProfile = await prisma.academyUserProfile.findFirst({
+          where: { academyUserId: existingUser.id },
+        });
+
+        if (!existingProfile) {
+          // Create AcademyUserProfile with Google metadata
           await prisma.academyUserProfile.create({
             data: {
-              academyUserId: newUser.id,
-              academyTenantId: tenant.id,
+              academyUserId: existingUser.id,
+              academyTenantId: existingUser.tenantId,
               displayName: user.name || email.split("@")[0],
+              avatarUrl: user.image || null, // Google profile picture
               skillLevel: "beginner",
+              subscriptionTier: "free",
             },
           });
         }

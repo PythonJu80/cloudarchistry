@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -8,198 +8,147 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Multi-tenant organization
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  plan      String   @default("FREE") // FREE, PRO, ENTERPRISE
-  
-  // AWS Configuration (encrypted in production)
-  awsRoleArn        String?
-  awsExternalId     String?
-  awsRegion         String   @default("us-east-1")
-  defaultBucket     String?
-  
-  // Usage tracking
-  bytesTransferred  BigInt   @default(0)
-  bytesLimit        BigInt   @default(5368709120) // 5GB default
-  
-  // Stripe
-  stripeCustomerId  String?
-  stripeSubId       String?
-  
-  // AI Integration (BYOK - Bring Your Own Key)
-  openaiApiKey      String?
-  preferredModel    String?  @default("gpt-4.1") // GPT model for learning agent
-  
-  // Company Knowledge Base
-  companyWebsite    String?
-  companyContext    String?  // Scraped and summarized company info
+  id                 String      @id @default(cuid())
+  name               String
+  slug               String      @unique
+  plan               String      @default("FREE")
+  awsRoleArn         String?
+  awsExternalId      String?
+  awsRegion          String      @default("us-east-1")
+  defaultBucket      String?
+  bytesTransferred   BigInt      @default(0)
+  bytesLimit         BigInt      @default(5368709120)
+  stripeCustomerId   String?
+  stripeSubId        String?
+  openaiApiKey       String?
+  preferredModel     String?     @default("gpt-4.1")
+  companyWebsite     String?
+  companyContext     String?
   knowledgeUpdatedAt DateTime?
-  
-  // Desktop Agent
-  agentApiKey       String?
-  agentConnected    Boolean  @default(false)
-  agentLastSeen     DateTime?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  users     User[]
-  transfers Transfer[]
-  buckets   Bucket[]
-  secrets   Secret[]
-  agentScans AgentScan[]
+  agentApiKey        String?
+  agentConnected     Boolean     @default(false)
+  agentLastSeen      DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  agentScans         AgentScan[]
+  buckets            Bucket[]
+  secrets            Secret[]
+  transfers          Transfer[]
+  users              User[]
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String       @id @default(cuid())
+  email         String       @unique
   name          String?
   passwordHash  String
-  role          String    @default("USER") // SUPERUSER, ADMIN, USER, VIEWER
-  isSuperuser   Boolean   @default(false)
-  emailVerified DateTime? // null = not verified
-  
+  role          String       @default("USER")
+  isSuperuser   Boolean      @default(false)
+  emailVerified DateTime?
   tenantId      String
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  transfers     Transfer[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   chatThreads   ChatThread[]
   cloudFlows    CloudFlow[]
-  
+  transfers     Transfer[]
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId])
 }
 
 model Bucket {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   name      String
   region    String
-  isDefault Boolean  @default(false)
-  
+  isDefault Boolean    @default(false)
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  
+  createdAt DateTime   @default(now())
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transfers Transfer[]
-  
+
   @@unique([tenantId, name])
   @@index([tenantId])
 }
 
 model Transfer {
-  id          String   @id @default(cuid())
-  
-  // Source info
-  fileName    String
-  filePath    String
-  fileSize    BigInt
-  mimeType    String?
-  
-  // Destination
-  s3Key       String
-  bucketId    String
-  bucket      Bucket   @relation(fields: [bucketId], references: [id])
-  
-  // Status: PENDING, UPLOADING, COMPLETED, FAILED, CANCELLED
-  status      String   @default("PENDING")
-  progress    Int      @default(0) // 0-100
-  error       String?
-  
-  // Checksums
-  localChecksum  String?
-  s3Checksum     String?
-  
-  // Timing
-  startedAt   DateTime?
-  completedAt DateTime?
-  
-  // Relations
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id            String    @id @default(cuid())
+  fileName      String
+  filePath      String
+  fileSize      BigInt
+  mimeType      String?
+  s3Key         String
+  bucketId      String
+  status        String    @default("PENDING")
+  progress      Int       @default(0)
+  error         String?
+  localChecksum String?
+  s3Checksum    String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  tenantId      String
+  userId        String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  bucket        Bucket    @relation(fields: [bucketId], references: [id])
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id])
+
   @@index([tenantId])
   @@index([userId])
   @@index([status])
 }
 
-// Knowledge base for RAG
 model KnowledgeChunk {
   id        String   @id @default(cuid())
-  source    String   // URL or document name
+  source    String
   title     String?
-  content   String   // The text chunk
-  embedding String   // JSON array of floats (OpenAI embedding)
-  metadata  String?  // JSON for extra info
-  
+  content   String
+  embedding String
+  metadata  String?
   createdAt DateTime @default(now())
-  
+
   @@index([source])
 }
 
-// Chat threads for AI assistant
 model ChatThread {
-  id        String   @id @default(cuid())
-  title     String   @default("New Chat")
-  
+  id        String        @id @default(cuid())
+  title     String        @default("New Chat")
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   messages  ChatMessage[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   threadId  String
-  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  
-  role      String   // "user" or "assistant"
+  role      String
   content   String
-  
-  // Optional metadata for assistant responses
-  type      String?  // "query", "s3_list", "insight", "chat", etc.
-  data      String?  // JSON string for results, files, stats
-  
-  createdAt DateTime @default(now())
-  
+  type      String?
+  data      String?
+  createdAt DateTime   @default(now())
+  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
   @@index([threadId])
 }
 
-// Encrypted secrets storage (BYOK)
 model Secret {
   id        String   @id @default(cuid())
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  // Secret type: AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_ROLE_ARN, OPENAI_API_KEY, etc.
   key       String
-  // Encrypted value (iv:authTag:encryptedData)
   value     String
-  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@unique([tenantId, key])
   @@index([tenantId])
 }
 
-// Audit log for compliance
 model AuditLog {
   id        String   @id @default(cuid())
   tenantId  String
@@ -208,130 +157,86 @@ model AuditLog {
   resource  String
   details   String?
   ipAddress String?
-  
   createdAt DateTime @default(now())
-  
+
   @@index([tenantId])
   @@index([createdAt])
 }
 
-// Neo4j Graph Database Configuration per Tenant
 model TenantNeo4jConfig {
-  id          String   @id @default(cuid())
-  tenantId    String   @unique
-  
-  // Connection settings (can be shared cluster or BYOD)
-  boltUri     String   @default("bolt://neo4j:7687")
-  username    String   @default("neo4j")
-  password    String   // encrypted
-  database    String   // tenant-specific database name
-  
-  // Config type
-  configType  String   @default("SHARED") // SHARED, BYOD (Bring Your Own DB)
-  
-  // Limits
-  maxNodes        Int      @default(100000)
-  maxRelationships Int     @default(500000)
-  gdsEnabled      Boolean  @default(false)
-  embeddingsEnabled Boolean @default(false)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id                String   @id @default(cuid())
+  tenantId          String   @unique
+  boltUri           String   @default("bolt://neo4j:7687")
+  username          String   @default("neo4j")
+  password          String
+  database          String
+  configType        String   @default("SHARED")
+  maxNodes          Int      @default(100000)
+  maxRelationships  Int      @default(500000)
+  gdsEnabled        Boolean  @default(false)
+  embeddingsEnabled Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
   @@index([tenantId])
 }
 
-// Graph Compute Usage Tracking for Billing
 model GraphUsage {
-  id                    String   @id @default(cuid())
-  tenantId              String
-  
-  // Usage metrics
-  computeSeconds        Int      @default(0)  // GDS algorithm execution time
-  queriesExecuted       Int      @default(0)  // Cypher queries run
-  nodesProcessed        Int      @default(0)  // Nodes touched
-  relationshipsProcessed Int     @default(0)  // Relationships touched
-  embeddingsGenerated   Int      @default(0)  // Vector embeddings created
-  
-  // Billing period
-  periodStart           DateTime
-  periodEnd             DateTime
-  
-  // Stripe sync
-  stripeReported        Boolean  @default(false)
-  stripeUsageRecordId   String?
-  
-  createdAt             DateTime @default(now())
-  
+  id                     String   @id @default(cuid())
+  tenantId               String
+  computeSeconds         Int      @default(0)
+  queriesExecuted        Int      @default(0)
+  nodesProcessed         Int      @default(0)
+  relationshipsProcessed Int      @default(0)
+  embeddingsGenerated    Int      @default(0)
+  periodStart            DateTime
+  periodEnd              DateTime
+  stripeReported         Boolean  @default(false)
+  stripeUsageRecordId    String?
+  createdAt              DateTime @default(now())
+
   @@unique([tenantId, periodStart, periodEnd])
   @@index([tenantId])
 }
 
-// Graph Algorithm Execution Log
 model GraphJobLog {
-  id              String   @id @default(cuid())
-  tenantId        String
-  userId          String?
-  
-  // Job details
-  algorithm       String   // pagerank, node2vec, similarity, etc.
-  status          String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
-  
-  // Metrics
-  nodesProcessed  Int      @default(0)
-  relsProcessed   Int      @default(0)
-  executionMs     Int      @default(0)
-  
-  // Results
-  resultSummary   String?  // JSON summary of results
-  error           String?
-  
-  startedAt       DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime @default(now())
-  
+  id             String    @id @default(cuid())
+  tenantId       String
+  userId         String?
+  algorithm      String
+  status         String    @default("PENDING")
+  nodesProcessed Int       @default(0)
+  relsProcessed  Int       @default(0)
+  executionMs    Int       @default(0)
+  resultSummary  String?
+  error          String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
   @@index([tenantId])
   @@index([status])
 }
 
-// ============================================
-// CloudFabric™ - Cloud Architecture Platform
-// ============================================
-
-// Cloud Resources - Unified view of all AWS resources
 model CloudResource {
-  id            String   @id @default(cuid())
-  tenantId      String
-  
-  // Resource identification
-  type          String   // EC2, S3, LAMBDA, RDS, VPC, SUBNET, SG, IAM_ROLE, etc.
-  arn           String?  // AWS ARN (null for pending resources)
-  awsId         String?  // AWS resource ID (i-xxx, sg-xxx, etc.)
-  name          String
-  region        String
-  
-  // Status tracking
-  status        String   @default("PENDING") // PENDING, CREATING, ACTIVE, UPDATING, DELETING, DELETED, FAILED
-  
-  // Configuration (service-specific JSON)
-  config        String   // JSON: instance type, storage, etc.
-  
-  // Cost tracking
-  monthlyCost   Float    @default(0)
-  lastCostSync  DateTime?
-  
-  // Metadata
-  tags          String?  // JSON: { "Environment": "prod", "Team": "backend" }
-  
-  // Architecture relationship
+  id             String        @id @default(cuid())
+  tenantId       String
+  type           String
+  arn            String?
+  awsId          String?
+  name           String
+  region         String
+  status         String        @default("PENDING")
+  config         String
+  monthlyCost    Float         @default(0)
+  lastCostSync   DateTime?
+  tags           String?
   architectureId String?
-  architecture   Architecture? @relation(fields: [architectureId], references: [id], onDelete: SetNull)
-  
-  // Audit
-  createdBy     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  createdBy      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  architecture   Architecture? @relation(fields: [architectureId], references: [id])
+
   @@unique([tenantId, arn])
   @@index([tenantId])
   @@index([type])
@@ -339,352 +244,235 @@ model CloudResource {
   @@index([architectureId])
 }
 
-// Architecture - Visual infrastructure designs
 model Architecture {
-  id            String   @id @default(cuid())
-  tenantId      String
-  userId        String
-  
-  // Basic info
-  name          String
-  description   String?
-  version       Int      @default(1)
-  
-  // Visual canvas state (React Flow JSON)
-  nodes         String   // JSON: React Flow nodes
-  edges         String   // JSON: React Flow edges
-  viewport      String?  // JSON: viewport state
-  
-  // Resource definitions
-  resources     String?  // JSON: array of resource configs
-  
-  // Deployment status
-  status        String   @default("draft") // draft, active, deploying, deployed, failed, archived
-  deployedAt    DateTime?
-  deployError   String?
-  
-  // Cost estimation
-  estimatedCost Float    @default(0)
-  
-  // Sharing
-  isShared      Boolean  @default(false)
-  
-  // Generated outputs
-  terraformCode String?  // Generated Terraform HCL
-  iamPolicies   String?  // JSON: generated IAM policies
-  
-  // Audit
-  createdBy     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  // Relations
-  cloudResources CloudResource[]
+  id             String                   @id @default(cuid())
+  tenantId       String
+  userId         String
+  name           String
+  description    String?
+  version        Int                      @default(1)
+  nodes          String
+  edges          String
+  viewport       String?
+  resources      String?
+  status         String                   @default("draft")
+  deployedAt     DateTime?
+  deployError    String?
+  estimatedCost  Float                    @default(0)
+  isShared       Boolean                  @default(false)
+  terraformCode  String?
+  iamPolicies    String?
+  createdBy      String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
   deployments    ArchitectureDeployment[]
-  
+  cloudResources CloudResource[]
+
   @@index([tenantId])
   @@index([userId])
   @@index([status])
 }
 
-// Architecture Deployment History
 model ArchitectureDeployment {
-  id              String   @id @default(cuid())
-  architectureId  String
-  architecture    Architecture @relation(fields: [architectureId], references: [id], onDelete: Cascade)
-  
-  // Deployment info
-  version         Int
-  status          String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, FAILED, ROLLED_BACK
-  
-  // Changes made
-  resourcesCreated Int     @default(0)
-  resourcesUpdated Int     @default(0)
-  resourcesDeleted Int     @default(0)
-  
-  // Logs
-  logs            String?  // JSON: array of log entries
-  error           String?
-  
-  // Timing
-  startedAt       DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime @default(now())
-  
+  id               String       @id @default(cuid())
+  architectureId   String
+  version          Int
+  status           String       @default("PENDING")
+  resourcesCreated Int          @default(0)
+  resourcesUpdated Int          @default(0)
+  resourcesDeleted Int          @default(0)
+  logs             String?
+  error            String?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime     @default(now())
+  architecture     Architecture @relation(fields: [architectureId], references: [id], onDelete: Cascade)
+
   @@index([architectureId])
 }
 
-// Alert Rules - Monitoring alerts
 model AlertRule {
-  id          String   @id @default(cuid())
-  tenantId    String
-  
-  // Alert definition
-  name        String
-  description String?
-  
-  // Condition
-  metric      String   // CPU, MEMORY, COST, ERROR_RATE, etc.
-  resourceType String? // EC2, LAMBDA, etc. (null = all)
-  resourceId  String?  // Specific resource (null = all of type)
-  operator    String   // GT, LT, EQ, GTE, LTE
-  threshold   Float
-  duration    Int      @default(300) // seconds to sustain before alerting
-  
-  // Notification
-  channels    String   // JSON: ["email", "slack", "webhook"]
-  channelConfig String // JSON: { "slack": "webhook_url", "email": ["a@b.com"] }
-  
-  // State
-  enabled     Boolean  @default(true)
+  id            String          @id @default(cuid())
+  tenantId      String
+  name          String
+  description   String?
+  metric        String
+  resourceType  String?
+  resourceId    String?
+  operator      String
+  threshold     Float
+  duration      Int             @default(300)
+  channels      String
+  channelConfig String
+  enabled       Boolean         @default(true)
   lastTriggered DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  incidents   AlertIncident[]
-  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  incidents     AlertIncident[]
+
   @@index([tenantId])
   @@index([enabled])
 }
 
-// ============================================
-// CloudFlow - Visual Workflow Automation
-// ============================================
-
-// CloudFlow Flow Definition
 model CloudFlow {
-  id          String   @id @default(cuid())
-  tenantId    String
-  
-  // Owner - user who created/owns this flow
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Basic info
-  name        String
-  description String?
-  
-  // Flow definition (React Flow JSON)
-  nodes       String   // JSON: array of FlowNode
-  edges       String   // JSON: array of FlowEdge
-  viewport    String?  // JSON: { x, y, zoom } for canvas position
-  
-  // Trigger configuration
-  triggerType String   @default("manual") // manual, cron, webhook
-  triggerConfig String? // JSON: cron expression, webhook config
-  
-  // State
-  status      String   @default("draft") // draft, active, paused
-  isShared    Boolean  @default(false)   // visible to all tenant users
-  
-  // Versioning
-  version     Int      @default(1)
-  
-  // Execution stats
-  lastRunAt   DateTime?
-  lastRunStatus String? // success, error
-  runCount    Int      @default(0)
-  
-  // Audit
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  executions  FlowExecution[]
-  secrets     FlowSecret[]
-  
+  id            String          @id @default(cuid())
+  tenantId      String
+  userId        String
+  name          String
+  description   String?
+  nodes         String
+  edges         String
+  viewport      String?
+  triggerType   String          @default("manual")
+  triggerConfig String?
+  status        String          @default("draft")
+  isShared      Boolean         @default(false)
+  version       Int             @default(1)
+  lastRunAt     DateTime?
+  lastRunStatus String?
+  runCount      Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions    FlowExecution[]
+  secrets       FlowSecret[]
+
   @@index([tenantId])
   @@index([userId])
   @@index([status])
 }
 
-// Flow-specific secret references (which tenant secrets a flow uses)
 model FlowSecret {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   flowId      String
+  secretKey   String
+  nodeId      String?
+  configField String?
+  createdAt   DateTime  @default(now())
   flow        CloudFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  
-  // Reference to tenant secret by key (not the actual value)
-  secretKey   String   // e.g., "AWS_ACCESS_KEY", "SLACK_WEBHOOK"
-  
-  // Which node uses this secret
-  nodeId      String?  // Optional: specific node that uses this secret
-  configField String?  // Optional: which config field uses this secret
-  
-  createdAt   DateTime @default(now())
-  
+
   @@unique([flowId, secretKey, nodeId])
   @@index([flowId])
 }
 
-// CloudFlow Execution History
 model FlowExecution {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   flowId      String
-  flow        CloudFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
   tenantId    String
-  
-  // Execution info
-  status      String   @default("pending") // pending, running, success, error, cancelled
-  triggeredBy String   // manual, cron, webhook, api
-  
-  // Results
-  results     String?  // JSON: node execution results
-  logs        String?  // JSON: execution logs
+  status      String    @default("pending")
+  triggeredBy String
+  results     String?
+  logs        String?
   error       String?
-  
-  // Timing
   startedAt   DateTime?
   completedAt DateTime?
-  createdAt   DateTime @default(now())
-  
+  createdAt   DateTime  @default(now())
+  flow        CloudFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
   @@index([flowId])
   @@index([tenantId])
   @@index([status])
 }
 
-// Alert Incidents - Triggered alerts
 model AlertIncident {
-  id          String   @id @default(cuid())
-  alertRuleId String
-  alertRule   AlertRule @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
-  
-  // Incident info
-  status      String   @default("OPEN") // OPEN, ACKNOWLEDGED, RESOLVED
-  severity    String   @default("WARNING") // INFO, WARNING, CRITICAL
-  
-  // Details
-  value       Float    // The value that triggered the alert
-  message     String
-  resourceArn String?
-  
-  // Resolution
+  id             String    @id @default(cuid())
+  alertRuleId    String
+  status         String    @default("OPEN")
+  severity       String    @default("WARNING")
+  value          Float
+  message        String
+  resourceArn    String?
   acknowledgedBy String?
   acknowledgedAt DateTime?
-  resolvedAt    DateTime?
-  
-  createdAt   DateTime @default(now())
-  
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  alertRule      AlertRule @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
+
   @@index([alertRuleId])
   @@index([status])
 }
 
-// Email verification tokens
 model VerificationToken {
   id        String   @id @default(cuid())
   token     String   @unique
   email     String
   expires   DateTime
   createdAt DateTime @default(now())
-  
+
   @@index([token])
   @@index([email])
 }
 
-// Desktop Agent scan results
 model AgentScan {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  scanPath  String
-  fileCount Int
+  id          String   @id @default(cuid())
+  tenantId    String
+  scanPath    String
+  fileCount   Int
   folderCount Int
-  totalSize BigInt
-  fileTypes Json     // { "pdf": 10, "docx": 5, ... }
-  largeFiles Json    // [{ name, path, size }, ...]
-  
-  createdAt DateTime @default(now())
-  
+  totalSize   BigInt
+  fileTypes   Json
+  largeFiles  Json
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId])
 }
 
-// Agent Commands - queued commands for the agent to execute
 model AgentCommand {
-  id        String   @id @default(cuid())
-  tenantId  String
-  
-  type      String   // SCAN, LIST, DISCOVER, UPLOAD, DOWNLOAD
-  payload   String   // JSON payload with command parameters
-  status    String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
-  result    String?  // JSON result from execution
-  error     String?  // Error message if failed
-  
-  createdAt   DateTime @default(now())
+  id          String    @id @default(cuid())
+  tenantId    String
+  type        String
+  payload     String
+  status      String    @default("PENDING")
+  result      String?
+  error       String?
+  createdAt   DateTime  @default(now())
   startedAt   DateTime?
   completedAt DateTime?
-  
+
   @@index([tenantId])
   @@index([status])
 }
 
-// ============================================
-// CloudMigrate - Infrastructure Discovery
-// ============================================
-
-// Discovery Scan - records each network scan
 model DiscoveryScan {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   tenantId    String
-  
-  scanId      String   // Agent-generated scan ID
-  networkCidr String   // e.g., "192.168.1.0/24"
+  scanId      String
+  networkCidr String
   startedAt   DateTime
   completedAt DateTime
-  hostsFound  Int      @default(0)
-  summary     String   // JSON: { byCategory, byOs, etc. }
-  
-  createdAt   DateTime @default(now())
-  
+  hostsFound  Int              @default(0)
+  summary     String
+  createdAt   DateTime         @default(now())
   hosts       DiscoveredHost[]
-  
+
   @@index([tenantId])
   @@index([completedAt])
 }
 
-// Discovered Host - individual servers/devices found
 model DiscoveredHost {
-  id            String   @id @default(cuid())
-  tenantId      String
-  
-  // Network info
-  ip            String
-  hostname      String?
-  mac           String?
-  status        String   @default("online") // online, offline
-  
-  // System info
-  os            String?  // Windows, Linux, etc.
-  osVersion     String?
-  
-  // Classification
-  category      String   // compute, database, storage, networking, identity, etc.
-  awsTarget     String?  // Recommended AWS service
-  
-  // Detected services
-  openPorts     String   // JSON array of PortInfo
-  services      String   // JSON array of ServiceInfo
-  
-  // Performance
-  responseTimeMs Int     @default(0)
-  
-  // Metadata
-  metadata      String?  // JSON for extra info
-  lastSeen      DateTime @default(now())
-  
-  // Migration status
-  migrationStatus String @default("discovered") // discovered, assessed, ready, migrating, migrated
+  id              String         @id @default(cuid())
+  tenantId        String
+  ip              String
+  hostname        String?
+  mac             String?
+  status          String         @default("online")
+  os              String?
+  osVersion       String?
+  category        String
+  awsTarget       String?
+  openPorts       String
+  services        String
+  responseTimeMs  Int            @default(0)
+  metadata        String?
+  lastSeen        DateTime       @default(now())
+  migrationStatus String         @default("discovered")
   migrationNotes  String?
-  
-  // Relations
-  scanId        String?
-  scan          DiscoveryScan? @relation(fields: [scanId], references: [id], onDelete: SetNull)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  scanId          String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  scan            DiscoveryScan? @relation(fields: [scanId], references: [id])
+
   @@unique([tenantId, ip])
   @@index([tenantId])
   @@index([category])
@@ -692,81 +480,59 @@ model DiscoveredHost {
   @@index([migrationStatus])
 }
 
-// Migration Workload - grouped assets for migration
 model MigrationWorkload {
-  id          String   @id @default(cuid())
-  tenantId    String
-  
-  name        String
-  description String?
-  category    String   // compute, database, storage, etc.
-  
-  // Source info
-  sourceType  String   // vm, database, file-share, etc.
-  sourceConfig String  // JSON: source-specific config
-  
-  // Target info
-  awsService  String   // EC2, RDS, S3, etc.
-  targetConfig String  // JSON: AWS-specific config
-  
-  // Status
-  status      String   @default("pending") // pending, ready, migrating, completed, failed
-  progress    Int      @default(0)
-  
-  // Cost estimation
-  estimatedCost Float  @default(0)
-  
-  // Timing
-  scheduledAt DateTime?
-  startedAt   DateTime?
-  completedAt DateTime?
-  
-  // Logs
-  logs        String?  // JSON array of log entries
-  error       String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id            String    @id @default(cuid())
+  tenantId      String
+  name          String
+  description   String?
+  category      String
+  sourceType    String
+  sourceConfig  String
+  awsService    String
+  targetConfig  String
+  status        String    @default("pending")
+  progress      Int       @default(0)
+  estimatedCost Float     @default(0)
+  scheduledAt   DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  logs          String?
+  error         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   @@index([tenantId])
   @@index([status])
   @@index([category])
 }
 
-// ============================================
-// Crawl4AI RAG Tables (managed by crawl4ai service)
-// These are defined here to prevent Prisma from dropping them
-// ============================================
-
 model sources {
-  source_id        String   @id
+  source_id        String          @id
   tenant_id        String
-  user_id          String   @default("default")
+  user_id          String          @default("default")
   summary          String?
-  total_word_count Int      @default(0)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @default(now())
-  
-  crawled_pages    crawled_pages[]
+  total_word_count Int             @default(0)
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @default(now())
   code_examples    code_examples[]
-  
+  crawled_pages    crawled_pages[]
+
   @@map("sources")
 }
 
 model crawled_pages {
-  id           BigInt   @id @default(autoincrement())
+  id           BigInt                 @id @default(autoincrement())
   url          String
   chunk_number Int
   content      String
-  metadata     Json     @default("{}")
+  metadata     Json                   @default("{}")
   source_id    String
   tenant_id    String
-  user_id      String   @default("default")
-  embedding    Unsupported("vector(1536)")?
-  created_at   DateTime @default(now())
-  
-  source       sources  @relation(fields: [source_id], references: [source_id])
-  
+  user_id      String                 @default("default")
+  embedding    Unsupported("vector")?
+  created_at   DateTime               @default(now())
+  source       sources                @relation(fields: [source_id], references: [source_id])
+
   @@unique([url, chunk_number])
   @@index([source_id])
   @@index([tenant_id])
@@ -775,20 +541,19 @@ model crawled_pages {
 }
 
 model code_examples {
-  id           BigInt   @id @default(autoincrement())
+  id           BigInt                 @id @default(autoincrement())
   url          String
   chunk_number Int
   content      String
   summary      String
-  metadata     Json     @default("{}")
+  metadata     Json                   @default("{}")
   source_id    String
   tenant_id    String
-  user_id      String   @default("default")
-  embedding    Unsupported("vector(1536)")?
-  created_at   DateTime @default(now())
-  
-  source       sources  @relation(fields: [source_id], references: [source_id])
-  
+  user_id      String                 @default("default")
+  embedding    Unsupported("vector")?
+  created_at   DateTime               @default(now())
+  source       sources                @relation(fields: [source_id], references: [source_id])
+
   @@unique([url, chunk_number])
   @@index([source_id])
   @@index([tenant_id])
@@ -796,8 +561,8 @@ model code_examples {
 }
 
 model reports {
-  id              BigInt   @id @default(autoincrement())
-  report_id       String   @unique
+  id              BigInt                 @id @default(autoincrement())
+  report_id       String                 @unique
   source_id       String
   tenant_id       String?
   title           String
@@ -806,121 +571,91 @@ model reports {
   focus_query     String?
   chunks_analyzed Int?
   model_used      String?
-  metadata        Json     @default("{}")
-  embedding       Unsupported("vector(1536)")?
-  created_at      DateTime @default(now())
-  
+  metadata        Json                   @default("{}")
+  embedding       Unsupported("vector")?
+  created_at      DateTime               @default(now())
+
   @@index([source_id])
   @@index([tenant_id])
   @@map("reports")
 }
 
-// ============================================
-// CloudAcademy - Learning & Challenge Platform
-// ============================================
-
-// Academy-specific Tenant (separate from main CloudMigrate Tenant)
 model AcademyTenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  plan      String   @default("FREE") // FREE, LEARNER, PRO, TEAM
-  
-  // Stripe
-  stripeCustomerId  String?
-  stripeSubId       String?
-  
-  // AI Integration (BYOK)
-  openaiApiKey      String?
-  preferredModel    String?  @default("gpt-4.1")
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  users     AcademyUser[]
-  secrets   AcademySecret[]
-  teams     AcademyTeam[]
-  profiles  AcademyUserProfile[]
-  activities AcademyActivity[]
-  scenarioAttempts ScenarioAttempt[]
-  teamChallengeAttempts TeamChallengeAttempt[]
-  customLocations CustomLocation[]
-  customScenarios CustomScenario[]
+  id                     String                  @id @default(cuid())
+  name                   String
+  slug                   String                  @unique
+  plan                   String                  @default("FREE")
+  stripeCustomerId       String?
+  stripeSubId            String?
+  openaiApiKey           String?
+  preferredModel         String?                 @default("gpt-4.1")
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  activities             AcademyActivity[]
+  secrets                AcademySecret[]
+  teams                  AcademyTeam[]
+  users                  AcademyUser[]
+  profiles               AcademyUserProfile[]
+  customLocations        CustomLocation[]
+  customScenarios        CustomScenario[]
   customScenarioAttempts CustomScenarioAttempt[]
+  scenarioAttempts       ScenarioAttempt[]
+  teamChallengeAttempts  TeamChallengeAttempt[]
 }
 
-// Academy-specific User (separate from main CloudMigrate User)
 model AcademyUser {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String?   @unique  // Optional unique username for display
+  id            String              @id @default(cuid())
+  email         String              @unique
+  username      String?             @unique
   name          String?
   passwordHash  String
-  role          String    @default("USER") // ADMIN, USER
+  role          String              @default("USER")
   emailVerified DateTime?
-  
   tenantId      String
-  tenant        AcademyTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  profile       AcademyUserProfile?
-  teamMembers   AcademyTeamMember[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
   teamInvites   AcademyTeamInvite[]
-  
+  teamMembers   AcademyTeamMember[]
+  tenant        AcademyTenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  profile       AcademyUserProfile?
+
   @@index([tenantId])
 }
 
-// Academy-specific secrets storage
 model AcademySecret {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   tenantId  String
-  tenant    AcademyTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
   key       String
-  value     String   // Encrypted value
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  value     String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  tenant    AcademyTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@unique([tenantId, key])
   @@index([tenantId])
 }
 
-// Team for collaborative challenges
 model AcademyTeam {
-  id          String   @id @default(cuid())
-  tenantId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyTenant
+  id              String                 @id @default(cuid())
+  tenantId        String?
   academyTenantId String?
-  academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
-  
-  name        String
-  slug        String   // URL-friendly name
-  description String?
-  avatarUrl   String?
-  
-  // Team settings
-  visibility  String   @default("private")  // private, tenant, public
-  maxMembers  Int      @default(10)
-  
-  // Gamification
-  totalPoints Int      @default(0)
-  level       Int      @default(1)
-  
-  // Metadata
-  settings    Json     @default("{}")  // Future extensibility
-  
-  createdBy   String   // userId who created
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  members     AcademyTeamMember[]
-  attempts    TeamChallengeAttempt[]
-  invites     AcademyTeamInvite[]
-  
+  name            String
+  slug            String
+  description     String?
+  avatarUrl       String?
+  visibility      String                 @default("private")
+  maxMembers      Int                    @default(10)
+  totalPoints     Int                    @default(0)
+  level           Int                    @default(1)
+  settings        Json                   @default("{}")
+  createdBy       String
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  academyTenant   AcademyTenant?         @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
+  invites         AcademyTeamInvite[]
+  members         AcademyTeamMember[]
+  attempts        TeamChallengeAttempt[]
+
   @@unique([tenantId, slug])
   @@index([tenantId])
   @@index([academyTenantId])
@@ -928,283 +663,194 @@ model AcademyTeam {
 }
 
 model AcademyTeamMember {
-  id        String   @id @default(cuid())
-  teamId    String
-  team      AcademyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  userId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyUser
-  academyUserId String?
-  academyUser   AcademyUser? @relation(fields: [academyUserId], references: [id], onDelete: Cascade)
-  
-  role      String   @default("member")  // owner, admin, member
-  
-  // Member stats within team
-  pointsContributed Int @default(0)
-  challengesCompleted Int @default(0)
-  
-  joinedAt  DateTime @default(now())
-  
+  id                  String       @id @default(cuid())
+  teamId              String
+  userId              String?
+  academyUserId       String?
+  role                String       @default("member")
+  pointsContributed   Int          @default(0)
+  challengesCompleted Int          @default(0)
+  joinedAt            DateTime     @default(now())
+  academyUser         AcademyUser? @relation(fields: [academyUserId], references: [id], onDelete: Cascade)
+  team                AcademyTeam  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   @@unique([teamId, userId])
   @@index([userId])
   @@index([academyUserId])
 }
 
 model AcademyTeamInvite {
-  id        String   @id @default(cuid())
-  teamId    String
-  team      AcademyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
-  email     String?  // Email invite
-  userId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyUser
+  id            String       @id @default(cuid())
+  teamId        String
+  email         String?
+  userId        String?
   academyUserId String?
-  academyUser   AcademyUser? @relation(fields: [academyUserId], references: [id], onDelete: SetNull)
-  code      String   @unique  // Invite code for link sharing
-  
-  role      String   @default("member")  // Role when accepted
-  expiresAt DateTime
-  usedAt    DateTime?
-  usedBy    String?  // userId who used the invite
-  
-  createdBy String
-  createdAt DateTime @default(now())
-  
+  code          String       @unique
+  role          String       @default("member")
+  expiresAt     DateTime
+  usedAt        DateTime?
+  usedBy        String?
+  createdBy     String
+  createdAt     DateTime     @default(now())
+  academyUser   AcademyUser? @relation(fields: [academyUserId], references: [id])
+  team          AcademyTeam  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   @@index([teamId])
   @@index([code])
   @@index([email])
   @@index([academyUserId])
 }
 
-// Location/Company definitions (replaces hardcoded LOCATIONS)
 model AcademyLocation {
-  id          String   @id @default(cuid())
-  
-  // Location identity
-  slug        String   @unique  // "hsbc-london", "amazon-seattle"
-  name        String            // "HSBC Tower"
-  company     String            // "HSBC"
-  industry    String            // "Banking & Finance"
-  
-  // Geolocation
-  lat         Float
-  lng         Float
-  region      String?           // "EMEA", "APAC", "Americas"
-  country     String?
-  city        String?
-  
-  // Display
-  icon        String   @default("🏢")
-  imageUrl    String?
-  
-  // Challenge metadata
-  difficulty  String   @default("intermediate")  // beginner, intermediate, advanced, expert
-  description String   @db.Text
-  
-  // Compliance/tags as JSON for flexibility
-  compliance  Json     @default("[]")  // ["PCI-DSS", "GDPR", "HIPAA"]
-  tags        Json     @default("[]")  // ["finance", "global", "high-availability"]
-  
-  // Unlock mechanics
-  isLocked    Boolean  @default(false)
-  unlockRequirements Json @default("[]")  // [{ "type": "location", "id": "...", "challenges": 3 }]
-  
-  // Stats (denormalized for performance)
-  totalAttempts   Int @default(0)
-  avgCompletionRate Float @default(0)
-  
-  // Lifecycle
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  scenarios   AcademyScenario[]
-  progress    UserLocationProgress[]
-  
+  id                 String                 @id @default(cuid())
+  slug               String                 @unique
+  name               String
+  company            String
+  industry           String
+  lat                Float
+  lng                Float
+  region             String?
+  country            String?
+  city               String?
+  icon               String                 @default("🏢")
+  imageUrl           String?
+  difficulty         String                 @default("intermediate")
+  description        String
+  compliance         Json                   @default("[]")
+  tags               Json                   @default("[]")
+  isLocked           Boolean                @default(false)
+  unlockRequirements Json                   @default("[]")
+  totalAttempts      Int                    @default(0)
+  avgCompletionRate  Float                  @default(0)
+  isActive           Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  scenarios          AcademyScenario[]
+  progress           UserLocationProgress[]
+
   @@index([industry])
   @@index([difficulty])
   @@index([region])
   @@index([isActive])
 }
 
-// Generated scenarios (cached from Learning Agent)
 model AcademyScenario {
-  id            String   @id @default(cuid())
-  locationId    String
-  location      AcademyLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  
-  // Scenario identity
-  title         String
-  description   String   @db.Text
-  businessContext String @db.Text
-  difficulty    String
-  
-  // Requirements as JSON for flexibility
-  technicalRequirements Json @default("[]")
-  complianceRequirements Json @default("[]")
-  constraints   Json     @default("[]")
-  learningObjectives Json @default("[]")
-  tags          Json     @default("[]")
-  
-  // Time & effort
-  estimatedMinutes Int @default(60)
-  maxPoints     Int      @default(1000)
-  
-  // Versioning & targeting
-  version       Int      @default(1)
-  targetLevel   String   @default("intermediate")  // Who this scenario is for
-  
-  // Company research cache (from Learning Agent)
-  companyInfo   Json?    // Cached CompanyInfo from research
-  
-  // Lifecycle
-  isActive      Boolean  @default(true)
-  generatedBy   String?  // "learning_agent_v1", "manual", etc.
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  challenges    AcademyChallenge[]
-  attempts      ScenarioAttempt[]
-  teamAttempts  TeamChallengeAttempt[]
-  
-  // Learning mode content
-  flashcardDecks FlashcardDeck[]
-  studyNotes    StudyNotes[]
-  coachingSessions CoachingSession[]
-  quizzes       Quiz[]
-  
+  id                     String                 @id @default(cuid())
+  locationId             String
+  title                  String
+  description            String
+  businessContext        String
+  difficulty             String
+  technicalRequirements  Json                   @default("[]")
+  complianceRequirements Json                   @default("[]")
+  constraints            Json                   @default("[]")
+  learningObjectives     Json                   @default("[]")
+  tags                   Json                   @default("[]")
+  estimatedMinutes       Int                    @default(60)
+  maxPoints              Int                    @default(1000)
+  version                Int                    @default(1)
+  targetLevel            String                 @default("intermediate")
+  companyInfo            Json?
+  isActive               Boolean                @default(true)
+  generatedBy            String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  challenges             AcademyChallenge[]
+  location               AcademyLocation        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  coachingSessions       CoachingSession[]
+  flashcardDecks         FlashcardDeck[]
+  quizzes                Quiz[]
+  attempts               ScenarioAttempt[]
+  studyNotes             StudyNotes[]
+  teamAttempts           TeamChallengeAttempt[]
+
   @@index([locationId])
   @@index([isActive])
   @@index([targetLevel])
   @@index([difficulty])
 }
 
-// Individual challenges within a scenario
 model AcademyChallenge {
-  id            String   @id @default(cuid())
-  scenarioId    String
-  scenario      AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  // Challenge identity
-  title         String
-  description   String   @db.Text
-  difficulty    String
-  orderIndex    Int      @default(0)
-  
-  // Scoring
-  points        Int      @default(100)
-  bonusPoints   Int      @default(0)  // For completing without hints, under time, etc.
-  
-  // Content as JSON for flexibility
-  hints         Json     @default("[]")
-  successCriteria Json   @default("[]")
-  awsServices   Json     @default("[]")
-  
-  // Optional: structured solution template
-  solutionTemplate Json? // Expected architecture components
-  evaluationRubric Json? // How to score solutions
-  
-  // Time
-  estimatedMinutes Int @default(15)
-  timeLimitMinutes Int? // Optional hard limit
-  
-  // Dependencies
-  prerequisiteChallengeIds Json @default("[]")  // Must complete these first
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  progress      ChallengeProgress[]
-  
+  id                       String              @id @default(cuid())
+  scenarioId               String
+  title                    String
+  description              String
+  difficulty               String
+  orderIndex               Int                 @default(0)
+  points                   Int                 @default(100)
+  bonusPoints              Int                 @default(0)
+  hints                    Json                @default("[]")
+  successCriteria          Json                @default("[]")
+  awsServices              Json                @default("[]")
+  solutionTemplate         Json?
+  evaluationRubric         Json?
+  estimatedMinutes         Int                 @default(15)
+  timeLimitMinutes         Int?
+  prerequisiteChallengeIds Json                @default("[]")
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  scenario                 AcademyScenario     @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  progress                 ChallengeProgress[]
+
   @@index([scenarioId])
   @@index([orderIndex])
 }
 
-// User's profile/preferences for Academy
 model AcademyUserProfile {
-  id          String   @id @default(cuid())
-  userId      String?  @unique  // Legacy - to be removed
-  tenantId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyUser and AcademyTenant
-  academyUserId   String?  @unique
-  academyUser     AcademyUser? @relation(fields: [academyUserId], references: [id], onDelete: Cascade)
-  academyTenantId String?
-  academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
-  
-  // Subscription tier: free, learner, pro, team
-  // free    = browse only, no AI, no Neo4j
-  // learner = AI coaching, challenges, flashcards ($19/mo)
-  // pro     = AI + Neo4j knowledge graph, custom scenarios ($49/mo)
-  // team    = full access, team features, admin ($29/user/mo)
-  subscriptionTier String @default("free")
-  subscriptionExpiresAt DateTime?
-  
-  // Feature flags based on tier
-  hasAiAccess Boolean @default(false)
-  hasNeo4jAccess Boolean @default(false)
-  hasTeamAccess Boolean @default(false)
-  
-  // Usage tracking
-  challengesStartedThisMonth Int @default(0)
-  aiRequestsThisMonth Int @default(0)
-  usageResetAt DateTime @default(now())
-  
-  // Display
-  displayName String?
-  avatarUrl   String?
-  bio         String?
-  
-  // Skill level & preferences
-  skillLevel  String   @default("intermediate")
-  targetCertification String? @default("SAA")  // e.g. SAA, DVA, SOA, SAP, DOP, etc.
-  preferredIndustries Json @default("[]")
-  preferredDifficulty String?
-  
-  // Gamification
-  totalPoints Int      @default(0)
-  level       Int      @default(1)
-  xp          Int      @default(0)  // XP within current level
-  
-  // Streaks
-  currentStreak Int    @default(0)
-  longestStreak Int    @default(0)
-  lastActivityDate DateTime?
-  
-  // Achievements/badges as JSON
-  achievements Json    @default("[]")  // [{ "id": "first_challenge", "earnedAt": "..." }]
-  
-  // Stats
-  challengesCompleted Int @default(0)
-  scenariosCompleted Int @default(0)
-  locationsVisited Int @default(0)
-  totalTimeMinutes Int @default(0)
-  
-  // Preferences
-  settings    Json     @default("{}")  // UI preferences, notifications, etc.
-  
-  // BYOK - Bring Your Own Key (encrypted)
-  // Format: iv:authTag:encryptedData (same as Secret model)
-  openaiApiKey      String?  // Encrypted OpenAI API key
-  openaiKeyLastFour String?  // Last 4 chars for display (e.g., "sk-...a1b2")
-  openaiKeyAddedAt  DateTime?
-  preferredModel    String?  @default("gpt-4.1") // User's preferred GPT model
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  locationProgress UserLocationProgress[]
-  scenarioAttempts ScenarioAttempt[]
-  
-  // Learning mode relations
-  flashcardProgress FlashcardUserProgress[]
-  studyNotesProgress StudyNotesProgress[]
-  coachingSessions CoachingSession[]
-  quizAttempts QuizAttempt[]
-  customLocations CustomLocation[]
-  
+  id                         String                  @id @default(cuid())
+  academyUserId              String?                 @unique
+  academyTenantId            String?
+  subscriptionTier           String                  @default("free")
+  subscriptionExpiresAt      DateTime?
+  hasAiAccess                Boolean                 @default(false)
+  hasNeo4jAccess             Boolean                 @default(false)
+  hasTeamAccess              Boolean                 @default(false)
+  challengesStartedThisMonth Int                     @default(0)
+  aiRequestsThisMonth        Int                     @default(0)
+  usageResetAt               DateTime                @default(now())
+  displayName                String?
+  avatarUrl                  String?
+  bio                        String?
+  skillLevel                 String                  @default("intermediate")
+  targetCertification        String?                 @default("SAA")
+  preferredIndustries        Json                    @default("[]")
+  preferredDifficulty        String?
+  totalPoints                Int                     @default(0)
+  level                      Int                     @default(1)
+  xp                         Int                     @default(0)
+  currentStreak              Int                     @default(0)
+  longestStreak              Int                     @default(0)
+  lastActivityDate           DateTime?
+  achievements               Json                    @default("[]")
+  challengesCompleted        Int                     @default(0)
+  scenariosCompleted         Int                     @default(0)
+  locationsVisited           Int                     @default(0)
+  totalTimeMinutes           Int                     @default(0)
+  settings                   Json                    @default("{}")
+  openaiApiKey               String?
+  openaiKeyLastFour          String?
+  openaiKeyAddedAt           DateTime?
+  preferredModel             String?                 @default("gpt-4.1")
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+  userId                     String?                 @unique
+  tenantId                   String?
+  awsAccessKeyId             String?
+  awsSecretAccessKey         String?
+  awsRegion                  String?                 @default("us-east-1")
+  awsKeyLastFour             String?
+  awsKeyAddedAt              DateTime?
+  awsCredentialsValid        Boolean?                @default(false)
+  academyTenant              AcademyTenant?          @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
+  academyUser                AcademyUser?            @relation(fields: [academyUserId], references: [id], onDelete: Cascade)
+  coachingSessions           CoachingSession[]
+  customLocations            CustomLocation[]
+  flashcardProgress          FlashcardUserProgress[]
+  quizAttempts               QuizAttempt[]
+  scenarioAttempts           ScenarioAttempt[]
+  studyNotesProgress         StudyNotesProgress[]
+  locationProgress           UserLocationProgress[]
+
   @@index([tenantId])
   @@index([academyUserId])
   @@index([academyTenantId])
@@ -1212,82 +858,50 @@ model AcademyUserProfile {
   @@index([level])
 }
 
-// User progress on a location (high-level)
 model UserLocationProgress {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  locationId  String
-  location    AcademyLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  
-  // Progress
-  status      String   @default("not_started")  // not_started, visited, in_progress, completed
-  
-  // Timestamps
-  firstVisitedAt DateTime @default(now())
-  lastVisitedAt DateTime @default(now())
-  completedAt DateTime?
-  
-  // Aggregated stats
-  totalPoints Int      @default(0)
-  challengesCompleted Int @default(0)
-  totalChallenges Int  @default(0)
-  timeSpentMinutes Int @default(0)
-  
-  // Best attempt reference
-  bestAttemptId String?
-  
+  id                  String             @id @default(cuid())
+  profileId           String
+  locationId          String
+  status              String             @default("not_started")
+  firstVisitedAt      DateTime           @default(now())
+  lastVisitedAt       DateTime           @default(now())
+  completedAt         DateTime?
+  totalPoints         Int                @default(0)
+  challengesCompleted Int                @default(0)
+  totalChallenges     Int                @default(0)
+  timeSpentMinutes    Int                @default(0)
+  bestAttemptId       String?
+  location            AcademyLocation    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  profile             AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
   @@unique([profileId, locationId])
   @@index([profileId])
   @@index([locationId])
   @@index([status])
 }
 
-// Scenario attempt (a user's session with a scenario)
 model ScenarioAttempt {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  tenantId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyTenant
-  academyTenantId String?
-  academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
-  
-  // Team context (optional - for team challenges)
-  teamAttemptId String?
-  
-  // Status
-  status      String   @default("in_progress")  // in_progress, completed, abandoned, timed_out
-  
-  // Timestamps
-  startedAt   DateTime @default(now())
-  lastActivityAt DateTime @default(now())
-  completedAt DateTime?
-  
-  // Scoring
-  pointsEarned Int     @default(0)
-  maxPoints   Int      @default(0)
-  bonusPoints Int      @default(0)
-  
-  // Time tracking
-  activeTimeMinutes Int @default(0)  // Actual active time (not idle)
-  
-  // Chat history with coach
-  chatHistory Json     @default("[]")  // [{ role, content, timestamp }]
-  
-  // Metadata
-  metadata    Json     @default("{}")  // Browser, device, etc.
-  
+  id                String              @id @default(cuid())
+  profileId         String
+  scenarioId        String
+  tenantId          String?
+  academyTenantId   String?
+  teamAttemptId     String?
+  status            String              @default("in_progress")
+  startedAt         DateTime            @default(now())
+  lastActivityAt    DateTime            @default(now())
+  completedAt       DateTime?
+  pointsEarned      Int                 @default(0)
+  maxPoints         Int                 @default(0)
+  bonusPoints       Int                 @default(0)
+  activeTimeMinutes Int                 @default(0)
+  chatHistory       Json                @default("[]")
+  metadata          Json                @default("{}")
   challengeProgress ChallengeProgress[]
-  
+  academyTenant     AcademyTenant?      @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
+  profile           AcademyUserProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  scenario          AcademyScenario     @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
   @@index([profileId])
   @@index([scenarioId])
   @@index([tenantId])
@@ -1296,78 +910,47 @@ model ScenarioAttempt {
   @@index([startedAt])
 }
 
-// Progress on individual challenges
 model ChallengeProgress {
-  id            String   @id @default(cuid())
-  
-  attemptId     String
-  attempt       ScenarioAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  
-  challengeId   String
-  challenge     AcademyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  
-  // Status
-  status        String   @default("locked")  // locked, available, in_progress, completed, skipped
-  
-  // Timestamps
-  unlockedAt    DateTime?
-  startedAt     DateTime?
-  completedAt   DateTime?
-  
-  // Scoring
-  pointsEarned  Int      @default(0)
-  bonusEarned   Int      @default(0)
-  hintsUsed     Int      @default(0)
-  attemptsCount Int      @default(0)
-  
-  // Time
-  timeSpentMinutes Int   @default(0)
-  
-  // User's solution
-  solution      Json?    // Architecture diagram, answers, etc.
-  solutionNotes String?  @db.Text  // User's notes/explanation
-  
-  // AI evaluation
-  feedback      Json?    // { score, strengths, improvements, suggestions }
-  evaluatedAt   DateTime?
-  
+  id               String           @id @default(cuid())
+  attemptId        String
+  challengeId      String
+  status           String           @default("locked")
+  unlockedAt       DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  pointsEarned     Int              @default(0)
+  bonusEarned      Int              @default(0)
+  hintsUsed        Int              @default(0)
+  attemptsCount    Int              @default(0)
+  timeSpentMinutes Int              @default(0)
+  solution         Json?
+  solutionNotes    String?
+  feedback         Json?
+  evaluatedAt      DateTime?
+  attempt          ScenarioAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  challenge        AcademyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
   @@unique([attemptId, challengeId])
   @@index([challengeId])
   @@index([status])
 }
 
-// Team challenge attempts (for team competitions)
 model TeamChallengeAttempt {
-  id          String   @id @default(cuid())
-  
-  teamId      String
-  team        AcademyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  tenantId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyTenant
+  id              String          @id @default(cuid())
+  teamId          String
+  scenarioId      String
+  tenantId        String?
   academyTenantId String?
-  academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
-  
-  // Status
-  status      String   @default("in_progress")  // in_progress, completed, abandoned
-  
-  // Timestamps
-  startedAt   DateTime @default(now())
-  completedAt DateTime?
-  
-  // Scoring
-  totalPoints Int      @default(0)
-  
-  // Member contributions
-  contributions Json   @default("{}")  // { "userId": { points, challenges, timeMinutes } }
-  
-  // Team chat/discussion
-  discussion  Json     @default("[]")  // [{ userId, message, timestamp }]
-  
+  status          String          @default("in_progress")
+  startedAt       DateTime        @default(now())
+  completedAt     DateTime?
+  totalPoints     Int             @default(0)
+  contributions   Json            @default("{}")
+  discussion      Json            @default("[]")
+  academyTenant   AcademyTenant?  @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
+  scenario        AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  team            AcademyTeam     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   @@unique([teamId, scenarioId])
   @@index([teamId])
   @@index([scenarioId])
@@ -1376,99 +959,61 @@ model TeamChallengeAttempt {
   @@index([status])
 }
 
-// Leaderboard entries (materialized view pattern - updated periodically)
 model AcademyLeaderboard {
-  id          String   @id @default(cuid())
-  
-  // Scope definition
-  scope       String   // global, tenant, team, industry
-  scopeId     String?  // tenantId, teamId, or industry name
-  period      String   // all_time, yearly, monthly, weekly, daily
-  periodKey   String   // "2024", "2024-12", "2024-W50", "2024-12-04"
-  
-  // Entry type
-  entryType   String   // user, team
-  entryId     String   // profileId or teamId
-  
-  // Display info (denormalized)
-  displayName String
-  avatarUrl   String?
-  
-  // Stats
-  totalPoints     Int @default(0)
-  challengesCompleted Int @default(0)
-  scenariosCompleted Int @default(0)
-  locationsCompleted Int @default(0)
-  averageScore    Float @default(0)
-  
-  // Rank
-  rank        Int      @default(0)
-  previousRank Int?    // For showing movement
-  
-  // Timestamps
-  updatedAt   DateTime @updatedAt
-  
+  id                  String   @id @default(cuid())
+  scope               String
+  scopeId             String?
+  period              String
+  periodKey           String
+  entryType           String
+  entryId             String
+  displayName         String
+  avatarUrl           String?
+  totalPoints         Int      @default(0)
+  challengesCompleted Int      @default(0)
+  scenariosCompleted  Int      @default(0)
+  locationsCompleted  Int      @default(0)
+  averageScore        Float    @default(0)
+  rank                Int      @default(0)
+  previousRank        Int?
+  updatedAt           DateTime @updatedAt
+
   @@unique([scope, scopeId, period, periodKey, entryType, entryId])
   @@index([scope, scopeId, period, periodKey, rank])
   @@index([entryType, entryId])
 }
 
-// Achievement definitions
 model AcademyAchievement {
-  id          String   @id @default(cuid())
-  
-  // Identity
-  slug        String   @unique  // "first_challenge", "speed_demon", "perfect_score"
-  name        String
-  description String
-  
-  // Display
-  icon        String   // Emoji or icon name
-  rarity      String   @default("common")  // common, uncommon, rare, epic, legendary
-  
-  // Unlock criteria (JSON for flexibility)
-  criteria    Json     // { "type": "challenges_completed", "value": 10 }
-  
-  // Rewards
-  pointsReward Int     @default(0)
-  xpReward    Int      @default(0)
-  
-  // Metadata
-  category    String   @default("general")  // general, speed, mastery, social, etc.
-  isSecret    Boolean  @default(false)  // Hidden until earned
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  description  String
+  icon         String
+  rarity       String   @default("common")
+  criteria     Json
+  pointsReward Int      @default(0)
+  xpReward     Int      @default(0)
+  category     String   @default("general")
+  isSecret     Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
   @@index([category])
   @@index([rarity])
 }
 
-// Activity feed for social features
 model AcademyActivity {
-  id          String   @id @default(cuid())
-  
-  // Actor
-  profileId   String
-  tenantId    String?  // Legacy - to be removed
-  teamId      String?  // If team-related
-  
-  // New: Reference to AcademyTenant
+  id              String         @id @default(cuid())
+  profileId       String
+  tenantId        String?
+  teamId          String?
   academyTenantId String?
+  type            String
+  data            Json
+  visibility      String         @default("tenant")
+  createdAt       DateTime       @default(now())
   academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
-  
-  // Activity type
-  type        String   // challenge_completed, scenario_completed, achievement_earned, 
-                       // level_up, streak_milestone, team_joined, location_unlocked
-  
-  // Activity data
-  data        Json     // { challengeId, points, achievementId, etc. }
-  
-  // Visibility
-  visibility  String   @default("tenant")  // private, team, tenant, public
-  
-  createdAt   DateTime @default(now())
-  
+
   @@index([profileId])
   @@index([tenantId])
   @@index([academyTenantId])
@@ -1477,1077 +1022,677 @@ model AcademyActivity {
   @@index([createdAt])
 }
 
-// ============================================
-// CloudAcademy - Learning Modes
-// Flashcards, Notes, Chat, Quiz
-// ============================================
-
-// Flashcard Deck - collection of cards for a scenario
 model FlashcardDeck {
-  id          String   @id @default(cuid())
-  
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  // Deck metadata
-  title       String
-  description String?
-  
-  // Generation info
-  generatedBy String   @default("ai")  // ai, user, imported
-  aiModel     String?  // gpt-4o, etc.
-  
-  // Stats
-  totalCards  Int      @default(0)
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  cards       Flashcard[]
+  id           String                  @id @default(cuid())
+  scenarioId   String
+  title        String
+  description  String?
+  generatedBy  String                  @default("ai")
+  aiModel      String?
+  totalCards   Int                     @default(0)
+  isActive     Boolean                 @default(true)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  cards        Flashcard[]
+  scenario     AcademyScenario         @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   userProgress FlashcardUserProgress[]
-  
+
   @@index([scenarioId])
 }
 
-// Individual Flashcard
 model Flashcard {
-  id          String   @id @default(cuid())
-  
-  deckId      String
-  deck        FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  
-  // Card content
-  front       String   @db.Text  // Question/prompt
-  back        String   @db.Text  // Answer/explanation
-  
-  // Rich content support
-  frontType   String   @default("text")  // text, code, image, diagram
-  backType    String   @default("text")
-  
-  // Metadata
-  tags        Json     @default("[]")  // ["vpc", "security", "networking"]
-  difficulty  String   @default("medium")  // easy, medium, hard
-  awsServices Json     @default("[]")  // ["EC2", "VPC", "IAM"]
-  
-  // Ordering
-  orderIndex  Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id           String              @id @default(cuid())
+  deckId       String
+  front        String
+  back         String
+  frontType    String              @default("text")
+  backType     String              @default("text")
+  tags         Json                @default("[]")
+  difficulty   String              @default("medium")
+  awsServices  Json                @default("[]")
+  orderIndex   Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  deck         FlashcardDeck       @relation(fields: [deckId], references: [id], onDelete: Cascade)
   userProgress FlashcardProgress[]
-  
+
   @@index([deckId])
   @@index([difficulty])
 }
 
-// User's progress on a flashcard deck (spaced repetition)
 model FlashcardUserProgress {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  deckId      String
-  deck        FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  
-  // Overall stats
-  cardsStudied    Int @default(0)
-  cardsMastered   Int @default(0)  // Cards with high confidence
-  totalReviews    Int @default(0)
-  
-  // Session tracking
-  lastStudiedAt   DateTime?
-  currentStreak   Int @default(0)  // Days in a row
-  
-  // Time spent
-  totalTimeMinutes Int @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  cardProgress FlashcardProgress[]
-  
+  id               String              @id @default(cuid())
+  profileId        String
+  deckId           String
+  cardsStudied     Int                 @default(0)
+  cardsMastered    Int                 @default(0)
+  totalReviews     Int                 @default(0)
+  lastStudiedAt    DateTime?
+  currentStreak    Int                 @default(0)
+  totalTimeMinutes Int                 @default(0)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  cardProgress     FlashcardProgress[]
+  deck             FlashcardDeck       @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  profile          AcademyUserProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
   @@unique([profileId, deckId])
   @@index([profileId])
   @@index([deckId])
 }
 
-// User's progress on individual flashcard (spaced repetition algorithm)
 model FlashcardProgress {
-  id          String   @id @default(cuid())
-  
+  id             String                @id @default(cuid())
   userProgressId String
+  cardId         String
+  easeFactor     Float                 @default(2.5)
+  interval       Int                   @default(1)
+  repetitions    Int                   @default(0)
+  status         String                @default("new")
+  nextReviewAt   DateTime?
+  lastReviewAt   DateTime?
+  totalReviews   Int                   @default(0)
+  correctCount   Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  card           Flashcard             @relation(fields: [cardId], references: [id], onDelete: Cascade)
   userProgress   FlashcardUserProgress @relation(fields: [userProgressId], references: [id], onDelete: Cascade)
-  
-  cardId      String
-  card        Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  
-  // Spaced Repetition (SM-2 algorithm style)
-  easeFactor  Float    @default(2.5)  // Difficulty multiplier
-  interval    Int      @default(1)     // Days until next review
-  repetitions Int      @default(0)     // Successful reviews in a row
-  
-  // Status
-  status      String   @default("new")  // new, learning, review, mastered
-  
-  // Next review
-  nextReviewAt DateTime?
-  lastReviewAt DateTime?
-  
-  // History
-  totalReviews Int     @default(0)
-  correctCount Int     @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+
   @@unique([userProgressId, cardId])
   @@index([cardId])
   @@index([nextReviewAt])
   @@index([status])
 }
 
-// ============================================
-// Study Notes
-// ============================================
-
-// AI-generated or user-created study notes for a scenario
 model StudyNotes {
-  id          String   @id @default(cuid())
-  
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  // Notes metadata
-  title       String
-  
-  // Content - structured for rich display
-  content     String   @db.Text  // Markdown content
-  
-  // Table of contents / structure
-  sections    Json     @default("[]")  // [{ id, title, level, anchor }]
-  
-  // Generation info
-  generatedBy String   @default("ai")  // ai, user
-  aiModel     String?
-  
-  // AWS services covered
-  awsServices Json     @default("[]")
-  
-  // Version control
-  version     Int      @default(1)
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  userProgress StudyNotesProgress[]
+  id           String               @id @default(cuid())
+  scenarioId   String
+  title        String
+  content      String
+  sections     Json                 @default("[]")
+  generatedBy  String               @default("ai")
+  aiModel      String?
+  awsServices  Json                 @default("[]")
+  version      Int                  @default(1)
+  isActive     Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
   annotations  StudyAnnotation[]
-  
+  scenario     AcademyScenario      @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  userProgress StudyNotesProgress[]
+
   @@index([scenarioId])
 }
 
-// User's progress/interaction with study notes
 model StudyNotesProgress {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  notesId     String
-  notes       StudyNotes @relation(fields: [notesId], references: [id], onDelete: Cascade)
-  
-  // Reading progress
-  readProgress    Float    @default(0)  // 0-100 percentage
-  sectionsRead    Json     @default("[]")  // [sectionId, ...]
-  
-  // Time tracking
-  totalTimeMinutes Int     @default(0)
-  lastReadAt      DateTime?
-  
-  // Bookmarked
-  isBookmarked    Boolean  @default(false)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id               String             @id @default(cuid())
+  profileId        String
+  notesId          String
+  readProgress     Float              @default(0)
+  sectionsRead     Json               @default("[]")
+  totalTimeMinutes Int                @default(0)
+  lastReadAt       DateTime?
+  isBookmarked     Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  notes            StudyNotes         @relation(fields: [notesId], references: [id], onDelete: Cascade)
+  profile          AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
   @@unique([profileId, notesId])
   @@index([profileId])
   @@index([notesId])
 }
 
-// User annotations/highlights on study notes
 model StudyAnnotation {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  
-  notesId     String
-  notes       StudyNotes @relation(fields: [notesId], references: [id], onDelete: Cascade)
-  
-  // Annotation type
-  type        String   // highlight, note, bookmark, question
-  
-  // Position in content
-  sectionId   String?  // Which section
-  startOffset Int?     // Character offset start
-  endOffset   Int?     // Character offset end
-  
-  // Content
-  selectedText String? @db.Text  // The highlighted text
-  userNote    String?  @db.Text  // User's note/comment
-  color       String   @default("yellow")  // Highlight color
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id           String     @id @default(cuid())
+  profileId    String
+  notesId      String
+  type         String
+  sectionId    String?
+  startOffset  Int?
+  endOffset    Int?
+  selectedText String?
+  userNote     String?
+  color        String     @default("yellow")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  notes        StudyNotes @relation(fields: [notesId], references: [id], onDelete: Cascade)
+
   @@index([profileId])
   @@index([notesId])
 }
 
-// ============================================
-// Chat / Coaching Sessions
-// ============================================
-
-// Chat session with AI coach for a scenario
 model CoachingSession {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  // Session metadata
-  title       String   @default("Coaching Session")
-  
-  // Current context
-  currentChallengeId String?  // Which challenge they're working on
-  currentMode String?         // flashcard, notes, quiz, general
-  
-  // Session state
-  status      String   @default("active")  // active, completed, archived
-  
-  // Stats
-  messageCount Int     @default(0)
-  
-  // Time tracking
-  startedAt   DateTime @default(now())
-  lastMessageAt DateTime?
-  endedAt     DateTime?
-  
-  // Total time
-  totalTimeMinutes Int @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  messages    CoachingMessage[]
-  
+  id                 String             @id @default(cuid())
+  profileId          String
+  scenarioId         String
+  title              String             @default("Coaching Session")
+  currentChallengeId String?
+  currentMode        String?
+  status             String             @default("active")
+  messageCount       Int                @default(0)
+  startedAt          DateTime           @default(now())
+  lastMessageAt      DateTime?
+  endedAt            DateTime?
+  totalTimeMinutes   Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  messages           CoachingMessage[]
+  profile            AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  scenario           AcademyScenario    @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
   @@index([profileId])
   @@index([scenarioId])
   @@index([status])
 }
 
-// Individual chat message
 model CoachingMessage {
-  id          String   @id @default(cuid())
-  
+  id          String          @id @default(cuid())
   sessionId   String
-  session     CoachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  
-  // Message content
-  role        String   // user, assistant, system
-  content     String   @db.Text
-  
-  // Rich content
-  contentType String   @default("text")  // text, code, diagram, suggestion
-  
-  // Metadata
-  metadata    Json     @default("{}")  // { tokensUsed, model, etc. }
-  
-  // For assistant messages - what triggered it
-  triggerType String?  // question, hint_request, feedback, explanation
-  
-  // Feedback on assistant messages
+  role        String
+  content     String
+  contentType String          @default("text")
+  metadata    Json            @default("{}")
+  triggerType String?
   helpful     Boolean?
-  
-  createdAt   DateTime @default(now())
-  
+  createdAt   DateTime        @default(now())
+  session     CoachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
   @@index([sessionId])
   @@index([role])
 }
 
-// ============================================
-// Quizzes
-// ============================================
-
-// Quiz for a scenario
 model Quiz {
-  id          String   @id @default(cuid())
-  
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  // Quiz metadata
-  title       String
-  description String?
-  
-  // Quiz settings
-  quizType    String   @default("standard")  // standard, timed, adaptive
-  timeLimit   Int?     // Minutes (null = no limit)
-  passingScore Int     @default(70)  // Percentage to pass
-  
-  // Question settings
-  questionCount Int    @default(10)
-  shuffleQuestions Boolean @default(true)
-  shuffleOptions Boolean @default(true)
-  showExplanations Boolean @default(true)  // After answering
-  
-  // Generation info
-  generatedBy String   @default("ai")
-  aiModel     String?
-  
-  // Difficulty distribution
-  difficultyMix Json   @default("{\"easy\": 30, \"medium\": 50, \"hard\": 20}")
-  
-  // Stats
-  totalAttempts Int    @default(0)
-  avgScore      Float  @default(0)
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  questions   QuizQuestion[]
-  attempts    QuizAttempt[]
-  
+  id               String          @id @default(cuid())
+  scenarioId       String
+  title            String
+  description      String?
+  quizType         String          @default("standard")
+  timeLimit        Int?
+  passingScore     Int             @default(70)
+  questionCount    Int             @default(10)
+  shuffleQuestions Boolean         @default(true)
+  shuffleOptions   Boolean         @default(true)
+  showExplanations Boolean         @default(true)
+  generatedBy      String          @default("ai")
+  aiModel          String?
+  difficultyMix    Json            @default("{\"easy\": 30, \"hard\": 20, \"medium\": 50}")
+  totalAttempts    Int             @default(0)
+  avgScore         Float           @default(0)
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  scenario         AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  attempts         QuizAttempt[]
+  questions        QuizQuestion[]
+
   @@index([scenarioId])
 }
 
-// Quiz question
 model QuizQuestion {
-  id          String   @id @default(cuid())
-  
-  quizId      String
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  
-  // Question content
-  question    String   @db.Text
-  questionType String  @default("multiple_choice")  // multiple_choice, multi_select, true_false, free_text, code
-  
-  // For code questions
-  codeLanguage String?  // terraform, python, yaml, json
-  codeSnippet String?   @db.Text
-  
-  // Options (for choice questions)
-  options     Json     @default("[]")  // [{ id, text, isCorrect }]
-  
-  // For free text - expected answer patterns
-  expectedAnswer String? @db.Text
-  answerPatterns Json   @default("[]")  // Regex patterns for grading
-  
-  // Explanation shown after answering
-  explanation String?  @db.Text
-  
-  // Metadata
-  difficulty  String   @default("medium")
-  points      Int      @default(10)
-  awsServices Json     @default("[]")
-  tags        Json     @default("[]")
-  
-  // Ordering
-  orderIndex  Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  answers     QuizAnswer[]
-  
+  id             String       @id @default(cuid())
+  quizId         String
+  question       String
+  questionType   String       @default("multiple_choice")
+  codeLanguage   String?
+  codeSnippet    String?
+  options        Json         @default("[]")
+  expectedAnswer String?
+  answerPatterns Json         @default("[]")
+  explanation    String?
+  difficulty     String       @default("medium")
+  points         Int          @default(10)
+  awsServices    Json         @default("[]")
+  tags           Json         @default("[]")
+  orderIndex     Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  answers        QuizAnswer[]
+  quiz           Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
   @@index([quizId])
   @@index([difficulty])
 }
 
-// User's quiz attempt
 model QuizAttempt {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  quizId      String
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  
-  // Attempt status
-  status      String   @default("in_progress")  // in_progress, completed, abandoned, timed_out
-  
-  // Scoring
-  score       Float    @default(0)  // Percentage
-  pointsEarned Int     @default(0)
-  maxPoints   Int      @default(0)
-  
-  // Question tracking
-  questionsAnswered Int @default(0)
-  questionsCorrect  Int @default(0)
-  totalQuestions    Int @default(0)
-  
-  // Time tracking
-  startedAt   DateTime @default(now())
-  completedAt DateTime?
-  timeSpentSeconds Int @default(0)
-  
-  // Pass/fail
-  passed      Boolean?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  answers     QuizAnswer[]
-  
+  id                String             @id @default(cuid())
+  profileId         String
+  quizId            String
+  status            String             @default("in_progress")
+  score             Float              @default(0)
+  pointsEarned      Int                @default(0)
+  maxPoints         Int                @default(0)
+  questionsAnswered Int                @default(0)
+  questionsCorrect  Int                @default(0)
+  totalQuestions    Int                @default(0)
+  startedAt         DateTime           @default(now())
+  completedAt       DateTime?
+  timeSpentSeconds  Int                @default(0)
+  passed            Boolean?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  answers           QuizAnswer[]
+  profile           AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  quiz              Quiz               @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
   @@index([profileId])
   @@index([quizId])
   @@index([status])
 }
 
-// User's answer to a quiz question
 model QuizAnswer {
-  id          String   @id @default(cuid())
-  
-  attemptId   String
-  attempt     QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  
-  questionId  String
-  question    QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  
-  // User's answer
-  selectedOptions Json   @default("[]")  // [optionId, ...] for choice questions
-  textAnswer  String?    @db.Text        // For free text questions
-  
-  // Grading
-  isCorrect   Boolean?
-  pointsAwarded Int     @default(0)
-  
-  // AI grading for free text
-  aiGradingScore Float?
-  aiGradingFeedback String? @db.Text
-  
-  // Time spent on this question
-  timeSpentSeconds Int  @default(0)
-  
-  answeredAt  DateTime @default(now())
-  
+  id                String       @id @default(cuid())
+  attemptId         String
+  questionId        String
+  selectedOptions   Json         @default("[]")
+  textAnswer        String?
+  isCorrect         Boolean?
+  pointsAwarded     Int          @default(0)
+  aiGradingScore    Float?
+  aiGradingFeedback String?
+  timeSpentSeconds  Int          @default(0)
+  answeredAt        DateTime     @default(now())
+  attempt           QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question          QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
   @@unique([attemptId, questionId])
   @@index([attemptId])
   @@index([questionId])
 }
 
-// ============================================
-// Custom User Locations (Any business on map)
-// ============================================
-
-// User-created location (corner shop, any business)
 model CustomLocation {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  tenantId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyTenant
+  id              String             @id @default(cuid())
+  profileId       String
+  tenantId        String?
   academyTenantId String?
-  academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
-  
-  // Location info (from Google Places or user input)
-  placeId     String?  // Google Places ID
-  name        String
-  address     String?
-  
-  // Geo
-  lat         Float
-  lng         Float
-  
-  // Business info (researched by AI)
-  businessType String?
-  industry    String?
-  description String?  @db.Text
-  
-  // Research results (cached)
-  researchData Json?   // Full research from Learning Agent
-  researchedAt DateTime?
-  
-  // Display
-  icon        String   @default("📍")
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  scenarios   CustomScenario[]
-  
+  placeId         String?
+  name            String
+  address         String?
+  lat             Float
+  lng             Float
+  businessType    String?
+  industry        String?
+  description     String?
+  researchData    Json?
+  researchedAt    DateTime?
+  icon            String             @default("📍")
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  academyTenant   AcademyTenant?     @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
+  profile         AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  scenarios       CustomScenario[]
+
   @@index([profileId])
   @@index([tenantId])
   @@index([academyTenantId])
   @@index([placeId])
 }
 
-// Scenario generated for a custom location
 model CustomScenario {
-  id          String   @id @default(cuid())
-  
-  locationId  String
-  location    CustomLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  
-  profileId   String
-  tenantId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyTenant
-  academyTenantId String?
-  academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
-  
-  // Scenario content (same structure as AcademyScenario)
-  title       String
-  description String   @db.Text
-  businessContext String @db.Text
-  difficulty  String
-  
-  // Requirements
-  technicalRequirements Json @default("[]")
-  complianceRequirements Json @default("[]")
-  constraints Json     @default("[]")
-  learningObjectives Json @default("[]")
-  tags        Json     @default("[]")
-  
-  // Time & scoring
-  estimatedMinutes Int @default(60)
-  maxPoints   Int      @default(1000)
-  
-  // Company research (from Learning Agent)
-  companyInfo Json?
-  
-  // Generation info
-  generatedBy String   @default("learning_agent")
-  aiModel     String?
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  challenges  CustomChallenge[]
-  flashcardDecks CustomFlashcardDeck[]
-  studyNotes  CustomStudyNotes[]
-  quizzes     CustomQuiz[]
-  coachingSessions CustomCoachingSession[]
-  attempts    CustomScenarioAttempt[]
-  
+  id                     String                  @id @default(cuid())
+  locationId             String
+  profileId              String
+  tenantId               String?
+  academyTenantId        String?
+  title                  String
+  description            String
+  businessContext        String
+  difficulty             String
+  technicalRequirements  Json                    @default("[]")
+  complianceRequirements Json                    @default("[]")
+  constraints            Json                    @default("[]")
+  learningObjectives     Json                    @default("[]")
+  tags                   Json                    @default("[]")
+  estimatedMinutes       Int                     @default(60)
+  maxPoints              Int                     @default(1000)
+  companyInfo            Json?
+  generatedBy            String                  @default("learning_agent")
+  aiModel                String?
+  isActive               Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  challenges             CustomChallenge[]
+  coachingSessions       CustomCoachingSession[]
+  flashcardDecks         CustomFlashcardDeck[]
+  quizzes                CustomQuiz[]
+  academyTenant          AcademyTenant?          @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
+  location               CustomLocation          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  attempts               CustomScenarioAttempt[]
+  studyNotes             CustomStudyNotes[]
+
   @@index([locationId])
   @@index([profileId])
   @@index([tenantId])
   @@index([academyTenantId])
 }
 
-// Challenge within a custom scenario
 model CustomChallenge {
-  id          String   @id @default(cuid())
-  
-  scenarioId  String
-  scenario    CustomScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  // Challenge content
-  title       String
-  description String   @db.Text
-  difficulty  String
-  orderIndex  Int      @default(0)
-  
-  // Scoring
-  points      Int      @default(100)
-  bonusPoints Int      @default(0)
-  
-  // Content
-  hints       Json     @default("[]")
-  successCriteria Json @default("[]")
-  awsServices Json     @default("[]")
-  
-  // Time
-  estimatedMinutes Int @default(15)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  progress    CustomChallengeProgress[]
-  
+  id               String                    @id @default(cuid())
+  scenarioId       String
+  title            String
+  description      String
+  difficulty       String
+  orderIndex       Int                       @default(0)
+  points           Int                       @default(100)
+  bonusPoints      Int                       @default(0)
+  hints            Json                      @default("[]")
+  successCriteria  Json                      @default("[]")
+  awsServices      Json                      @default("[]")
+  estimatedMinutes Int                       @default(15)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  scenario         CustomScenario            @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  progress         CustomChallengeProgress[]
+
   @@index([scenarioId])
 }
 
-// User's attempt at a custom scenario
 model CustomScenarioAttempt {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  scenarioId  String
-  scenario    CustomScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  tenantId    String?  // Legacy - to be removed
-  
-  // New: Reference to AcademyTenant
-  academyTenantId String?
-  academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
-  
-  // Status
-  status      String   @default("in_progress")
-  
-  // Timestamps
-  startedAt   DateTime @default(now())
-  lastActivityAt DateTime @default(now())
-  completedAt DateTime?
-  
-  // Scoring
-  pointsEarned Int     @default(0)
-  maxPoints   Int      @default(0)
-  
-  // Time
-  activeTimeMinutes Int @default(0)
-  
-  // Learning mode progress
-  flashcardsCompleted Boolean @default(false)
-  notesCompleted      Boolean @default(false)
-  quizCompleted       Boolean @default(false)
-  chatUsed            Boolean @default(false)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  challengeProgress CustomChallengeProgress[]
-  
+  id                  String                    @id @default(cuid())
+  profileId           String
+  scenarioId          String
+  tenantId            String?
+  academyTenantId     String?
+  status              String                    @default("in_progress")
+  startedAt           DateTime                  @default(now())
+  lastActivityAt      DateTime                  @default(now())
+  completedAt         DateTime?
+  pointsEarned        Int                       @default(0)
+  maxPoints           Int                       @default(0)
+  activeTimeMinutes   Int                       @default(0)
+  flashcardsCompleted Boolean                   @default(false)
+  notesCompleted      Boolean                   @default(false)
+  quizCompleted       Boolean                   @default(false)
+  chatUsed            Boolean                   @default(false)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  challengeProgress   CustomChallengeProgress[]
+  academyTenant       AcademyTenant?            @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
+  scenario            CustomScenario            @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
   @@index([profileId])
   @@index([scenarioId])
   @@index([tenantId])
   @@index([academyTenantId])
 }
 
-// Progress on custom challenge
 model CustomChallengeProgress {
-  id          String   @id @default(cuid())
-  
-  attemptId   String
-  attempt     CustomScenarioAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  
-  challengeId String
-  challenge   CustomChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  
-  // Status
-  status      String   @default("locked")
-  
-  // Timestamps
-  startedAt   DateTime?
-  completedAt DateTime?
-  
-  // Scoring
-  pointsEarned Int     @default(0)
-  hintsUsed   Int      @default(0)
-  
-  // Time
-  timeSpentMinutes Int @default(0)
-  
-  // Solution
-  solution    Json?
-  feedback    Json?
-  
+  id               String                @id @default(cuid())
+  attemptId        String
+  challengeId      String
+  status           String                @default("locked")
+  startedAt        DateTime?
+  completedAt      DateTime?
+  pointsEarned     Int                   @default(0)
+  hintsUsed        Int                   @default(0)
+  timeSpentMinutes Int                   @default(0)
+  solution         Json?
+  feedback         Json?
+  attempt          CustomScenarioAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  challenge        CustomChallenge       @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
   @@unique([attemptId, challengeId])
   @@index([challengeId])
 }
 
-// ============================================
-// Custom Location Learning Content
-// (Mirrors the main models but for custom locations)
-// ============================================
-
 model CustomFlashcardDeck {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   scenarioId  String
-  scenario    CustomScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
   title       String
   description String?
-  generatedBy String   @default("ai")
-  totalCards  Int      @default(0)
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  generatedBy String            @default("ai")
+  totalCards  Int               @default(0)
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   cards       CustomFlashcard[]
-  
+  scenario    CustomScenario    @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
   @@index([scenarioId])
 }
 
 model CustomFlashcard {
-  id          String   @id @default(cuid())
+  id          String              @id @default(cuid())
   deckId      String
+  front       String
+  back        String
+  frontType   String              @default("text")
+  backType    String              @default("text")
+  tags        Json                @default("[]")
+  difficulty  String              @default("medium")
+  awsServices Json                @default("[]")
+  orderIndex  Int                 @default(0)
+  createdAt   DateTime            @default(now())
   deck        CustomFlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  
-  front       String   @db.Text
-  back        String   @db.Text
-  frontType   String   @default("text")
-  backType    String   @default("text")
-  tags        Json     @default("[]")
-  difficulty  String   @default("medium")
-  awsServices Json     @default("[]")
-  orderIndex  Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  
+
   @@index([deckId])
 }
 
 model CustomStudyNotes {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   scenarioId  String
-  scenario    CustomScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
   title       String
-  content     String   @db.Text
-  sections    Json     @default("[]")
-  generatedBy String   @default("ai")
-  awsServices Json     @default("[]")
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  content     String
+  sections    Json           @default("[]")
+  generatedBy String         @default("ai")
+  awsServices Json           @default("[]")
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  scenario    CustomScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
   @@index([scenarioId])
 }
 
 model CustomQuiz {
-  id          String   @id @default(cuid())
-  scenarioId  String
-  scenario    CustomScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  title       String
-  description String?
-  quizType    String   @default("standard")
-  timeLimit   Int?
-  passingScore Int     @default(70)
-  questionCount Int    @default(10)
-  generatedBy String   @default("ai")
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  questions   CustomQuizQuestion[]
-  
+  id            String               @id @default(cuid())
+  scenarioId    String
+  title         String
+  description   String?
+  quizType      String               @default("standard")
+  timeLimit     Int?
+  passingScore  Int                  @default(70)
+  questionCount Int                  @default(10)
+  generatedBy   String               @default("ai")
+  isActive      Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  scenario      CustomScenario       @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  questions     CustomQuizQuestion[]
+
   @@index([scenarioId])
 }
 
 model CustomQuizQuestion {
-  id          String   @id @default(cuid())
-  quizId      String
-  quiz        CustomQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  
-  question    String   @db.Text
-  questionType String  @default("multiple_choice")
-  options     Json     @default("[]")
-  explanation String?  @db.Text
-  difficulty  String   @default("medium")
-  points      Int      @default(10)
-  awsServices Json     @default("[]")
-  orderIndex  Int      @default(0)
-  
-  createdAt   DateTime @default(now())
-  
+  id           String     @id @default(cuid())
+  quizId       String
+  question     String
+  questionType String     @default("multiple_choice")
+  options      Json       @default("[]")
+  explanation  String?
+  difficulty   String     @default("medium")
+  points       Int        @default(10)
+  awsServices  Json       @default("[]")
+  orderIndex   Int        @default(0)
+  createdAt    DateTime   @default(now())
+  quiz         CustomQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
   @@index([quizId])
 }
 
 model CustomCoachingSession {
-  id          String   @id @default(cuid())
-  profileId   String
-  scenarioId  String
-  scenario    CustomScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
-  title       String   @default("Coaching Session")
-  status      String   @default("active")
-  messageCount Int     @default(0)
-  
-  startedAt   DateTime @default(now())
+  id            String                  @id @default(cuid())
+  profileId     String
+  scenarioId    String
+  title         String                  @default("Coaching Session")
+  status        String                  @default("active")
+  messageCount  Int                     @default(0)
+  startedAt     DateTime                @default(now())
   lastMessageAt DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  messages    CustomCoachingMessage[]
-  
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  messages      CustomCoachingMessage[]
+  scenario      CustomScenario          @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
   @@index([profileId])
   @@index([scenarioId])
 }
 
 model CustomCoachingMessage {
-  id          String   @id @default(cuid())
+  id          String                @id @default(cuid())
   sessionId   String
-  session     CustomCoachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  
   role        String
-  content     String   @db.Text
-  contentType String   @default("text")
-  metadata    Json     @default("{}")
-  
-  createdAt   DateTime @default(now())
-  
+  content     String
+  contentType String                @default("text")
+  metadata    Json                  @default("{}")
+  createdAt   DateTime              @default(now())
+  session     CustomCoachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
   @@index([sessionId])
 }
 
-// ============================================
-// CloudAcademy - RAG Knowledge Base
-// AWS & Migration Expert Knowledge
-// ============================================
-
-// Knowledge source - mirrors crawl4ai "sources" table structure
-// Separate from main crawled_pages - this is for agent learning knowledge
 model AcademyKnowledgeSource {
-  id              String   @id  // source_id (domain/path)
-  
-  // Core fields matching crawl4ai sources
-  summary         String?  @db.Text
-  totalWordCount  Int      @default(0)
-  
-  // Extended metadata for learning context
-  title           String?
-  category        String?  // aws_service, migration, architecture, etc.
-  awsServices     Json     @default("[]")
-  tags            Json     @default("[]")
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  chunks          AcademyKnowledgeChunk[]
-  codeExamples    AcademyCodeExample[]
-  
+  id             String                  @id
+  summary        String?
+  totalWordCount Int                     @default(0)
+  title          String?
+  category       String?
+  awsServices    Json                    @default("[]")
+  tags           Json                    @default("[]")
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  codeExamples   AcademyCodeExample[]
+  chunks         AcademyKnowledgeChunk[]
+
   @@index([category])
 }
 
-// Knowledge chunk - mirrors crawl4ai "crawled_pages" table structure
-// Separate table for agent learning knowledge
 model AcademyKnowledgeChunk {
-  id          Int      @id @default(autoincrement())
-  
-  // Core fields matching crawl4ai crawled_pages
+  id          Int                    @id @default(autoincrement())
   url         String
   chunkNumber Int
-  content     String   @db.Text
-  metadata    Json     @default("{}")
+  content     String
+  metadata    Json                   @default("{}")
   sourceId    String
+  embedding   Unsupported("vector")?
+  createdAt   DateTime               @default(now())
   source      AcademyKnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  
-  // Vector embedding for semantic search (same dimension as crawl4ai)
-  embedding   Unsupported("vector(1536)")?
-  
-  createdAt   DateTime @default(now())
-  
+
   @@unique([url, chunkNumber])
   @@index([sourceId])
   @@index([url])
 }
 
-// Code examples - mirrors crawl4ai "code_examples" table structure
 model AcademyCodeExample {
-  id          Int      @id @default(autoincrement())
-  
+  id          Int                    @id @default(autoincrement())
   url         String
   chunkNumber Int
-  content     String   @db.Text  // The code
-  summary     String   @db.Text  // AI summary of the code
-  metadata    Json     @default("{}")
+  content     String
+  summary     String
+  metadata    Json                   @default("{}")
   sourceId    String
+  embedding   Unsupported("vector")?
+  createdAt   DateTime               @default(now())
   source      AcademyKnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  
-  // Vector embedding
-  embedding   Unsupported("vector(1536)")?
-  
-  createdAt   DateTime @default(now())
-  
+
   @@unique([url, chunkNumber])
   @@index([sourceId])
 }
 
-// Pre-built Q&A pairs for common questions
 model AcademyKnowledgeQA {
-  id          String   @id @default(cuid())
-  
-  // Question
-  question    String   @db.Text
-  questionVariants Json @default("[]")  // Alternative phrasings
-  
-  // Answer
-  answer      String   @db.Text
-  
-  // Categorization
-  category    String   // aws_service, migration, architecture, troubleshooting
-  awsServices Json     @default("[]")
-  migrationCategories Json @default("[]")
-  tags        Json     @default("[]")
-  
-  // Difficulty
-  difficulty  String   @default("intermediate")
-  
-  // Source references
-  sourceChunkIds Json  @default("[]")  // Links to knowledge chunks
-  externalLinks Json   @default("[]")  // [{ title, url }]
-  
-  // Quality
-  isVerified  Boolean  @default(false)
-  upvotes     Int      @default(0)
-  downvotes   Int      @default(0)
-  
-  // Embedding for semantic matching
-  embedding   Unsupported("vector(1536)")?
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id                  String                 @id @default(cuid())
+  question            String
+  questionVariants    Json                   @default("[]")
+  answer              String
+  category            String
+  awsServices         Json                   @default("[]")
+  migrationCategories Json                   @default("[]")
+  tags                Json                   @default("[]")
+  difficulty          String                 @default("intermediate")
+  sourceChunkIds      Json                   @default("[]")
+  externalLinks       Json                   @default("[]")
+  isVerified          Boolean                @default(false)
+  upvotes             Int                    @default(0)
+  downvotes           Int                    @default(0)
+  embedding           Unsupported("vector")?
+  isActive            Boolean                @default(true)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
   @@index([category])
   @@index([isActive])
 }
 
-// AWS Service reference - structured data about each service
 model AWSServiceReference {
-  id          String   @id @default(cuid())
-  
-  // Service identification
-  serviceName String   @unique  // "EC2", "S3", "Lambda"
-  serviceCode String   @unique  // "ec2", "s3", "lambda"
-  fullName    String   // "Amazon Elastic Compute Cloud"
-  
-  // Categorization
-  category    String   // compute, storage, database, networking, security, etc.
-  
-  // Description
-  shortDescription String
-  fullDescription String? @db.Text
-  
-  // Use cases
-  useCases    Json     @default("[]")  // ["web hosting", "batch processing"]
-  
-  // Migration mapping (on-prem equivalents)
-  onPremEquivalents Json @default("[]")  // ["VMware", "Hyper-V", "physical servers"]
-  migrationCategory String?  // Maps to your 12 categories
-  
-  // Pricing model
-  pricingModel String?  // on_demand, reserved, spot, free_tier
-  hasFreeeTier Boolean @default(false)
-  
-  // Compliance
-  complianceCertifications Json @default("[]")  // ["HIPAA", "PCI-DSS", "SOC2"]
-  
-  // Related services
-  relatedServices Json  @default("[]")  // ["EBS", "ELB", "Auto Scaling"]
-  
-  // Documentation links
-  docsUrl     String?
-  pricingUrl  String?
-  
-  // Icon/branding
-  iconUrl     String?
-  color       String?  // Brand color hex
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id                       String   @id @default(cuid())
+  serviceName              String   @unique
+  serviceCode              String   @unique
+  fullName                 String
+  category                 String
+  shortDescription         String
+  fullDescription          String?
+  useCases                 Json     @default("[]")
+  onPremEquivalents        Json     @default("[]")
+  migrationCategory        String?
+  pricingModel             String?
+  hasFreeeTier             Boolean  @default(false)
+  complianceCertifications Json     @default("[]")
+  relatedServices          Json     @default("[]")
+  docsUrl                  String?
+  pricingUrl               String?
+  iconUrl                  String?
+  color                    String?
+  isActive                 Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
   @@index([category])
   @@index([migrationCategory])
 }
 
-// Migration pattern templates
 model MigrationPattern {
-  id          String   @id @default(cuid())
-  
-  // Pattern identification
-  name        String
-  slug        String   @unique
-  
-  // What it migrates
-  sourceType  String   // "vmware_vm", "sql_server", "file_share", etc.
-  targetService String // "EC2", "RDS", "FSx"
-  
-  // Categorization
-  migrationCategory String  // One of your 12 categories
-  
-  // Description
-  shortDescription String
-  fullDescription String @db.Text
-  
-  // The pattern
-  steps       Json     // [{ order, title, description, awsServices, estimatedTime }]
-  
-  // Prerequisites
-  prerequisites Json   @default("[]")
-  
-  // AWS services involved
-  awsServices Json     @default("[]")
-  
-  // Complexity & time
-  complexity  String   @default("medium")  // low, medium, high, expert
-  estimatedHours Int?
-  
-  // Risks and considerations
-  risks       Json     @default("[]")
-  considerations Json  @default("[]")
-  
-  // Cost factors
-  costFactors Json     @default("[]")
-  
-  // Success criteria
-  successCriteria Json @default("[]")
-  
-  // Related patterns
-  relatedPatterns Json @default("[]")
-  
-  // Diagram/architecture
-  architectureDiagram String? @db.Text  // Mermaid or similar
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  sourceType          String
+  targetService       String
+  migrationCategory   String
+  shortDescription    String
+  fullDescription     String
+  steps               Json
+  prerequisites       Json     @default("[]")
+  awsServices         Json     @default("[]")
+  complexity          String   @default("medium")
+  estimatedHours      Int?
+  risks               Json     @default("[]")
+  considerations      Json     @default("[]")
+  costFactors         Json     @default("[]")
+  successCriteria     Json     @default("[]")
+  relatedPatterns     Json     @default("[]")
+  architectureDiagram String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
   @@index([migrationCategory])
   @@index([sourceType])
   @@index([targetService])
 }
 
-// Well-Architected Framework reference
 model WellArchitectedPrinciple {
-  id          String   @id @default(cuid())
-  
-  // Pillar
-  pillar      String   // operational_excellence, security, reliability, 
-                       // performance_efficiency, cost_optimization, sustainability
-  
-  // Principle
-  name        String
-  slug        String   @unique
-  description String   @db.Text
-  
-  // Best practices
-  bestPractices Json   @default("[]")  // [{ title, description, services }]
-  
-  // Anti-patterns
-  antiPatterns Json    @default("[]")
-  
-  // Questions to ask
-  reviewQuestions Json @default("[]")
-  
-  // Related AWS services
-  awsServices Json     @default("[]")
-  
-  // Documentation
-  docsUrl     String?
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  
+  id              String   @id @default(cuid())
+  pillar          String
+  name            String
+  slug            String   @unique
+  description     String
+  bestPractices   Json     @default("[]")
+  antiPatterns    Json     @default("[]")
+  reviewQuestions Json     @default("[]")
+  awsServices     Json     @default("[]")
+  docsUrl         String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
   @@index([pillar])
 }

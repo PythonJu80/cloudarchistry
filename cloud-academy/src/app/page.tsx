@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserNav } from "@/components/user-nav";
+import { NavbarAvatar } from "@/components/navbar";
 
 const features = [
   {
@@ -74,12 +75,10 @@ export default async function Home() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-              <Globe className="w-6 h-6 text-white" />
-            </div>
+          <Link href="/" className="flex items-center gap-2">
+            <NavbarAvatar />
             <span className="text-xl font-bold">CloudAcademy</span>
-          </div>
+          </Link>
           <div className="hidden md:flex items-center gap-8">
             <Link href="/world" className="text-muted-foreground hover:text-foreground transition-colors">
               World Map

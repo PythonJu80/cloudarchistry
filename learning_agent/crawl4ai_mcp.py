@@ -3085,6 +3085,234 @@ Return JSON with: score (0-100), passed (boolean), strengths (list), improvement
     }
 
 
+# ============================================
+# ARCHITECTURE DIAGRAM AUDITING
+# ============================================
+
+class DiagramNode(BaseModel):
+    """A node in the architecture diagram"""
+    id: str
+    type: str  # AWS service type (ec2, rds, vpc, etc.)
+    label: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
+    parent_id: Optional[str] = None  # Which container this node is inside
+    position: Optional[Dict[str, float]] = None  # x, y coordinates
+
+class DiagramConnection(BaseModel):
+    """A connection between nodes"""
+    from_node: str = Field(alias="from")
+    to_node: str = Field(alias="to")
+    
+    class Config:
+        populate_by_name = True
+
+class AuditDiagramRequest(BaseModel):
+    """Request to audit an architecture diagram"""
+    nodes: List[DiagramNode]
+    connections: List[DiagramConnection]
+    challenge_id: Optional[str] = None
+    challenge_title: Optional[str] = None
+    challenge_brief: Optional[str] = None
+    expected_services: Optional[List[str]] = None  # AWS services expected in solution
+    session_id: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+class AuditDiagramResponse(BaseModel):
+    """Structured response from diagram audit"""
+    score: int = Field(ge=0, le=100, description="Score out of 100")
+    correct: List[str] = Field(description="What the user got right")
+    missing: List[str] = Field(description="What's missing from the architecture")
+    suggestions: List[str] = Field(description="Specific improvement suggestions")
+    feedback: str = Field(description="Overall feedback paragraph")
+    session_id: Optional[str] = None
+
+
+DIAGRAM_AUDIT_PROMPT = """You are Sophia, an expert AWS Solutions Architect coaching a learner on their architecture diagram.
+
+## Challenge Context
+Title: {challenge_title}
+Brief: {challenge_brief}
+Expected AWS Services: {expected_services}
+
+## User's Architecture Diagram
+```json
+{diagram_json}
+```
+
+## Understanding the Diagram Structure
+The diagram data shows:
+- **architecture_hierarchy**: Nested structure showing what's INSIDE what (e.g., EC2 inside Subnet inside VPC)
+- **all_nodes**: Flat list with "inside" field showing parent container
+- **connections**: Data flow/dependencies between services
+
+**CRITICAL: Analyze the NESTING carefully!**
+- Is the database inside a PRIVATE subnet? (security best practice)
+- Are web servers in a PUBLIC subnet with the load balancer?
+- Is there proper network isolation (VPC → Subnets → Security Groups)?
+- Are global services (S3, CloudFront, DynamoDB) correctly OUTSIDE the VPC?
+
+## CRITICAL COACHING RULES
+You are a COACH, not a cheat sheet. You must NEVER give away answers directly.
+
+**NEVER say things like:**
+- "Add an Application Load Balancer"
+- "You're missing Auto Scaling"
+- "Move RDS to a private subnet"
+- "Add a NAT Gateway"
+
+**INSTEAD, guide them to discover the answer:**
+- "What happens when traffic spikes? How would your single EC2 handle 10x the load?"
+- "If one instance fails, what happens to your users? Think about resilience..."
+- "Look at where your database is placed - who can reach it from the internet right now?"
+- "Think about the network path - how does traffic flow from users to your app to your data?"
+- "Consider the blast radius - if this subnet is compromised, what else is exposed?"
+
+## Your Coaching Approach
+1. **Analyze the hierarchy** - is the nesting correct for security/best practices?
+2. **Ask leading questions** that make them think about placement
+3. **Describe the PROBLEM**, not the solution
+4. **Use scenarios**: "Imagine if a hacker..." or "What happens when..."
+5. **Celebrate correct nesting** - "Good job putting X inside Y!"
+
+## Response Format
+Return ONLY valid JSON (no markdown, no explanation outside JSON):
+{{
+  "score": <0-100>,
+  "correct": ["things they got right - especially correct PLACEMENT/NESTING"],
+  "missing": ["describe the GAP or PROBLEM, not the solution - focus on placement issues"],
+  "suggestions": ["coaching questions about WHERE things should be, not WHAT to add"],
+  "feedback": "2-3 sentence coaching message - acknowledge progress, hint at placement/nesting issues"
+}}
+
+Remember: A good coach helps learners discover answers themselves. The "aha!" moment is theirs to have."""
+
+
+@app.post("/api/learning/audit-diagram", response_model=AuditDiagramResponse)
+async def audit_diagram_endpoint(request: AuditDiagramRequest):
+    """
+    Audit a user's AWS architecture diagram.
+    
+    Analyzes the diagram against challenge requirements and returns
+    structured feedback with score, correct elements, missing elements,
+    and suggestions for improvement.
+    """
+    try:
+        # Set request-scoped API key and model if provided (BYOK)
+        from utils import set_request_api_key, set_request_model
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        # Build hierarchical structure for the agent to understand nesting
+        # First, create a lookup of all nodes
+        nodes_by_id = {n.id: n for n in request.nodes}
+        
+        # Build the hierarchy - group children under parents
+        def build_node_data(node: DiagramNode) -> Dict:
+            data = {
+                "id": node.id,
+                "type": node.type,
+                "label": node.label,
+            }
+            if node.config:
+                data["config"] = node.config
+            if node.parent_id:
+                data["inside"] = node.parent_id  # More readable than parent_id
+            return data
+        
+        # Separate into containers and resources for clearer structure
+        containers = [n for n in request.nodes if n.type in ("vpc", "subnet", "subnet-public", "subnet-private", "security-group", "auto-scaling")]
+        resources = [n for n in request.nodes if n not in containers]
+        
+        # Build a hierarchical view
+        hierarchy = {}
+        for node in request.nodes:
+            if not node.parent_id:
+                # Top-level node
+                if node.id not in hierarchy:
+                    hierarchy[node.id] = {"node": build_node_data(node), "children": []}
+            else:
+                # Child node - add to parent's children
+                if node.parent_id not in hierarchy:
+                    parent = nodes_by_id.get(node.parent_id)
+                    if parent:
+                        hierarchy[node.parent_id] = {"node": build_node_data(parent), "children": []}
+                if node.parent_id in hierarchy:
+                    hierarchy[node.parent_id]["children"].append(build_node_data(node))
+        
+        # Prepare diagram JSON for the prompt
+        diagram_data = {
+            "architecture_hierarchy": [
+                {
+                    **h["node"],
+                    "contains": h["children"] if h["children"] else None
+                }
+                for h in hierarchy.values()
+            ],
+            "all_nodes": [build_node_data(n) for n in request.nodes],
+            "connections": [
+                {"from": c.from_node, "to": c.to_node}
+                for c in request.connections
+            ]
+        }
+        
+        # Build the audit prompt
+        system_prompt = DIAGRAM_AUDIT_PROMPT.format(
+            challenge_title=request.challenge_title or "AWS Architecture Challenge",
+            challenge_brief=request.challenge_brief or "Design a secure, scalable AWS architecture.",
+            expected_services=", ".join(request.expected_services) if request.expected_services else "Not specified",
+            diagram_json=json.dumps(diagram_data, indent=2),
+        )
+        
+        # Get OpenAI client using request-scoped key
+        from utils import get_request_api_key, get_request_model
+        api_key = get_request_api_key()
+        if not api_key:
+            raise HTTPException(status_code=402, detail="OpenAI API key required. Please configure your API key in Settings.")
+        
+        client = AsyncOpenAI(api_key=api_key)
+        model = get_request_model() or "gpt-4o"
+        
+        # Call OpenAI for structured audit
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": "Audit this architecture diagram and return JSON."},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,  # Lower temperature for consistent scoring
+        )
+        
+        # Parse response
+        result_text = response.choices[0].message.content
+        result = json.loads(result_text)
+        
+        # Ensure all required fields
+        audit_result = AuditDiagramResponse(
+            score=result.get("score", 50),
+            correct=result.get("correct", []),
+            missing=result.get("missing", []),
+            suggestions=result.get("suggestions", []),
+            feedback=result.get("feedback", "Unable to generate feedback."),
+            session_id=request.session_id,
+        )
+        
+        logger.info(f"Diagram audit complete: score={audit_result.score}, nodes={len(request.nodes)}")
+        return audit_result
+        
+    except Exception as e:
+        logger.error(f"Diagram audit error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clear request-scoped context
+        from utils import set_request_api_key, set_request_model
+        set_request_api_key(None)
+        set_request_model(None)
+
+
 class ChallengeQuestionsRequest(BaseModel):
     """Request to generate questions for a specific challenge"""
     challenge: Dict[str, Any]  # id, title, description, hints, success_criteria, aws_services_relevant

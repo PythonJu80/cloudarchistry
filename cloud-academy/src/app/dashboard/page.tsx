@@ -196,6 +196,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [avatar, setAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -205,6 +206,11 @@ export default function DashboardPage() {
 
     if (status === "authenticated") {
       fetchDashboardData();
+      // Load avatar from localStorage
+      const localAvatar = localStorage.getItem("academy-avatar");
+      if (localAvatar) {
+        setAvatar(localAvatar);
+      }
     }
   }, [status, router]);
 
@@ -216,6 +222,10 @@ export default function DashboardPage() {
       }
       const dashboardData = await response.json();
       setData(dashboardData);
+      // Set avatar from profile if no local avatar
+      if (!localStorage.getItem("academy-avatar") && dashboardData.profile?.avatarUrl) {
+        setAvatar(dashboardData.profile.avatarUrl);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -268,9 +278,18 @@ export default function DashboardPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-              <Globe className="w-6 h-6 text-white" />
-            </div>
+            {avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatar}
+                alt="Profile"
+                className="w-10 h-10 rounded-xl object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                <Globe className="w-6 h-6 text-white" />
+              </div>
+            )}
             <span className="text-xl font-bold">CloudAcademy</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">

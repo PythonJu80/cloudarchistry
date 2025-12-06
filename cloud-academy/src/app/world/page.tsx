@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { type SubscriptionTier, getTierFeatures, getUpgradeMessage } from "@/lib/academy/services/subscription";
 import { ScenarioGenerationModal } from "@/components/world/scenario-generation-modal";
 import { ChallengeWorkspaceModal } from "@/components/world/challenge-workspace-modal";
+import { NavbarAvatar } from "@/components/navbar";
 
 // Dynamically import map components to avoid SSR issues
 const Globe3D = dynamic(() => import("@/components/world/globe-3d"), {
@@ -654,15 +655,18 @@ export default function WorldPage() {
   const [userApiKey, setUserApiKey] = useState<string | null>(null);
   const [preferredModel, setPreferredModel] = useState<string | null>(null);
   
-  // Fetch target cert and API key from database on mount
+  // Fetch target cert, skill level, and API key from database on mount
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        // Fetch cert
+        // Fetch cert and skill level from profile
         const certRes = await fetch("/api/profile/certification");
         const certData = await certRes.json();
         if (certData.targetCertification) {
           setSelectedCert(certData.targetCertification);
+        }
+        if (certData.skillLevel) {
+          setSelectedSkillLevel(certData.skillLevel as "beginner" | "intermediate" | "advanced" | "expert");
         }
         
         // Fetch API key (encrypted, returned decrypted for use)
@@ -692,6 +696,20 @@ export default function WorldPage() {
       });
     } catch (err) {
       console.error("Failed to save cert:", err);
+    }
+  };
+  
+  // Save skill level to database when changed
+  const handleSkillLevelChange = async (level: "beginner" | "intermediate" | "advanced" | "expert") => {
+    setSelectedSkillLevel(level);
+    try {
+      await fetch("/api/profile/certification", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skillLevel: level }),
+      });
+    } catch (err) {
+      console.error("Failed to save skill level:", err);
     }
   };
   
@@ -755,8 +773,8 @@ export default function WorldPage() {
             <div className="p-4 border-b border-border/50">
               <div className="flex items-center justify-between mb-4">
                 <Link href="/" className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-                    <Globe className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 rounded-lg overflow-hidden">
+                    <NavbarAvatar />
                   </div>
                   <span className="font-bold">CloudAcademy</span>
                 </Link>
@@ -1148,7 +1166,7 @@ export default function WorldPage() {
                     <span className="text-sm text-muted-foreground">Skill Level:</span>
                     <select
                       value={selectedSkillLevel}
-                      onChange={(e) => setSelectedSkillLevel(e.target.value as "beginner" | "intermediate" | "advanced" | "expert")}
+                      onChange={(e) => handleSkillLevelChange(e.target.value as "beginner" | "intermediate" | "advanced" | "expert")}
                       className={cn(
                         "text-xs px-2 py-1 rounded-full border cursor-pointer appearance-none pr-6 [&>option]:bg-zinc-900 [&>option]:text-white",
                         selectedSkillLevel === "beginner" && "border-green-500/50 bg-green-500/20 text-green-400",

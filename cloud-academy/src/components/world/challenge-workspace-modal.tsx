@@ -21,18 +21,40 @@ import {
   Clock,
   RotateCcw,
   PenTool,
-  Move,
-  Square,
-  Server,
-  Database,
-  Cloud,
-  Shield,
-  ZoomIn,
-  ZoomOut,
-  Trash2,
-  Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
+import type { DiagramData, AuditResult } from "@/components/diagram";
+import { Terminal } from "lucide-react";
+
+// Dynamically import AwsTerminal to avoid SSR issues
+const AwsTerminal = dynamic(
+  () => import("@/components/diagram").then((mod) => mod.AwsTerminal),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+      </div>
+    ),
+  }
+);
+
+// Dynamically import DiagramCanvas to avoid SSR issues with React Flow
+const DiagramCanvas = dynamic(
+  () => import("@/components/diagram").then((mod) => mod.DiagramCanvas),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex-1 flex items-center justify-center bg-slate-950">
+        <div className="text-center text-slate-500">
+          <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin" />
+          <p className="text-sm">Loading diagram canvas...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 interface Challenge {
   id: string;
@@ -147,7 +169,31 @@ export function ChallengeWorkspaceModal({
 
   // Workspace mode: questions or drawing (brief always visible)
   const [workspaceMode, setWorkspaceMode] = useState<"questions" | "drawing">("questions");
-  const [selectedTool, setSelectedTool] = useState<"select" | "vpc" | "ec2" | "rds" | "s3" | "lambda">("select");
+  
+  // Diagram state
+  const [diagramData, setDiagramData] = useState<DiagramData | null>(null);
+  const [diagramSessionId, setDiagramSessionId] = useState<string | undefined>();
+  const [lastAuditResult, setLastAuditResult] = useState<AuditResult | null>(null);
+  
+  // Right panel state (chat or terminal)
+  const [rightPanelTab, setRightPanelTab] = useState<"chat" | "terminal">("chat");
+  const [hasAwsCredentials, setHasAwsCredentials] = useState(false);
+  
+  // Check AWS credentials on mount
+  useEffect(() => {
+    const checkAwsCredentials = async () => {
+      try {
+        const res = await fetch("/api/settings/aws");
+        if (res.ok) {
+          const data = await res.json();
+          setHasAwsCredentials(data.hasCredentials || false);
+        }
+      } catch {
+        // Ignore errors
+      }
+    };
+    checkAwsCredentials();
+  }, []);
 
   // Hint state per question
   const [revealedQuestionHints, setRevealedQuestionHints] = useState<Set<string>>(new Set());
@@ -215,6 +261,11 @@ export function ChallengeWorkspaceModal({
           if (a.hintUsed) hintsSet.add(a.questionId);
         });
         setRevealedQuestionHints(hintsSet);
+        
+        // Restore diagram data if present
+        if (saved.diagramData) {
+          setDiagramData(saved.diagramData);
+        }
         
         setIsLoadingQuestions(false);
         return;
@@ -842,152 +893,137 @@ export function ChallengeWorkspaceModal({
                   </>
                 )}
 
-                {/* DRAWING MODE */}
+                {/* DRAWING MODE - Full React Flow Diagram Canvas */}
                 {workspaceMode === "drawing" && (
-                  <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Drawing Toolbar */}
-                    <div className="shrink-0 flex items-center gap-1 p-2 border-b border-slate-800 bg-slate-950/50">
-                      <Button
-                        variant={selectedTool === "select" ? "secondary" : "ghost"}
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSelectedTool("select")}
-                        title="Select & Move"
-                      >
-                        <Move className="w-4 h-4" />
-                      </Button>
-                      <div className="w-px h-6 bg-slate-700 mx-1" />
-                      <Button
-                        variant={selectedTool === "vpc" ? "secondary" : "ghost"}
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSelectedTool("vpc")}
-                        title="VPC"
-                      >
-                        <Square className="w-4 h-4 text-purple-400" />
-                      </Button>
-                      <Button
-                        variant={selectedTool === "ec2" ? "secondary" : "ghost"}
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSelectedTool("ec2")}
-                        title="EC2 Instance"
-                      >
-                        <Server className="w-4 h-4 text-orange-400" />
-                      </Button>
-                      <Button
-                        variant={selectedTool === "rds" ? "secondary" : "ghost"}
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSelectedTool("rds")}
-                        title="RDS Database"
-                      >
-                        <Database className="w-4 h-4 text-blue-400" />
-                      </Button>
-                      <Button
-                        variant={selectedTool === "s3" ? "secondary" : "ghost"}
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSelectedTool("s3")}
-                        title="S3 Bucket"
-                      >
-                        <Cloud className="w-4 h-4 text-green-400" />
-                      </Button>
-                      <Button
-                        variant={selectedTool === "lambda" ? "secondary" : "ghost"}
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSelectedTool("lambda")}
-                        title="Lambda Function"
-                      >
-                        <Globe className="w-4 h-4 text-amber-400" />
-                      </Button>
-                      <div className="flex-1" />
-                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Zoom In">
-                        <ZoomIn className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Zoom Out">
-                        <ZoomOut className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-300" title="Clear Canvas">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    {/* Canvas Area */}
-                    <div className="flex-1 relative bg-slate-950 overflow-hidden">
-                      {/* Grid background */}
-                      <div 
-                        className="absolute inset-0 opacity-20"
-                        style={{
-                          backgroundImage: `
-                            linear-gradient(to right, #334155 1px, transparent 1px),
-                            linear-gradient(to bottom, #334155 1px, transparent 1px)
-                          `,
-                          backgroundSize: "20px 20px",
-                        }}
-                      />
-                      
-                      {/* Canvas placeholder */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center text-slate-500">
-                          <Shield className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                          <p className="text-lg font-medium mb-2">Architecture Canvas</p>
-                          <p className="text-sm">Design your solution by dragging AWS components</p>
-                          <p className="text-xs mt-2 text-slate-600">Use the toolbar above to add services</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Relevant Services Footer */}
-                    <div className="shrink-0 p-3 border-t border-slate-800 bg-slate-900/50">
-                      <p className="text-xs text-slate-500 mb-2">Suggested services for this challenge:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {challenge.aws_services_relevant?.map((service, i) => (
-                          <span key={i} className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer transition-colors">
-                            {service}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="flex-1 overflow-hidden">
+                    <DiagramCanvas
+                      initialData={diagramData || undefined}
+                      challengeContext={{
+                        challengeId: challenge.id,
+                        challengeTitle: challenge.title,
+                        challengeBrief: questionsData?.brief || challenge.description,
+                        awsServices: challenge.aws_services_relevant,
+                      }}
+                      sessionId={diagramSessionId}
+                      apiKey={apiKey || undefined}
+                      preferredModel={preferredModel || undefined}
+                      onSave={(data) => {
+                        setDiagramData(data);
+                        // Also save to challenge progress
+                        if (attemptId && challenge.id) {
+                          // Build answers array from current state
+                          const answersArray = Object.entries(answers)
+                            .filter(([, state]) => state.isSubmitted)
+                            .map(([questionId, state]) => ({
+                              questionId,
+                              selectedOptionId: state.selectedOptionId,
+                              isCorrect: state.isCorrect || false,
+                              pointsEarned: state.isCorrect ? 20 : 0,
+                              hintUsed: revealedQuestionHints.has(questionId),
+                              answeredAt: new Date().toISOString(),
+                            }));
+                          
+                          fetch("/api/challenge/progress", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              attemptId,
+                              challengeId: challenge.id,
+                              answers: answersArray,
+                              totalPointsEarned: earnedPoints,
+                              hintsUsed: revealedQuestionHints.size,
+                              isComplete: false,
+                              diagramData: data,
+                              questionsData: questionsData ? {
+                                brief: questionsData.brief,
+                                questions: questionsData.questions,
+                                totalPoints: questionsData.total_points,
+                                estimatedTimeMinutes: questionsData.estimated_time_minutes,
+                              } : undefined,
+                            }),
+                          }).catch(console.error);
+                        }
+                      }}
+                      onAuditComplete={(result) => {
+                        setLastAuditResult(result);
+                        // Update session ID for continuity
+                        if (!diagramSessionId) {
+                          setDiagramSessionId(`diagram-${challenge.id}-${Date.now()}`);
+                        }
+                      }}
+                    />
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Right side - Collapsible Chat */}
+          {/* Right side - Collapsible Panel (Chat + Terminal) */}
           <div className={cn(
             "flex flex-col border-l border-slate-800 transition-all duration-300 overflow-hidden",
-            isChatOpen ? "w-[340px] bg-slate-900" : "w-12 bg-slate-950"
+            isChatOpen ? "w-[380px] bg-slate-900" : "w-12 bg-slate-950"
           )}>
-            {/* Chat toggle / header */}
+            {/* Panel toggle / header */}
             <div className="h-12 flex items-center justify-between px-3 border-b border-slate-800 shrink-0">
               {isChatOpen ? (
                 <>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-sm font-medium">Sophia</span>
-                    <span className="text-xs text-slate-500">AI Coach</span>
+                  {/* Tab buttons */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setRightPanelTab("chat")}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors",
+                        rightPanelTab === "chat" 
+                          ? "bg-cyan-500/20 text-cyan-400" 
+                          : "text-slate-400 hover:text-slate-300 hover:bg-slate-800"
+                      )}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      Chat
+                    </button>
+                    <button
+                      onClick={() => setRightPanelTab("terminal")}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors",
+                        rightPanelTab === "terminal" 
+                          ? "bg-green-500/20 text-green-400" 
+                          : "text-slate-400 hover:text-slate-300 hover:bg-slate-800"
+                      )}
+                    >
+                      <Terminal className="w-3.5 h-3.5" />
+                      AWS CLI
+                    </button>
                   </div>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsChatOpen(false)}>
                     <PanelRightClose className="w-4 h-4" />
                   </Button>
                 </>
               ) : (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-10 w-10 mx-auto"
-                  onClick={() => setIsChatOpen(true)}
-                >
-                  <MessageCircle className="w-5 h-5 text-cyan-400" />
-                </Button>
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-9 w-9"
+                    onClick={() => { setIsChatOpen(true); setRightPanelTab("chat"); }}
+                    title="AI Coach"
+                  >
+                    <MessageCircle className="w-4 h-4 text-cyan-400" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-9 w-9"
+                    onClick={() => { setIsChatOpen(true); setRightPanelTab("terminal"); }}
+                    title="AWS Terminal"
+                  >
+                    <Terminal className="w-4 h-4 text-green-400" />
+                  </Button>
+                </div>
               )}
             </div>
 
-            {/* Chat content */}
-            {isChatOpen && (
+            {/* Panel content */}
+            {isChatOpen && rightPanelTab === "chat" && (
               <>
                 <div className="flex-1 p-3 overflow-y-auto">
                   {messages.length === 0 ? (
@@ -1055,6 +1091,65 @@ export function ChallengeWorkspaceModal({
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Terminal content */}
+            {isChatOpen && rightPanelTab === "terminal" && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <AwsTerminal
+                  className="flex-1 rounded-none border-0"
+                  hasAwsCredentials={hasAwsCredentials}
+                  onCommandExecuted={(cmd, output) => {
+                    console.log(`[AWS CLI] ${cmd}`, output);
+                  }}
+                />
+                
+                {/* Quick actions */}
+                <div className="p-2 border-t border-slate-800 bg-slate-900/50">
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      onClick={() => {
+                        // This would trigger the terminal to run this command
+                        const event = new CustomEvent("aws-terminal-command", { 
+                          detail: "aws sts get-caller-identity" 
+                        });
+                        window.dispatchEvent(event);
+                      }}
+                      className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-slate-300 hover:bg-slate-700"
+                    >
+                      Verify Credentials
+                    </button>
+                    <button
+                      onClick={() => {
+                        const event = new CustomEvent("aws-terminal-command", { 
+                          detail: "aws ec2 describe-vpcs" 
+                        });
+                        window.dispatchEvent(event);
+                      }}
+                      className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-slate-300 hover:bg-slate-700"
+                    >
+                      List VPCs
+                    </button>
+                    <button
+                      onClick={() => {
+                        const event = new CustomEvent("aws-terminal-command", { 
+                          detail: "aws s3 ls" 
+                        });
+                        window.dispatchEvent(event);
+                      }}
+                      className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-slate-300 hover:bg-slate-700"
+                    >
+                      List S3 Buckets
+                    </button>
+                  </div>
+                  
+                  {!hasAwsCredentials && (
+                    <p className="text-[10px] text-amber-400 mt-2">
+                      ⚠️ Add AWS credentials in Settings to run commands
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

@@ -12,6 +12,11 @@ interface QuestionAnswer {
   answeredAt: string;
 }
 
+interface DiagramData {
+  nodes: unknown[];
+  edges: unknown[];
+}
+
 interface ProgressUpdate {
   attemptId: string;
   challengeId: string;
@@ -25,6 +30,7 @@ interface ProgressUpdate {
     totalPoints: number;
     estimatedTimeMinutes: number;
   };
+  diagramData?: DiagramData;
 }
 
 /**
@@ -52,6 +58,7 @@ export async function POST(request: NextRequest) {
       hintsUsed, 
       isComplete,
       questionsData,
+      diagramData,
     } = body;
 
     if (!attemptId || !challengeId) {
@@ -80,6 +87,7 @@ export async function POST(request: NextRequest) {
     const solutionData = JSON.parse(JSON.stringify({
       answers,
       questionsData,
+      diagramData,  // Include diagram data in solution
       lastUpdated: new Date().toISOString(),
     }));
 
@@ -259,6 +267,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Extract diagramData from solution if present
+    const solution = progress.solution as { diagramData?: DiagramData; answers?: QuestionAnswer[] } | null;
+    
     return NextResponse.json({
       exists: true,
       progress: {
@@ -268,6 +279,7 @@ export async function GET(request: NextRequest) {
         hintsUsed: progress.hintsUsed,
         attemptsCount: progress.attemptsCount,
         solution: progress.solution,
+        diagramData: solution?.diagramData || null,  // Extract for easy access
         startedAt: progress.startedAt,
         completedAt: progress.completedAt,
       },
