@@ -3,8 +3,8 @@
 /**
  * Service Picker Sidebar
  * 
- * Displays AWS services organized by category for drag-and-drop onto the canvas.
- * Supports user-defined custom services that persist in localStorage.
+ * Canva/Draw.io style sidebar with icon strip navigation.
+ * Displays AWS services, shapes, styles, and controls.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -56,9 +56,26 @@ import {
   Maximize,
   MousePointer2,
   RotateCcw,
+  // New icons for sidebar tabs
+  LayoutGrid,
+  Shapes,
+  Palette,
+  Type,
+  Minus,
+  Circle,
+  Square,
+  Triangle,
+  ArrowRight,
+  MoveHorizontal,
+  Hexagon,
+  Star,
+  PenTool,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+// Sidebar tab types
+type SidebarTab = "services" | "shapes" | "style" | "controls";
 
 // Local storage key for custom services
 const CUSTOM_SERVICES_KEY = "cloud-academy-custom-services";
@@ -196,7 +213,10 @@ export function ServicePicker({
     new Set() // All categories collapsed by default
   );
   
-  // Sidebar view state
+  // Main sidebar tab (icon strip)
+  const [activeTab, setActiveTab] = useState<SidebarTab>("services");
+  
+  // Sub-view within each tab
   const [sidebarView, setSidebarView] = useState<SidebarView>("services");
   
   // Custom services state
@@ -333,366 +353,501 @@ export function ServicePicker({
   };
 
   // ========================================
-  // CONTROLS VIEW - Compact icon-based like Canva
+  // RENDER ADD SERVICE PANEL
   // ========================================
-  if (sidebarView === "controls") {
-    return (
-      <div className="w-56 bg-slate-900 border-r border-slate-800 flex flex-col h-full">
-        {/* Header */}
-        <div className="p-3 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSidebarView("services")}
-              className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <h3 className="text-sm font-medium text-slate-200">Controls</h3>
-          </div>
-        </div>
-
-        {/* Compact Controls */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          {/* History Row */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">History</p>
-            <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1">
-              <button
-                onClick={onUndo}
-                disabled={!canUndo}
-                className={cn(
-                  "flex-1 h-8 rounded flex items-center justify-center transition-colors",
-                  canUndo ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
-                )}
-                title="Undo (Ctrl+Z)"
-              >
-                <Undo2 className="w-4 h-4" />
-              </button>
-              <div className="w-px h-5 bg-slate-700" />
-              <button
-                onClick={onRedo}
-                disabled={!canRedo}
-                className={cn(
-                  "flex-1 h-8 rounded flex items-center justify-center transition-colors",
-                  canRedo ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
-                )}
-                title="Redo (Ctrl+Y)"
-              >
-                <Redo2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Edit Row */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">Edit</p>
-            <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1">
-              <button
-                onClick={onCopy}
-                disabled={!hasSelection}
-                className={cn(
-                  "flex-1 h-8 rounded flex items-center justify-center transition-colors",
-                  hasSelection ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
-                )}
-                title="Copy (Ctrl+C)"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-              <div className="w-px h-5 bg-slate-700" />
-              <button
-                onClick={onPaste}
-                className="flex-1 h-8 rounded flex items-center justify-center hover:bg-slate-700 text-slate-300 transition-colors"
-                title="Paste (Ctrl+V)"
-              >
-                <Clipboard className="w-4 h-4" />
-              </button>
-              <div className="w-px h-5 bg-slate-700" />
-              <button
-                onClick={onDuplicate}
-                disabled={!hasSelection}
-                className={cn(
-                  "flex-1 h-8 rounded flex items-center justify-center transition-colors",
-                  hasSelection ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
-                )}
-                title="Duplicate (Ctrl+D)"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-              <div className="w-px h-5 bg-slate-700" />
-              <button
-                onClick={onDelete}
-                disabled={!hasSelection}
-                className={cn(
-                  "flex-1 h-8 rounded flex items-center justify-center transition-colors",
-                  hasSelection ? "hover:bg-red-900/50 text-red-400" : "text-slate-600 cursor-not-allowed"
-                )}
-                title="Delete (Del)"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* View Row */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">View</p>
-            <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1">
-              <button
-                onClick={onToggleGrid}
-                className={cn(
-                  "flex-1 h-8 rounded flex items-center justify-center transition-colors",
-                  showGrid ? "bg-cyan-500/20 text-cyan-400" : "hover:bg-slate-700 text-slate-300"
-                )}
-                title="Toggle Grid"
-              >
-                <Grid3X3 className="w-4 h-4" />
-              </button>
-              <div className="w-px h-5 bg-slate-700" />
-              <button
-                onClick={onZoomOut}
-                className="flex-1 h-8 rounded flex items-center justify-center hover:bg-slate-700 text-slate-300 transition-colors"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <span className="text-[10px] text-slate-400 w-10 text-center">{zoomLevel}%</span>
-              <button
-                onClick={onZoomIn}
-                className="flex-1 h-8 rounded flex items-center justify-center hover:bg-slate-700 text-slate-300 transition-colors"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-              <div className="w-px h-5 bg-slate-700" />
-              <button
-                onClick={onFitView}
-                className="flex-1 h-8 rounded flex items-center justify-center hover:bg-slate-700 text-slate-300 transition-colors"
-                title="Fit to View"
-              >
-                <Maximize className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Selection */}
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">Selection</p>
-            <button
-              onClick={onSelectAll}
-              className="w-full h-8 rounded bg-slate-800/50 flex items-center justify-center gap-2 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
-              title="Select All (Ctrl+A)"
-            >
-              <MousePointer2 className="w-3.5 h-3.5" />
-              Select All
-            </button>
-          </div>
-
-          {/* Clear */}
-          <div className="pt-2 border-t border-slate-800">
-            <button
-              onClick={onClear}
-              className="w-full h-8 rounded bg-slate-800/50 flex items-center justify-center gap-2 hover:bg-red-900/30 text-red-400 text-xs transition-colors"
-              title="Clear Canvas"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Clear All
-            </button>
-          </div>
-        </div>
-
-        {/* Shortcuts */}
-        <div className="p-2 border-t border-slate-800">
-          <div className="text-[9px] text-slate-600 space-y-0.5">
-            <p>⌘Z Undo • ⌘Y Redo • ⌘C Copy</p>
-            <p>⌘V Paste • ⌘D Duplicate • Del Delete</p>
-          </div>
+  const renderAddServicePanel = () => (
+    <div className="flex-1 flex flex-col h-full bg-slate-900">
+      {/* Header - Add Service Mode */}
+      <div className="p-3 border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSidebarView("services")}
+            className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <h3 className="text-sm font-medium text-slate-200">Add Custom Service</h3>
         </div>
       </div>
-    );
-  }
 
-  // ========================================
-  // ADD SERVICE VIEW
-  // ========================================
-  if (sidebarView === "add") {
-    return (
-      <div className="w-56 bg-slate-900 border-r border-slate-800 flex flex-col h-full">
-        {/* Header - Add Service Mode */}
-        <div className="p-3 border-b border-slate-800">
-          <div className="flex items-center gap-2 mb-3">
-            <button
-              onClick={() => setSidebarView("services")}
-              className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <h3 className="text-sm font-medium text-slate-200">Add Custom Service</h3>
-          </div>
+      {/* Add Service Form */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-[10px] text-slate-500 uppercase tracking-wider">Service Name</label>
+          <Input
+            value={newService.name}
+            onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="e.g., Amazon MQ"
+            className="h-8 text-xs bg-slate-800 border-slate-700 text-slate-200"
+          />
         </div>
-
-        {/* Add Service Form */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Service Name</label>
-            <Input
-              value={newService.name}
-              onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., Amazon MQ"
-              className="h-8 text-xs bg-slate-800 border-slate-700 text-slate-200"
-            />
-          </div>
-          
-          <div className="space-y-1.5">
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Short Name</label>
-            <Input
-              value={newService.shortName}
-              onChange={(e) => setNewService(prev => ({ ...prev, shortName: e.target.value }))}
-              placeholder="e.g., MQ"
-              className="h-8 text-xs bg-slate-800 border-slate-700 text-slate-200"
-            />
-          </div>
-          
-          <div className="space-y-1.5">
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Category</label>
-            <select
-              value={newService.category}
-              onChange={(e) => setNewService(prev => ({ ...prev, category: e.target.value as AWSCategory }))}
-              className="w-full h-8 px-2 rounded-md bg-slate-800 border border-slate-700 text-slate-200 text-xs"
-            >
-              {AWS_CATEGORIES.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="space-y-1.5">
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Search AWS Icon</label>
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-              <Input
-                value={iconSearchQuery}
-                onChange={(e) => setIconSearchQuery(e.target.value)}
-                placeholder="Search icons (e.g., Lambda, SageMaker)..."
-                className="h-8 pl-7 text-xs bg-slate-800 border-slate-700 text-slate-200"
-              />
-            </div>
-            
-            {/* Selected Icon Preview */}
-            {selectedIcon && (
-              <div className="flex items-center gap-2 p-2 rounded bg-cyan-500/10 border border-cyan-500/30">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={selectedIcon.iconPath} 
-                  alt={selectedIcon.name} 
-                  className="w-8 h-8"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-cyan-300 truncate">{selectedIcon.name}</p>
-                  <p className="text-[10px] text-slate-500">{selectedIcon.category}</p>
-                </div>
-                <button
-                  onClick={() => setSelectedIcon(null)}
-                  className="text-slate-500 hover:text-red-400"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-            
-            {/* Icon Search Results */}
-            {isSearchingIcons && (
-              <div className="text-xs text-slate-500 text-center py-2">Searching...</div>
-            )}
-            
-            {!isSearchingIcons && iconSearchResults.length > 0 && !selectedIcon && (
-              <div className="max-h-32 overflow-y-auto space-y-1 border border-slate-700 rounded p-1 bg-slate-800/50">
-                {iconSearchResults.map((icon) => (
-                  <button
-                    key={icon.id}
-                    onClick={() => {
-                      setSelectedIcon(icon);
-                      setIconSearchResults([]);
-                    }}
-                    className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-slate-700 transition-colors"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={icon.iconPath} 
-                      alt={icon.name} 
-                      className="w-6 h-6"
-                    />
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="text-xs text-slate-200 truncate">{icon.name}</p>
-                      <p className="text-[9px] text-slate-500">{icon.category}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            
-            {!isSearchingIcons && iconSearchQuery.length >= 2 && iconSearchResults.length === 0 && !selectedIcon && (
-              <p className="text-xs text-slate-500 text-center py-2">No icons found</p>
-            )}
-          </div>
-          
-          <div className="space-y-1.5">
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider">Description</label>
-            <Input
-              value={newService.description}
-              onChange={(e) => setNewService(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description..."
-              className="h-8 text-xs bg-slate-800 border-slate-700 text-slate-200"
-            />
-          </div>
+        
+        <div className="space-y-1.5">
+          <label className="text-[10px] text-slate-500 uppercase tracking-wider">Short Name</label>
+          <Input
+            value={newService.shortName}
+            onChange={(e) => setNewService(prev => ({ ...prev, shortName: e.target.value }))}
+            placeholder="e.g., MQ"
+            className="h-8 text-xs bg-slate-800 border-slate-700 text-slate-200"
+          />
         </div>
-
-        {/* Save Button */}
-        <div className="p-3 border-t border-slate-800">
-          <Button
-            onClick={handleAddService}
-            disabled={!newService.name.trim() || !newService.shortName.trim() || !selectedIcon}
-            className="w-full h-8 text-xs bg-cyan-600 hover:bg-cyan-700 gap-1.5"
+        
+        <div className="space-y-1.5">
+          <label className="text-[10px] text-slate-500 uppercase tracking-wider">Category</label>
+          <select
+            value={newService.category}
+            onChange={(e) => setNewService(prev => ({ ...prev, category: e.target.value as AWSCategory }))}
+            className="w-full h-8 px-2 rounded-md bg-slate-800 border border-slate-700 text-slate-200 text-xs"
           >
-            <Save className="w-3.5 h-3.5" />
-            Save Service
-          </Button>
-          {!selectedIcon && newService.name.trim() && (
-            <p className="text-[10px] text-amber-400 text-center mt-2">Search and select an icon above</p>
+            {AWS_CATEGORIES.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="space-y-1.5">
+          <label className="text-[10px] text-slate-500 uppercase tracking-wider">Search AWS Icon</label>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+            <Input
+              value={iconSearchQuery}
+              onChange={(e) => setIconSearchQuery(e.target.value)}
+              placeholder="Search icons..."
+              className="h-8 pl-7 text-xs bg-slate-800 border-slate-700 text-slate-200"
+            />
+          </div>
+          
+          {/* Selected Icon Preview */}
+          {selectedIcon && (
+            <div className="flex items-center gap-2 p-2 rounded bg-cyan-500/10 border border-cyan-500/30">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={selectedIcon.iconPath} alt={selectedIcon.name} className="w-8 h-8" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-cyan-300 truncate">{selectedIcon.name}</p>
+                <p className="text-[10px] text-slate-500">{selectedIcon.category}</p>
+              </div>
+              <button onClick={() => setSelectedIcon(null)} className="text-slate-500 hover:text-red-400">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+          
+          {/* Icon Search Results */}
+          {isSearchingIcons && <div className="text-xs text-slate-500 text-center py-2">Searching...</div>}
+          
+          {!isSearchingIcons && iconSearchResults.length > 0 && !selectedIcon && (
+            <div className="max-h-32 overflow-y-auto space-y-1 border border-slate-700 rounded p-1 bg-slate-800/50">
+              {iconSearchResults.map((icon) => (
+                <button
+                  key={icon.id}
+                  onClick={() => { setSelectedIcon(icon); setIconSearchResults([]); }}
+                  className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-slate-700 transition-colors"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={icon.iconPath} alt={icon.name} className="w-6 h-6" />
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-xs text-slate-200 truncate">{icon.name}</p>
+                    <p className="text-[9px] text-slate-500">{icon.category}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {!isSearchingIcons && iconSearchQuery.length >= 2 && iconSearchResults.length === 0 && !selectedIcon && (
+            <p className="text-xs text-slate-500 text-center py-2">No icons found</p>
           )}
         </div>
+        
+        <div className="space-y-1.5">
+          <label className="text-[10px] text-slate-500 uppercase tracking-wider">Description</label>
+          <Input
+            value={newService.description}
+            onChange={(e) => setNewService(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Brief description..."
+            className="h-8 text-xs bg-slate-800 border-slate-700 text-slate-200"
+          />
+        </div>
       </div>
-    );
-  }
+
+      {/* Save Button */}
+      <div className="p-3 border-t border-slate-800">
+        <Button
+          onClick={handleAddService}
+          disabled={!newService.name.trim() || !newService.shortName.trim() || !selectedIcon}
+          className="w-full h-8 text-xs bg-cyan-600 hover:bg-cyan-700 gap-1.5"
+        >
+          <Save className="w-3.5 h-3.5" />
+          Save Service
+        </Button>
+        {!selectedIcon && newService.name.trim() && (
+          <p className="text-[10px] text-amber-400 text-center mt-2">Search and select an icon above</p>
+        )}
+      </div>
+    </div>
+  );
 
   // ========================================
-  // SERVICES VIEW (Default)
+  // RENDER SHAPES PANEL
   // ========================================
-  return (
-    <div className="w-56 bg-slate-900 border-r border-slate-800 flex flex-col h-full">
+  const renderShapesPanel = () => (
+    <div className="flex-1 flex flex-col h-full bg-slate-900">
+      <div className="p-3 border-b border-slate-800">
+        <h3 className="text-sm font-medium text-slate-200">Shapes & Elements</h3>
+        <p className="text-[10px] text-slate-500 mt-1">Drag shapes onto the canvas</p>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {/* Basic Shapes */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Basic Shapes</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { icon: Square, label: "Rectangle", id: "rect" },
+              { icon: Circle, label: "Circle", id: "circle" },
+              { icon: Triangle, label: "Triangle", id: "triangle" },
+              { icon: Hexagon, label: "Hexagon", id: "hexagon" },
+            ].map(({ icon: Icon, label, id }) => (
+              <button
+                key={id}
+                className="aspect-square rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
+                title={label}
+              >
+                <Icon className="w-5 h-5" />
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Connectors */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Connectors</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { icon: ArrowRight, label: "Arrow", id: "arrow" },
+              { icon: Minus, label: "Line", id: "line" },
+              { icon: MoveHorizontal, label: "Double Arrow", id: "double-arrow" },
+              { icon: PenTool, label: "Curve", id: "curve" },
+            ].map(({ icon: Icon, label, id }) => (
+              <button
+                key={id}
+                className="aspect-square rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
+                title={label}
+              >
+                <Icon className="w-5 h-5" />
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Text & Labels */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Text & Labels</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-colors text-xs">
+              <Type className="w-4 h-4" />
+              Text Box
+            </button>
+            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-colors text-xs">
+              <Star className="w-4 h-4" />
+              Note
+            </button>
+          </div>
+        </div>
+        
+        {/* AWS Groups */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">AWS Groups</p>
+          <div className="space-y-1">
+            {[
+              { label: "AWS Cloud", color: "#232F3E" },
+              { label: "Region", color: "#147EBA" },
+              { label: "Availability Zone", color: "#147EBA" },
+              { label: "VPC", color: "#8C4FFF" },
+              { label: "Security Group", color: "#DD344C" },
+            ].map(({ label, color }) => (
+              <button
+                key={label}
+                className="w-full h-9 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center gap-2 px-3 text-slate-300 hover:text-slate-100 transition-colors text-xs"
+              >
+                <div className="w-4 h-4 rounded border-2" style={{ borderColor: color }} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ========================================
+  // RENDER STYLE PANEL
+  // ========================================
+  const renderStylePanel = () => (
+    <div className="flex-1 flex flex-col h-full bg-slate-900">
+      <div className="p-3 border-b border-slate-800">
+        <h3 className="text-sm font-medium text-slate-200">Style & Colors</h3>
+        <p className="text-[10px] text-slate-500 mt-1">Customize appearance</p>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {/* Background Colors */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Background</p>
+          <div className="grid grid-cols-6 gap-1.5">
+            {[
+              "#0f172a", "#1e293b", "#334155", "#475569",
+              "#ffffff", "#f1f5f9", "#e2e8f0", "#cbd5e1",
+              "#fef3c7", "#fde68a", "#fcd34d", "#fbbf24",
+              "#dcfce7", "#bbf7d0", "#86efac", "#4ade80",
+              "#dbeafe", "#bfdbfe", "#93c5fd", "#60a5fa",
+              "#f3e8ff", "#e9d5ff", "#d8b4fe", "#c084fc",
+            ].map((color) => (
+              <button
+                key={color}
+                className="aspect-square rounded-md border border-slate-700 hover:scale-110 transition-transform"
+                style={{ backgroundColor: color }}
+                title={color}
+              />
+            ))}
+          </div>
+        </div>
+        
+        {/* Border Colors */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Border Color</p>
+          <div className="grid grid-cols-6 gap-1.5">
+            {[
+              "#22d3ee", "#06b6d4", "#0891b2", "#0e7490",
+              "#a855f7", "#9333ea", "#7c3aed", "#6d28d9",
+              "#f97316", "#ea580c", "#dc2626", "#b91c1c",
+              "#22c55e", "#16a34a", "#15803d", "#166534",
+              "#64748b", "#475569", "#334155", "#1e293b",
+              "#fbbf24", "#f59e0b", "#d97706", "#b45309",
+            ].map((color) => (
+              <button
+                key={color}
+                className="aspect-square rounded-md border-2 hover:scale-110 transition-transform"
+                style={{ borderColor: color, backgroundColor: "transparent" }}
+                title={color}
+              />
+            ))}
+          </div>
+        </div>
+        
+        {/* Border Style */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Border Style</p>
+          <div className="grid grid-cols-3 gap-2">
+            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+              <div className="w-8 h-0 border-t-2 border-slate-400" />
+            </button>
+            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+              <div className="w-8 h-0 border-t-2 border-dashed border-slate-400" />
+            </button>
+            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+              <div className="w-8 h-0 border-t-2 border-dotted border-slate-400" />
+            </button>
+          </div>
+        </div>
+        
+        {/* Opacity */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Opacity</p>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            defaultValue="100"
+            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  // ========================================
+  // RENDER CONTROLS PANEL
+  // ========================================
+  const renderControlsPanel = () => (
+    <div className="flex-1 flex flex-col h-full bg-slate-900">
+      <div className="p-3 border-b border-slate-800">
+        <h3 className="text-sm font-medium text-slate-200">Controls</h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {/* History Row */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">History</p>
+          <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className={cn(
+                "flex-1 h-8 rounded flex items-center justify-center transition-colors",
+                canUndo ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-slate-700" />
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className={cn(
+                "flex-1 h-8 rounded flex items-center justify-center transition-colors",
+                canRedo ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Redo (Ctrl+Y)"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Edit Row */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">Edit</p>
+          <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1">
+            <button
+              onClick={onCopy}
+              disabled={!hasSelection}
+              className={cn(
+                "flex-1 h-8 rounded flex items-center justify-center transition-colors",
+                hasSelection ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Copy (Ctrl+C)"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-slate-700" />
+            <button
+              onClick={onPaste}
+              className="flex-1 h-8 rounded flex items-center justify-center hover:bg-slate-700 text-slate-300 transition-colors"
+              title="Paste (Ctrl+V)"
+            >
+              <Clipboard className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-slate-700" />
+            <button
+              onClick={onDuplicate}
+              disabled={!hasSelection}
+              className={cn(
+                "flex-1 h-8 rounded flex items-center justify-center transition-colors",
+                hasSelection ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Duplicate (Ctrl+D)"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-slate-700" />
+            <button
+              onClick={onDelete}
+              disabled={!hasSelection}
+              className={cn(
+                "flex-1 h-8 rounded flex items-center justify-center transition-colors",
+                hasSelection ? "hover:bg-red-900/50 text-red-400" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Delete (Del)"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* View Row */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">View</p>
+          <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1">
+            <button
+              onClick={onToggleGrid}
+              className={cn(
+                "flex-1 h-8 rounded flex items-center justify-center transition-colors",
+                showGrid ? "bg-cyan-500/20 text-cyan-400" : "hover:bg-slate-700 text-slate-300"
+              )}
+              title="Toggle Grid"
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-slate-700" />
+            <button
+              onClick={onZoomOut}
+              className="flex-1 h-8 rounded flex items-center justify-center hover:bg-slate-700 text-slate-300 transition-colors"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="text-[10px] text-slate-400 w-10 text-center">{zoomLevel}%</span>
+            <button
+              onClick={onZoomIn}
+              className="flex-1 h-8 rounded flex items-center justify-center hover:bg-slate-700 text-slate-300 transition-colors"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-slate-700" />
+            <button
+              onClick={onFitView}
+              className="flex-1 h-8 rounded flex items-center justify-center hover:bg-slate-700 text-slate-300 transition-colors"
+              title="Fit to View"
+            >
+              <Maximize className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Selection */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">Selection</p>
+          <button
+            onClick={onSelectAll}
+            className="w-full h-8 rounded bg-slate-800/50 flex items-center justify-center gap-2 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+            title="Select All (Ctrl+A)"
+          >
+            <MousePointer2 className="w-3.5 h-3.5" />
+            Select All
+          </button>
+        </div>
+
+        {/* Clear */}
+        <div className="pt-2 border-t border-slate-800">
+          <button
+            onClick={onClear}
+            className="w-full h-8 rounded bg-slate-800/50 flex items-center justify-center gap-2 hover:bg-red-900/30 text-red-400 text-xs transition-colors"
+            title="Clear Canvas"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Clear All
+          </button>
+        </div>
+      </div>
+
+      {/* Shortcuts */}
+      <div className="p-2 border-t border-slate-800">
+        <div className="text-[9px] text-slate-600 space-y-0.5">
+          <p>⌘Z Undo • ⌘Y Redo • ⌘C Copy</p>
+          <p>⌘V Paste • ⌘D Duplicate • Del Delete</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ========================================
+  // RENDER SERVICES PANEL
+  // ========================================
+  const renderServicesPanel = () => (
+    <div className="flex-1 flex flex-col h-full bg-slate-900">
       {/* Header */}
       <div className="p-3 border-b border-slate-800">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-medium text-slate-200">AWS Services</h3>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarView("controls")}
-              className="h-6 w-6 p-0 text-slate-400 hover:text-cyan-400"
-              title="Diagram controls"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarView("add")}
-              className="h-6 w-6 p-0 text-slate-400 hover:text-cyan-400"
-              title="Add custom service"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarView("add")}
+            className="h-6 w-6 p-0 text-slate-400 hover:text-cyan-400"
+            title="Add custom service"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
         </div>
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
@@ -816,6 +971,90 @@ export function ServicePicker({
         <p className="text-[10px] text-slate-600 text-center">
           Drag services onto the canvas
         </p>
+      </div>
+    </div>
+  );
+
+  // ========================================
+  // MAIN RETURN - Icon Strip + Panel
+  // ========================================
+  return (
+    <div className="flex h-full">
+      {/* Left Icon Strip - Canva style */}
+      <div className="w-12 bg-slate-950 border-r border-slate-800 flex flex-col items-center py-2 gap-1">
+        {/* Services Tab */}
+        <button
+          onClick={() => { setActiveTab("services"); setSidebarView("services"); }}
+          className={cn(
+            "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+            activeTab === "services"
+              ? "bg-cyan-500/20 text-cyan-400"
+              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+          )}
+          title="AWS Services"
+        >
+          <LayoutGrid className="w-5 h-5" />
+        </button>
+        
+        {/* Shapes Tab */}
+        <button
+          onClick={() => { setActiveTab("shapes"); setSidebarView("services"); }}
+          className={cn(
+            "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+            activeTab === "shapes"
+              ? "bg-cyan-500/20 text-cyan-400"
+              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+          )}
+          title="Shapes & Elements"
+        >
+          <Shapes className="w-5 h-5" />
+        </button>
+        
+        {/* Style Tab */}
+        <button
+          onClick={() => { setActiveTab("style"); setSidebarView("services"); }}
+          className={cn(
+            "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+            activeTab === "style"
+              ? "bg-cyan-500/20 text-cyan-400"
+              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+          )}
+          title="Style & Colors"
+        >
+          <Palette className="w-5 h-5" />
+        </button>
+        
+        {/* Divider */}
+        <div className="w-6 h-px bg-slate-800 my-2" />
+        
+        {/* Controls Tab */}
+        <button
+          onClick={() => { setActiveTab("controls"); setSidebarView("services"); }}
+          className={cn(
+            "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+            activeTab === "controls"
+              ? "bg-cyan-500/20 text-cyan-400"
+              : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+          )}
+          title="Controls"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Panel Content */}
+      <div className="w-52 border-r border-slate-800 flex flex-col h-full">
+        {sidebarView === "add" ? (
+          renderAddServicePanel()
+        ) : activeTab === "services" ? (
+          renderServicesPanel()
+        ) : activeTab === "shapes" ? (
+          renderShapesPanel()
+        ) : activeTab === "style" ? (
+          renderStylePanel()
+        ) : activeTab === "controls" ? (
+          renderControlsPanel()
+        ) : null}
       </div>
     </div>
   );

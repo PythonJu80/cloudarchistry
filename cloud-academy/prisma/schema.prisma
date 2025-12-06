@@ -867,6 +867,13 @@ model AcademyUser {
   profile       AcademyUserProfile?
   teamMembers   AcademyTeamMember[]
   teamInvites   AcademyTeamInvite[]
+  teamActivities TeamActivity[]
+  
+  // Versus matches
+  versusAsPlayer1  VersusMatch[] @relation("VersusPlayer1")
+  versusAsPlayer2  VersusMatch[] @relation("VersusPlayer2")
+  h2hAsPlayer1     HeadToHeadRecord[] @relation("H2HPlayer1")
+  h2hAsPlayer2     HeadToHeadRecord[] @relation("H2HPlayer2")
   
   @@index([tenantId])
 }
@@ -903,6 +910,7 @@ model AcademyTeam {
   members     AcademyTeamMember[]
   attempts    TeamChallengeAttempt[]
   invites     AcademyTeamInvite[]
+  activities  TeamActivity[]
   
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -929,6 +937,7 @@ model AcademyTeamMember {
   joinedAt  DateTime @default(now())
   
   @@unique([teamId, userId])
+  @@unique([teamId, academyUserId])  // Prevent duplicate memberships
   @@index([userId])
   @@index([academyUserId])
 }
@@ -958,6 +967,106 @@ model AcademyTeamInvite {
   @@index([code])
   @@index([email])
   @@index([academyUserId])
+}
+
+// Team Activity Feed - tracks team-level events for feeds and analytics
+model TeamActivity {
+  id          String   @id @default(cuid())
+  teamId      String
+  team        AcademyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  // Who performed the action
+  academyUserId String?
+  academyUser   AcademyUser? @relation(fields: [academyUserId], references: [id], onDelete: SetNull)
+  
+  // Activity type: challenge_completed, scenario_started, member_joined, badge_earned, level_up, etc.
+  activityType  String
+  
+  // Points earned from this activity (if applicable)
+  pointsEarned  Int @default(0)
+  
+  // Flexible metadata for different activity types
+  // e.g., { challengeId, challengeTitle, score } or { badgeId, badgeName }
+  metadata      Json @default("{}")
+  
+  // Display text (pre-computed for feed display)
+  title         String    // "Ju completed S3 Security Challenge"
+  description   String?   // Optional longer description
+  
+  createdAt     DateTime @default(now())
+  
+  @@index([teamId])
+  @@index([academyUserId])
+  @@index([activityType])
+  @@index([createdAt])
+}
+
+// Versus Match - Head-to-head battles
+model VersusMatch {
+  id            String   @id @default(cuid())
+  matchCode     String   @unique
+  
+  // Players
+  player1Id     String
+  player1       AcademyUser @relation("VersusPlayer1", fields: [player1Id], references: [id], onDelete: Cascade)
+  player2Id     String
+  player2       AcademyUser @relation("VersusPlayer2", fields: [player2Id], references: [id], onDelete: Cascade)
+  
+  // Challenge (optional)
+  challengeId   String?
+  challenge     AcademyChallenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+  
+  // Match config
+  matchType     String   @default("quiz")  // quiz, diagram
+  status        String   @default("pending")  // pending, active, completed, cancelled
+  
+  // Scores
+  player1Score  Int      @default(0)
+  player2Score  Int      @default(0)
+  winnerId      String?
+  
+  // Quiz state
+  currentQuestion Int    @default(0)
+  totalQuestions  Int    @default(10)
+  
+  // Match state (questions, answers, buzzes)
+  matchState    Json     @default("{}")
+  
+  // Chat messages
+  chatMessages  Json     @default("[]")
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  
+  @@index([player1Id])
+  @@index([player2Id])
+  @@index([status])
+  @@index([matchCode])
+}
+
+// Head to Head Record - Track win/loss between two players
+model HeadToHeadRecord {
+  id            String   @id @default(cuid())
+  
+  player1Id     String
+  player1       AcademyUser @relation("H2HPlayer1", fields: [player1Id], references: [id], onDelete: Cascade)
+  player2Id     String
+  player2       AcademyUser @relation("H2HPlayer2", fields: [player2Id], references: [id], onDelete: Cascade)
+  
+  player1Wins   Int      @default(0)
+  player2Wins   Int      @default(0)
+  draws         Int      @default(0)
+  totalMatches  Int      @default(0)
+  
+  lastMatchAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([player1Id, player2Id])
+  @@index([player1Id])
+  @@index([player2Id])
 }
 
 // Location/Company definitions (replaces hardcoded LOCATIONS)
@@ -1100,6 +1209,7 @@ model AcademyChallenge {
   updatedAt     DateTime @updatedAt
   
   progress      ChallengeProgress[]
+  versusMatches VersusMatch[]
   
   @@index([scenarioId])
   @@index([orderIndex])

@@ -28,6 +28,11 @@ import {
   FileText,
   Download,
   ExternalLink,
+  Users,
+  UserPlus,
+  Mail,
+  Copy,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,6 +152,38 @@ interface PortfolioData {
 
 // No fallback - models must come from OpenAI API
 
+interface TeamMember {
+  id: string;
+  role: string;
+  academyUser: {
+    id: string;
+    name: string | null;
+    email: string;
+    username: string | null;
+  } | null;
+}
+
+interface TeamInvite {
+  id: string;
+  email: string | null;
+  code: string;
+  role: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+interface TeamData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  myRole: string;
+  memberCount: number;
+  maxMembers: number;
+  members: TeamMember[];
+  invites: TeamInvite[];
+}
+
 export default function SettingsPage() {
   const { status } = useSession();
   const router = useRouter();
@@ -194,6 +231,17 @@ export default function SettingsPage() {
   const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioData | null>(null);
   const [portfolioViewerOpen, setPortfolioViewerOpen] = useState(false);
 
+  // Team state
+  const [teams, setTeams] = useState<TeamData[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamDescription, setNewTeamDescription] = useState("");
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -205,6 +253,7 @@ export default function SettingsPage() {
       fetchAwsCredentials();
       fetchProfile();
       fetchPortfolios();
+      fetchTeams();
     }
   }, [status, router]);
 
@@ -400,6 +449,106 @@ export default function SettingsPage() {
     } finally {
       setPortfoliosLoading(false);
     }
+  }
+
+  async function fetchTeams() {
+    setTeamsLoading(true);
+    try {
+      const response = await fetch("/api/team");
+      if (response.ok) {
+        const data = await response.json();
+        setTeams(data.teams || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch teams:", err);
+    } finally {
+      setTeamsLoading(false);
+    }
+  }
+
+  async function handleCreateTeam() {
+    if (!newTeamName.trim()) {
+      setError("Team name is required");
+      return;
+    }
+    setCreatingTeam(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newTeamName,
+          description: newTeamDescription,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create team");
+      }
+      setSuccess("Team created successfully!");
+      setShowCreateTeam(false);
+      setNewTeamName("");
+      setNewTeamDescription("");
+      fetchTeams();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create team");
+    } finally {
+      setCreatingTeam(false);
+    }
+  }
+
+  async function handleSendInvite(teamId: string) {
+    if (!inviteEmail.trim()) {
+      setError("Email is required");
+      return;
+    }
+    setSendingInvite(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamId,
+          email: inviteEmail,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send invite");
+      }
+      setSuccess(`Invite sent to ${inviteEmail}!`);
+      setInviteEmail("");
+      fetchTeams();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send invite");
+    } finally {
+      setSendingInvite(false);
+    }
+  }
+
+  async function handleRevokeInvite(inviteId: string) {
+    try {
+      const response = await fetch(`/api/team/invite?id=${inviteId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to revoke invite");
+      }
+      setSuccess("Invite revoked");
+      fetchTeams();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to revoke invite");
+    }
+  }
+
+  function copyInviteLink(code: string) {
+    const url = `${window.location.origin}/invite/${code}`;
+    navigator.clipboard.writeText(url);
+    setCopiedInvite(code);
+    setTimeout(() => setCopiedInvite(null), 2000);
   }
 
   function handleAvatarUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -1113,6 +1262,193 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Team Section */}
+          {settings?.subscriptionTier && ["team", "enterprise"].includes(settings.subscriptionTier) && (
+            <Card className="bg-card/50 border-border/50 mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-purple-400" />
+                  Team
+                </CardTitle>
+                <CardDescription>
+                  Collaborate with your team on challenges and track progress together.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {teamsLoading ? (
+                  <div className="flex items-center gap-2 py-4">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Loading teams...</span>
+                  </div>
+                ) : teams.length === 0 ? (
+                  // No teams - show create team form
+                  <div className="space-y-4">
+                    {!showCreateTeam ? (
+                      <div className="text-center py-6">
+                        <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                        <p className="text-muted-foreground mb-4">You&apos;re not part of any team yet.</p>
+                        <Button onClick={() => setShowCreateTeam(true)} className="gap-2">
+                          <UserPlus className="w-4 h-4" />
+                          Create a Team
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 p-4 rounded-lg bg-background border border-border">
+                        <h4 className="font-medium">Create a New Team</h4>
+                        <div className="space-y-2">
+                          <Label htmlFor="teamName">Team Name</Label>
+                          <Input
+                            id="teamName"
+                            placeholder="My Awesome Team"
+                            value={newTeamName}
+                            onChange={(e) => setNewTeamName(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="teamDesc">Description (optional)</Label>
+                          <Input
+                            id="teamDesc"
+                            placeholder="A team for learning AWS together"
+                            value={newTeamDescription}
+                            onChange={(e) => setNewTeamDescription(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleCreateTeam} disabled={creatingTeam} className="gap-2">
+                            {creatingTeam ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                            Create Team
+                          </Button>
+                          <Button variant="outline" onClick={() => setShowCreateTeam(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Show teams
+                  <div className="space-y-6">
+                    {teams.map((team) => (
+                      <div key={team.id} className="space-y-4">
+                        {/* Team Header */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-lg flex items-center gap-2">
+                              {team.name}
+                              {team.myRole === "owner" && (
+                                <Crown className="w-4 h-4 text-yellow-500" />
+                              )}
+                            </h4>
+                            {team.description && (
+                              <p className="text-sm text-muted-foreground">{team.description}</p>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="capitalize">{team.myRole}</Badge>
+                        </div>
+
+                        {/* Members */}
+                        <div className="space-y-2">
+                          <h5 className="text-sm font-medium text-muted-foreground">
+                            Members ({team.memberCount}/{team.maxMembers})
+                          </h5>
+                          <div className="space-y-2">
+                            {team.members.map((member) => (
+                              <div
+                                key={member.id}
+                                className="flex items-center justify-between p-2 rounded-lg bg-background/50"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <User className="w-4 h-4 text-primary" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">
+                                      {member.academyUser?.name || member.academyUser?.username || "Unknown"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">{member.academyUser?.email}</p>
+                                  </div>
+                                </div>
+                                <Badge variant="secondary" className="capitalize text-xs">{member.role}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Invite Section (only for owner/admin) */}
+                        {["owner", "admin"].includes(team.myRole) && (
+                          <div className="space-y-3 pt-3 border-t border-border">
+                            <h5 className="text-sm font-medium">Invite Members</h5>
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="colleague@company.com"
+                                value={inviteEmail}
+                                onChange={(e) => setInviteEmail(e.target.value)}
+                                className="flex-1"
+                              />
+                              <Button
+                                onClick={() => handleSendInvite(team.id)}
+                                disabled={sendingInvite}
+                                size="sm"
+                                className="gap-2"
+                              >
+                                {sendingInvite ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Mail className="w-4 h-4" />
+                                )}
+                                Send
+                              </Button>
+                            </div>
+
+                            {/* Pending Invites */}
+                            {team.invites.length > 0 && (
+                              <div className="space-y-2">
+                                <h6 className="text-xs font-medium text-muted-foreground">Pending Invites</h6>
+                                {team.invites.map((invite) => (
+                                  <div
+                                    key={invite.id}
+                                    className="flex items-center justify-between p-2 rounded-lg bg-amber-500/5 border border-amber-500/20"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Mail className="w-4 h-4 text-amber-500" />
+                                      <span className="text-sm">{invite.email}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => copyInviteLink(invite.code)}
+                                        className="h-7 px-2"
+                                      >
+                                        {copiedInvite === invite.code ? (
+                                          <Check className="w-3 h-3 text-green-500" />
+                                        ) : (
+                                          <Copy className="w-3 h-3" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleRevokeInvite(invite.id)}
+                                        className="h-7 px-2 text-red-500 hover:text-red-600"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
             </div>
 
