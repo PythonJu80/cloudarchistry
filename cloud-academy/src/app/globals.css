@@ -223,3 +223,12 @@
 .business-popup .leaflet-popup-tip {
   background: #1e293b;
 }
+
+/* Node shape clip-paths for diagram */
+.clip-triangle {
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.clip-hexagon {
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+}

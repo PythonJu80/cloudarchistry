@@ -6,8 +6,8 @@
  * Custom node types for rendering AWS services in the diagram.
  */
 
-import { memo } from "react";
-import { Handle, Position, NodeResizer } from "@xyflow/react";
+import { memo, useState, useRef, useEffect } from "react";
+import { Handle, Position, NodeResizer, useReactFlow } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import {
   Server,
@@ -142,6 +142,7 @@ const handleClass = (selected?: boolean) => cn(
 
 // ============================================
 // AWS Resource Node (EC2, RDS, Lambda, etc.)
+// Clean square icon with label below - matches AWS architecture diagrams
 // ============================================
 interface AWSResourceNodeData {
   serviceId: string;
@@ -377,6 +378,309 @@ export const AutoScalingNode = memo(({ data, selected }: { data: AutoScalingNode
 AutoScalingNode.displayName = "AutoScalingNode";
 
 // ============================================
+// Generic Icon Node (User, Mobile, Internet, etc.)
+// ============================================
+interface GenericIconNodeData {
+  label: string;
+  icon: string; // Emoji
+  color?: string;
+}
+
+export const GenericIconNode = memo(({ data, selected }: { data: GenericIconNodeData; selected?: boolean }) => {
+  return (
+    <div
+      className={cn(
+        "bg-white rounded-lg border-2 shadow-sm transition-all flex flex-col items-center p-3 min-w-[80px] group cursor-pointer",
+        selected ? "border-cyan-500 ring-2 ring-cyan-500/30 shadow-lg" : "border-gray-300 hover:border-gray-400"
+      )}
+    >
+      <Handle type="target" position={Position.Top} className={handleClass(selected)} />
+      <Handle type="target" position={Position.Left} id="left" className={handleClass(selected)} />
+      
+      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-1.5 text-2xl">
+        {data.icon}
+      </div>
+      
+      <p className="text-xs font-medium text-gray-800 text-center leading-tight">{data.label}</p>
+
+      <Handle type="source" position={Position.Bottom} className={handleClass(selected)} />
+      <Handle type="source" position={Position.Right} id="right" className={handleClass(selected)} />
+    </div>
+  );
+});
+
+GenericIconNode.displayName = "GenericIconNode";
+
+// ============================================
+// AWS Cloud Boundary Node
+// ============================================
+interface BoundaryNodeData {
+  label: string;
+  color?: string;
+}
+
+export const AWSCloudNode = memo(({ data, selected }: { data: BoundaryNodeData; selected?: boolean }) => {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border-2 border-dashed relative",
+        selected ? "border-orange-400 bg-orange-500/5" : "border-slate-500 bg-slate-800/30"
+      )}
+      style={{ width: "100%", height: "100%", minWidth: 300, minHeight: 200 }}
+    >
+      <NodeResizer
+        isVisible={selected}
+        minWidth={300}
+        minHeight={200}
+        lineClassName="!border-orange-400"
+        handleClassName="!w-3 !h-3 !bg-orange-400 !border-2 !border-white"
+      />
+      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-slate-800 px-2 py-0.5 border border-slate-600 rounded z-10">
+        <span className="text-sm">☁️</span>
+        <span className="text-white text-xs font-medium">{data.label}</span>
+      </div>
+      <Handle type="target" position={Position.Top} className={handleClass(selected)} />
+      <Handle type="source" position={Position.Bottom} className={handleClass(selected)} />
+    </div>
+  );
+});
+
+AWSCloudNode.displayName = "AWSCloudNode";
+
+// ============================================
+// Region Boundary Node
+// ============================================
+export const RegionNode = memo(({ data, selected }: { data: BoundaryNodeData; selected?: boolean }) => {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border-2 border-dashed relative",
+        selected ? "border-cyan-400 bg-cyan-500/5" : "border-blue-400 bg-blue-500/10"
+      )}
+      style={{ width: "100%", height: "100%", minWidth: 250, minHeight: 180 }}
+    >
+      <NodeResizer
+        isVisible={selected}
+        minWidth={250}
+        minHeight={180}
+        lineClassName="!border-blue-400"
+        handleClassName="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
+      />
+      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-blue-600 px-2 py-0.5 border border-blue-500 rounded z-10">
+        <span className="text-sm">🌍</span>
+        <span className="text-white text-xs font-medium">{data.label}</span>
+      </div>
+      <Handle type="target" position={Position.Top} className={handleClass(selected)} />
+      <Handle type="source" position={Position.Bottom} className={handleClass(selected)} />
+    </div>
+  );
+});
+
+RegionNode.displayName = "RegionNode";
+
+// ============================================
+// Availability Zone Node
+// ============================================
+export const AvailabilityZoneNode = memo(({ data, selected }: { data: BoundaryNodeData; selected?: boolean }) => {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border-2 relative",
+        selected ? "border-cyan-400 bg-cyan-500/5" : "border-sky-400 bg-sky-500/10"
+      )}
+      style={{ width: "100%", height: "100%", minWidth: 180, minHeight: 120 }}
+    >
+      <NodeResizer
+        isVisible={selected}
+        minWidth={180}
+        minHeight={120}
+        lineClassName="!border-sky-400"
+        handleClassName="!w-3 !h-3 !bg-sky-400 !border-2 !border-white"
+      />
+      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-sky-500 px-2 py-0.5 border border-sky-400 rounded z-10">
+        <span className="text-sm">📍</span>
+        <span className="text-white text-xs font-medium">{data.label}</span>
+      </div>
+      <Handle type="target" position={Position.Top} className={handleClass(selected)} />
+      <Handle type="source" position={Position.Bottom} className={handleClass(selected)} />
+    </div>
+  );
+});
+
+AvailabilityZoneNode.displayName = "AvailabilityZoneNode";
+
+// ============================================
+// Text Box Node - Editable with style support
+// ============================================
+interface TextNodeData {
+  label: string;
+  fontSize?: number;
+  fontFamily?: "sans" | "serif" | "mono";
+  fontWeight?: "normal" | "bold";
+  fontStyle?: "normal" | "italic";
+  textDecoration?: "none" | "underline" | "line-through";
+  textColor?: string;
+  onLabelChange?: (newLabel: string) => void;
+}
+
+export const TextNode = memo(({ data, selected, id }: { data: TextNodeData; selected?: boolean; id: string }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localText, setLocalText] = useState(data.label);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { setNodes } = useReactFlow();
+
+  // When editing starts/stops, update the node's draggable property
+  useEffect(() => {
+    setNodes(nodes => nodes.map(node => 
+      node.id === id 
+        ? { ...node, draggable: !isEditing }
+        : node
+    ));
+  }, [isEditing, id, setNodes]);
+
+  // Focus textarea when editing starts - put cursor at end, don't select all
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      const textarea = textareaRef.current;
+      textarea.focus();
+      // Put cursor at end instead of selecting all text
+      const len = textarea.value.length;
+      textarea.setSelectionRange(len, len);
+    }
+  }, [isEditing]);
+
+  // Auto-resize textarea - run immediately and on text change
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = Math.max(24, textareaRef.current.scrollHeight) + "px";
+    }
+  }, [localText, isEditing]);
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
+    setLocalText(data.label);
+    setIsEditing(true);
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    // Save the text to the node data
+    if (localText !== data.label) {
+      setNodes(nodes => nodes.map(node => 
+        node.id === id 
+          ? { ...node, data: { ...node.data, label: localText } }
+          : node
+      ));
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setLocalText(data.label);
+      setIsEditing(false);
+    } else if (e.key === "Enter" && !e.shiftKey) {
+      // Enter saves (Shift+Enter for new line)
+      e.preventDefault();
+      handleBlur();
+    }
+    // Don't propagate to prevent React Flow shortcuts
+    e.stopPropagation();
+  };
+
+  // Build style object from data
+  const textStyle: React.CSSProperties = {
+    fontSize: data.fontSize || 14,
+    fontFamily: data.fontFamily === "serif" ? "Georgia, serif" : 
+                data.fontFamily === "mono" ? "monospace" : 
+                "system-ui, sans-serif",
+    fontWeight: data.fontWeight || "normal",
+    fontStyle: data.fontStyle || "normal",
+    textDecoration: data.textDecoration || "none",
+    color: data.textColor || "#374151",
+  };
+
+  // Stop all drag/mouse events when editing to allow text selection
+  const stopEventPropagation = (e: React.MouseEvent | React.DragEvent) => {
+    if (isEditing) {
+      e.stopPropagation();
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "bg-white rounded border shadow-sm p-2 min-w-[100px] group",
+        selected ? "border-cyan-500 ring-2 ring-cyan-500/30" : "border-gray-300 hover:border-gray-400",
+        isEditing ? "min-w-[150px] cursor-text" : "cursor-grab" // Different cursor based on mode
+      )}
+      onDoubleClick={handleDoubleClick}
+      onMouseDown={stopEventPropagation}
+      onMouseMove={stopEventPropagation}
+      onDragStart={(e) => { if (isEditing) e.preventDefault(); }}
+    >
+      <Handle type="target" position={Position.Top} className={handleClass(selected)} />
+      <Handle type="target" position={Position.Left} id="left" className={handleClass(selected)} />
+      
+      {isEditing ? (
+        <textarea
+          ref={textareaRef}
+          value={localText}
+          onChange={(e) => setLocalText(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          onMouseDown={(e) => e.stopPropagation()} // Prevent node drag when selecting text
+          onMouseMove={(e) => e.stopPropagation()}
+          className="w-full min-h-[24px] resize-none border-none outline-none bg-transparent text-center block select-text"
+          style={textStyle}
+          placeholder="Enter text..."
+          autoFocus
+        />
+      ) : (
+        <p 
+          className="min-h-[24px] text-center whitespace-pre-wrap break-words"
+          style={textStyle}
+        >
+          {data.label || "Double-click to edit"}
+        </p>
+      )}
+
+      <Handle type="source" position={Position.Bottom} className={handleClass(selected)} />
+      <Handle type="source" position={Position.Right} id="right" className={handleClass(selected)} />
+    </div>
+  );
+});
+
+TextNode.displayName = "TextNode";
+
+// ============================================
+// Note Node (sticky note style)
+// ============================================
+export const NoteNode = memo(({ data, selected }: { data: TextNodeData; selected?: boolean }) => {
+  return (
+    <div
+      className={cn(
+        "bg-amber-100 rounded shadow-sm transition-all p-3 min-w-[140px] group cursor-pointer border-l-4 border-amber-400",
+        selected ? "ring-2 ring-cyan-500/30" : ""
+      )}
+    >
+      <Handle type="target" position={Position.Top} className={handleClass(selected)} />
+      <Handle type="target" position={Position.Left} id="left" className={handleClass(selected)} />
+      
+      <div className="flex items-start gap-2">
+        <span className="text-base">📌</span>
+        <p className="text-sm text-amber-900 min-h-[20px] flex-1">{data.label}</p>
+      </div>
+
+      <Handle type="source" position={Position.Bottom} className={handleClass(selected)} />
+      <Handle type="source" position={Position.Right} id="right" className={handleClass(selected)} />
+    </div>
+  );
+});
+
+NoteNode.displayName = "NoteNode";
+
+// ============================================
 // Export all node types for React Flow
 // ============================================
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -386,4 +690,10 @@ export const nodeTypes: Record<string, any> = {
   subnet: SubnetNode,
   securityGroup: SecurityGroupNode,
   autoScaling: AutoScalingNode,
+  genericIcon: GenericIconNode,
+  awsCloud: AWSCloudNode,
+  region: RegionNode,
+  availabilityZone: AvailabilityZoneNode,
+  textNode: TextNode,
+  noteNode: NoteNode,
 };

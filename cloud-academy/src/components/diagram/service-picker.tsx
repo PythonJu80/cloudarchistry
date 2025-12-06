@@ -60,16 +60,6 @@ import {
   LayoutGrid,
   Shapes,
   Palette,
-  Type,
-  Minus,
-  Circle,
-  Square,
-  Triangle,
-  ArrowRight,
-  MoveHorizontal,
-  Hexagon,
-  Star,
-  PenTool,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -163,6 +153,16 @@ interface IconSearchResult {
 // Sidebar view modes
 type SidebarView = "services" | "add" | "controls";
 
+// Text style type
+interface TextStyleUpdate {
+  fontSize?: number;
+  fontFamily?: "sans" | "serif" | "mono";
+  fontWeight?: "normal" | "bold";
+  fontStyle?: "normal" | "italic";
+  textDecoration?: "none" | "underline" | "line-through";
+  textColor?: string;
+}
+
 interface ServicePickerProps {
   onDragStart: (event: React.DragEvent, service: AWSService) => void;
   suggestedServices?: string[]; // Service IDs to highlight
@@ -185,6 +185,10 @@ interface ServicePickerProps {
   hasSelection?: boolean;
   showGrid?: boolean;
   zoomLevel?: number;
+  // Text style controls
+  onUpdateTextStyle?: (style: TextStyleUpdate) => void;
+  isTextNodeSelected?: boolean;
+  selectedTextStyle?: TextStyleUpdate;
 }
 
 export function ServicePicker({ 
@@ -207,6 +211,9 @@ export function ServicePicker({
   hasSelection = false,
   showGrid = true,
   zoomLevel = 100,
+  onUpdateTextStyle,
+  isTextNodeSelected = false,
+  selectedTextStyle,
 }: ServicePickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<AWSCategory>>(
@@ -488,90 +495,119 @@ export function ServicePicker({
   );
 
   // ========================================
-  // RENDER SHAPES PANEL
+  // RENDER SHAPES PANEL - Group Containers & General Icons
   // ========================================
   const renderShapesPanel = () => (
     <div className="flex-1 flex flex-col h-full bg-slate-900">
       <div className="p-3 border-b border-slate-800">
         <h3 className="text-sm font-medium text-slate-200">Shapes & Elements</h3>
-        <p className="text-[10px] text-slate-500 mt-1">Drag shapes onto the canvas</p>
+        <p className="text-[10px] text-slate-500 mt-1">Drag to add to canvas</p>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        {/* Basic Shapes */}
+        {/* AWS Boundaries - Only items NOT in Services */}
         <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Basic Shapes</p>
-          <div className="grid grid-cols-4 gap-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">AWS Boundaries</p>
+          <p className="text-[9px] text-slate-600 -mt-1">VPC, Subnets, Security Groups are in Services → Networking</p>
+          <div className="space-y-1.5">
             {[
-              { icon: Square, label: "Rectangle", id: "rect" },
-              { icon: Circle, label: "Circle", id: "circle" },
-              { icon: Triangle, label: "Triangle", id: "triangle" },
-              { icon: Hexagon, label: "Hexagon", id: "hexagon" },
-            ].map(({ icon: Icon, label, id }) => (
-              <button
-                key={id}
-                className="aspect-square rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
-                title={label}
-              >
-                <Icon className="w-5 h-5" />
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Connectors */}
-        <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Connectors</p>
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { icon: ArrowRight, label: "Arrow", id: "arrow" },
-              { icon: Minus, label: "Line", id: "line" },
-              { icon: MoveHorizontal, label: "Double Arrow", id: "double-arrow" },
-              { icon: PenTool, label: "Curve", id: "curve" },
-            ].map(({ icon: Icon, label, id }) => (
-              <button
-                key={id}
-                className="aspect-square rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors"
-                title={label}
-              >
-                <Icon className="w-5 h-5" />
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Text & Labels */}
-        <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Text & Labels</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-colors text-xs">
-              <Type className="w-4 h-4" />
-              Text Box
-            </button>
-            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-colors text-xs">
-              <Star className="w-4 h-4" />
-              Note
-            </button>
-          </div>
-        </div>
-        
-        {/* AWS Groups */}
-        <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">AWS Groups</p>
-          <div className="space-y-1">
-            {[
-              { label: "AWS Cloud", color: "#232F3E" },
-              { label: "Region", color: "#147EBA" },
-              { label: "Availability Zone", color: "#147EBA" },
-              { label: "VPC", color: "#8C4FFF" },
-              { label: "Security Group", color: "#DD344C" },
-            ].map(({ label, color }) => (
-              <button
+              { label: "AWS Cloud", color: "#232F3E", icon: "☁️", dashed: true },
+              { label: "Region", color: "#147EBA", icon: "🌍", dashed: true },
+              { label: "Availability Zone", color: "#147EBA", icon: "📍", dashed: false },
+            ].map(({ label, color, icon, dashed }) => (
+              <div
                 key={label}
-                className="w-full h-9 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center gap-2 px-3 text-slate-300 hover:text-slate-100 transition-colors text-xs"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/diagram-shape", JSON.stringify({
+                    type: "boundary",
+                    label,
+                    color,
+                    icon,
+                    dashed,
+                  }));
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                className="w-full h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center gap-2 px-3 text-slate-300 hover:text-slate-100 transition-colors text-xs cursor-grab active:cursor-grabbing"
+                title={`Drag to add ${label} boundary`}
               >
-                <div className="w-4 h-4 rounded border-2" style={{ borderColor: color }} />
-                {label}
-              </button>
+                <div 
+                  className={cn("w-5 h-5 rounded flex items-center justify-center text-[10px]", dashed && "border-dashed")}
+                  style={{ borderColor: color, borderWidth: 2 }}
+                >
+                  {icon}
+                </div>
+                <span className="flex-1 text-left">{label}</span>
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* General Icons - Users, Devices, etc. */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">General Icons</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { icon: "👤", label: "User" },
+              { icon: "👥", label: "Users" },
+              { icon: "📱", label: "Mobile" },
+              { icon: "💻", label: "Laptop" },
+              { icon: "🖥️", label: "Desktop" },
+              { icon: "🌐", label: "Internet" },
+              { icon: "☁️", label: "Cloud" },
+              { icon: "🏢", label: "Corporate" },
+              { icon: "🏭", label: "On-Prem" },
+              { icon: "🗄️", label: "Server" },
+              { icon: "💾", label: "Database" },
+              { icon: "🔒", label: "Security" },
+            ].map(({ icon, label }) => (
+              <div
+                key={label}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/diagram-shape", JSON.stringify({
+                    type: "icon",
+                    label,
+                    icon,
+                  }));
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                className="aspect-square rounded-lg bg-slate-800/50 hover:bg-slate-700 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 transition-colors cursor-grab active:cursor-grabbing p-1"
+                title={label}
+              >
+                <span className="text-lg">{icon}</span>
+                <span className="text-[8px] mt-0.5 text-slate-500">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Text Elements */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Text Elements</p>
+          <div className="space-y-1.5">
+            {[
+              { label: "Text Box", icon: "📝", type: "textbox" },
+              { label: "Note", icon: "📌", type: "note" },
+            ].map(({ label, icon, type }) => (
+              <div
+                key={type}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/diagram-shape", JSON.stringify({
+                    type: "text",
+                    label,
+                    icon,
+                    textType: type,
+                  }));
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                className="w-full h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center gap-2 px-3 text-slate-300 hover:text-slate-100 transition-colors text-xs cursor-grab active:cursor-grabbing"
+                title={`Drag to add ${label}`}
+              >
+                <span className="text-base">{icon}</span>
+                <span className="flex-1 text-left">{label}</span>
+              </div>
             ))}
           </div>
         </div>
@@ -659,6 +695,175 @@ export function ServicePicker({
             defaultValue="100"
             className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
           />
+        </div>
+        
+        {/* Text Styling (for Text Box elements) */}
+        <div className={cn("space-y-2", !isTextNodeSelected && "opacity-50")}>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Text Style</p>
+          <p className="text-[9px] text-slate-600">
+            {isTextNodeSelected ? "Style the selected text box" : "Select a Text Box to style"}
+          </p>
+          
+          {/* Font Size */}
+          <div className="space-y-1">
+            <p className="text-[9px] text-slate-500">Size</p>
+            <div className="grid grid-cols-5 gap-1">
+              {[10, 12, 14, 16, 20].map((size) => (
+                <button
+                  key={size}
+                  onMouseDown={(e) => e.preventDefault()} // Prevent stealing focus from textarea
+                  onClick={() => onUpdateTextStyle?.({ fontSize: size })}
+                  disabled={!isTextNodeSelected}
+                  className={cn(
+                    "h-7 rounded text-xs transition-colors",
+                    (selectedTextStyle?.fontSize ?? 14) === size
+                      ? "bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-500"
+                      : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200",
+                    !isTextNodeSelected && "cursor-not-allowed"
+                  )}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Font Family */}
+          <div className="space-y-1">
+            <p className="text-[9px] text-slate-500">Font</p>
+            <div className="grid grid-cols-3 gap-1">
+              {[
+                { label: "Sans", value: "sans" as const },
+                { label: "Serif", value: "serif" as const },
+                { label: "Mono", value: "mono" as const },
+              ].map(({ label, value }) => (
+                <button
+                  key={value}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => onUpdateTextStyle?.({ fontFamily: value })}
+                  disabled={!isTextNodeSelected}
+                  className={cn(
+                    "h-7 rounded text-xs transition-colors",
+                    value === "serif" && "font-serif",
+                    value === "mono" && "font-mono",
+                    (selectedTextStyle?.fontFamily ?? "sans") === value
+                      ? "bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-500"
+                      : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200",
+                    !isTextNodeSelected && "cursor-not-allowed"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Text Formatting */}
+          <div className="space-y-1">
+            <p className="text-[9px] text-slate-500">Format</p>
+            <div className="grid grid-cols-5 gap-1">
+              <button 
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onUpdateTextStyle?.({ fontWeight: "normal", fontStyle: "normal", textDecoration: "none" })}
+                disabled={!isTextNodeSelected}
+                className={cn(
+                  "h-7 rounded text-[10px] transition-colors",
+                  (selectedTextStyle?.fontWeight ?? "normal") === "normal" && 
+                  (selectedTextStyle?.fontStyle ?? "normal") === "normal" && 
+                  (selectedTextStyle?.textDecoration ?? "none") === "none"
+                    ? "bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-500"
+                    : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200",
+                  !isTextNodeSelected && "cursor-not-allowed"
+                )}
+              >
+                Aa
+              </button>
+              <button 
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onUpdateTextStyle?.({ fontWeight: "bold" })}
+                disabled={!isTextNodeSelected}
+                className={cn(
+                  "h-7 rounded text-xs font-bold transition-colors",
+                  selectedTextStyle?.fontWeight === "bold"
+                    ? "bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-500"
+                    : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200",
+                  !isTextNodeSelected && "cursor-not-allowed"
+                )}
+              >
+                B
+              </button>
+              <button 
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onUpdateTextStyle?.({ fontStyle: "italic" })}
+                disabled={!isTextNodeSelected}
+                className={cn(
+                  "h-7 rounded text-xs italic transition-colors",
+                  selectedTextStyle?.fontStyle === "italic"
+                    ? "bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-500"
+                    : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200",
+                  !isTextNodeSelected && "cursor-not-allowed"
+                )}
+              >
+                I
+              </button>
+              <button 
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onUpdateTextStyle?.({ textDecoration: "underline" })}
+                disabled={!isTextNodeSelected}
+                className={cn(
+                  "h-7 rounded text-xs underline transition-colors",
+                  selectedTextStyle?.textDecoration === "underline"
+                    ? "bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-500"
+                    : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200",
+                  !isTextNodeSelected && "cursor-not-allowed"
+                )}
+              >
+                U
+              </button>
+              <button 
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onUpdateTextStyle?.({ textDecoration: "line-through" })}
+                disabled={!isTextNodeSelected}
+                className={cn(
+                  "h-7 rounded text-xs line-through transition-colors",
+                  selectedTextStyle?.textDecoration === "line-through"
+                    ? "bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-500"
+                    : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200",
+                  !isTextNodeSelected && "cursor-not-allowed"
+                )}
+              >
+                S
+              </button>
+            </div>
+          </div>
+          
+          {/* Text Color */}
+          <div className="space-y-1">
+            <p className="text-[9px] text-slate-500">Text Color</p>
+            <div className="grid grid-cols-6 gap-1">
+              {[
+                "#000000", "#374151", "#6b7280", "#9ca3af",
+                "#ffffff", "#ef4444", "#f97316", "#eab308",
+                "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6",
+              ].map((color) => (
+                <button
+                  key={color}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => onUpdateTextStyle?.({ textColor: color })}
+                  disabled={!isTextNodeSelected}
+                  className={cn(
+                    "aspect-square rounded border hover:scale-110 transition-transform",
+                    (selectedTextStyle?.textColor ?? "#374151") === color
+                      ? "ring-2 ring-cyan-500 border-cyan-500"
+                      : "border-slate-700",
+                    !isTextNodeSelected && "cursor-not-allowed hover:scale-100"
+                  )}
+                  style={{ backgroundColor: color }}
+                  title={color}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

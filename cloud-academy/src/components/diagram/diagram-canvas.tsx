@@ -66,6 +66,14 @@ export interface DiagramNode extends Node {
     width?: number;
     height?: number;
     iconPath?: string; // Custom AWS icon path for user-added services
+    icon?: string; // Emoji icon for generic elements
+    // Text node styling
+    fontSize?: number;
+    fontFamily?: "sans" | "serif" | "mono";
+    fontWeight?: "normal" | "bold";
+    fontStyle?: "normal" | "italic";
+    textDecoration?: "none" | "underline" | "line-through";
+    textColor?: string;
   };
 }
 
@@ -139,6 +147,9 @@ function DiagramCanvasInner({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges || []);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  
+  // Track if any text node is being edited (disables panning)
+  const isTextEditing = nodes.some(n => n.type === "textNode" && n.draggable === false);
   
   // Audit state
   const [isAuditing, setIsAuditing] = useState(false);
@@ -440,6 +451,79 @@ function DiagramCanvasInner({
     (event: React.DragEvent) => {
       event.preventDefault();
 
+      // Check for shape/element data first
+      const shapeData = event.dataTransfer.getData("application/diagram-shape");
+      if (shapeData) {
+        const shape = JSON.parse(shapeData);
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        // Create shape node based on type
+        if (shape.type === "boundary") {
+          // AWS boundary containers - ONLY the ones not in Services
+          // VPC, Subnet, Security Group come from Services > Networking
+          const boundaryConfig: Record<string, { width: number; height: number; nodeType: string; zIndex: number }> = {
+            "AWS Cloud": { width: 500, height: 350, nodeType: "awsCloud", zIndex: -3 },
+            "Region": { width: 400, height: 280, nodeType: "region", zIndex: -2 },
+            "Availability Zone": { width: 220, height: 160, nodeType: "availabilityZone", zIndex: -1 },
+          };
+          
+          const config = boundaryConfig[shape.label];
+          if (!config) return; // Unknown boundary type
+          
+          const newNode: DiagramNode = {
+            id: `${shape.label.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+            type: config.nodeType,
+            position,
+            style: { width: config.width, height: config.height },
+            data: {
+              serviceId: shape.label.toLowerCase().replace(/\s+/g, "-"),
+              label: shape.label,
+              color: shape.color,
+            },
+            zIndex: config.zIndex, // Proper z-ordering for nesting
+          };
+          
+          setNodes((nds) => nds.concat(newNode));
+        } else if (shape.type === "icon") {
+          // General icon (user, mobile, internet, etc.)
+          const newNode: DiagramNode = {
+            id: `icon-${shape.label.toLowerCase()}-${Date.now()}`,
+            type: "genericIcon",
+            position,
+            data: {
+              serviceId: `icon-${shape.label.toLowerCase()}`,
+              label: shape.label,
+              sublabel: "",
+              color: "#64748b",
+              icon: shape.icon,
+            },
+            zIndex: 10,
+          };
+          
+          setNodes((nds) => nds.concat(newNode));
+        } else if (shape.type === "text") {
+          // Text box or Note
+          const newNode: DiagramNode = {
+            id: `${shape.textType}-${Date.now()}`,
+            type: shape.textType === "note" ? "noteNode" : "textNode",
+            position,
+            data: {
+              serviceId: shape.textType,
+              label: shape.textType === "note" ? "Add note..." : "Add text...",
+              sublabel: "",
+              color: shape.textType === "note" ? "#fbbf24" : "#64748b",
+            },
+            zIndex: 15,
+          };
+          
+          setNodes((nds) => nds.concat(newNode));
+        }
+        return;
+      }
+
       const serviceData = event.dataTransfer.getData("application/aws-service");
       if (!serviceData) return;
 
@@ -626,6 +710,24 @@ function DiagramCanvasInner({
     setEdges(nextState.edges);
     setHistoryIndex(prev => prev + 1);
   }, [canRedo, history, historyIndex, setNodes, setEdges]);
+
+  // 🎨 TEXT STYLE FUNCTIONS
+  const handleUpdateTextStyle = useCallback((styleUpdate: {
+    fontSize?: number;
+    fontFamily?: "sans" | "serif" | "mono";
+    fontWeight?: "normal" | "bold";
+    fontStyle?: "normal" | "italic";
+    textDecoration?: "none" | "underline" | "line-through";
+    textColor?: string;
+  }) => {
+    if (!selectedNode || (selectedNode.type !== "textNode")) return;
+    
+    setNodes(nds => nds.map(n => 
+      n.id === selectedNode.id 
+        ? { ...n, data: { ...n.data, ...styleUpdate } } as DiagramNode
+        : n
+    ));
+  }, [selectedNode, setNodes]);
 
   // 📋 COPY/PASTE FUNCTIONS
   const handleCopy = useCallback(() => {
@@ -839,6 +941,17 @@ function DiagramCanvasInner({
         hasSelection={!!selectedNode}
         showGrid={showGrid}
         zoomLevel={zoomLevel}
+        // Text style controls
+        onUpdateTextStyle={handleUpdateTextStyle}
+        isTextNodeSelected={selectedNode?.type === "textNode"}
+        selectedTextStyle={selectedNode?.type === "textNode" ? {
+          fontSize: selectedNode.data?.fontSize as number | undefined,
+          fontFamily: selectedNode.data?.fontFamily as "sans" | "serif" | "mono" | undefined,
+          fontWeight: selectedNode.data?.fontWeight as "normal" | "bold" | undefined,
+          fontStyle: selectedNode.data?.fontStyle as "normal" | "italic" | undefined,
+          textDecoration: selectedNode.data?.textDecoration as "none" | "underline" | "line-through" | undefined,
+          textColor: selectedNode.data?.textColor as string | undefined,
+        } : undefined}
       />
 
       {/* Main Canvas Area */}
@@ -996,6 +1109,10 @@ function DiagramCanvasInner({
             fitView
             snapToGrid
             snapGrid={[20, 20]}
+            panOnDrag={!isTextEditing}
+            zoomOnScroll={!isTextEditing}
+            zoomOnPinch={!isTextEditing}
+            zoomOnDoubleClick={false}
             defaultEdgeOptions={{
               type: "smoothstep",
               animated: true,
