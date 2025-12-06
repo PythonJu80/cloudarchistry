@@ -10,7 +10,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   ReactFlow,
-  Controls,
   Background,
   useNodesState,
   useEdgesState,
@@ -22,6 +21,7 @@ import {
   MarkerType,
   ReactFlowProvider,
   useReactFlow,
+  useViewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { nodeTypes } from "./aws-nodes";
@@ -29,8 +29,6 @@ import { ServicePicker } from "./service-picker";
 import { type AWSService } from "@/lib/aws-services";
 import { Button } from "@/components/ui/button";
 import {
-  Trash2,
-  RotateCcw,
   CheckCircle,
   Loader2,
   AlertCircle,
@@ -40,6 +38,13 @@ import {
   TrendingUp,
   Lightbulb,
   X,
+  Archive,
+  ThumbsUp,
+  ThumbsDown,
+  ChevronDown,
+  Trash2 as TrashIcon,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -60,6 +65,7 @@ export interface DiagramNode extends Node {
     subnetType?: "public" | "private";
     width?: number;
     height?: number;
+    iconPath?: string; // Custom AWS icon path for user-added services
   };
 }
 
@@ -82,6 +88,18 @@ export interface AuditResult {
   feedback: string;
 }
 
+// Stored tip from the database
+export interface StoredTip {
+  id: string;
+  auditScore: number;
+  category: "correct" | "missing" | "suggestion" | "feedback";
+  content: string;
+  isDismissed: boolean;
+  isHelpful: boolean | null;
+  userNotes: string | null;
+  createdAt: string;
+}
+
 interface DiagramCanvasProps {
   // Initial diagram data (for loading saved progress)
   initialData?: DiagramData;
@@ -92,19 +110,22 @@ interface DiagramCanvasProps {
     challengeBrief: string;
     awsServices?: string[];
   };
+  // Challenge progress ID for saving tips to the database
+  challengeProgressId?: string;
   // Session for agent chat continuity
   sessionId?: string;
   // API key for Learning Agent
   apiKey?: string;
   preferredModel?: string;
   // Callbacks
-  onSave?: (data: DiagramData) => void;
+  onSave?: (data: DiagramData) => void | Promise<void>;
   onAuditComplete?: (result: AuditResult) => void;
 }
 
 function DiagramCanvasInner({
   initialData,
   challengeContext,
+  challengeProgressId,
   sessionId,
   apiKey,
   preferredModel,
@@ -136,19 +157,53 @@ function DiagramCanvasInner({
   const [showScoreAnimation, setShowScoreAnimation] = useState<{ points: number; isPositive: boolean } | null>(null);
   const proTipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 📦 TIP JAR STATE
+  const [tipJarOpen, setTipJarOpen] = useState(false);
+  const [storedTips, setStoredTips] = useState<StoredTip[]>([]);
+  const [isLoadingTips, setIsLoadingTips] = useState(false);
+  const [tipJarFilter, setTipJarFilter] = useState<"all" | "correct" | "missing" | "suggestion">("all");
+
+  // 🔄 UNDO/REDO STATE
+  type HistoryState = { nodes: DiagramNode[]; edges: DiagramEdge[] };
+  const [history, setHistory] = useState<HistoryState[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUndoRedoAction = useRef(false);
+  
+  // 📋 CLIPBOARD STATE
+  const [clipboard, setClipboard] = useState<{ nodes: DiagramNode[]; edges: DiagramEdge[] } | null>(null);
+  
+  // 🖱️ CONTEXT MENU STATE
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
+  
+  // 🔲 GRID STATE
+  const [showGrid, setShowGrid] = useState(true);
+  
+  // 🖥️ FULLSCREEN STATE
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Get viewport for zoom level
+  const { zoom } = useViewport();
+  const zoomLevel = Math.round(zoom * 100);
+  const { fitView, zoomIn: rfZoomIn, zoomOut: rfZoomOut } = useReactFlow();
+
   // Auto-save function
-  const saveData = useCallback(() => {
+  const saveData = useCallback(async () => {
     if (nodes.length === 0 && edges.length === 0) return;
     
     const data: DiagramData = { nodes: nodes as DiagramNode[], edges: edges as DiagramEdge[] };
     setIsSaving(true);
     
-    // Call the onSave callback
-    onSave?.(data);
-    
-    setIsDirty(false);
-    setLastSaved(new Date());
-    setIsSaving(false);
+    try {
+      // Call the onSave callback and wait for it if it's a promise
+      await onSave?.(data);
+      
+      setIsDirty(false);
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error("Failed to save diagram:", error);
+    } finally {
+      setIsSaving(false);
+    }
   }, [nodes, edges, onSave]);
 
   // Mark as dirty and trigger auto-save when nodes/edges change
@@ -224,6 +279,118 @@ function DiagramCanvasInner({
     setShowScoreAnimation({ points, isPositive: points > 0 });
     setTimeout(() => setShowScoreAnimation(null), 1500);
   }, []);
+
+  // 📦 TIP JAR FUNCTIONS
+  // Load tips from the database
+  const loadTips = useCallback(async () => {
+    if (!challengeProgressId) return;
+    
+    setIsLoadingTips(true);
+    try {
+      const response = await fetch(
+        `/api/diagram/tips?challengeProgressId=${challengeProgressId}&includeDismissed=true`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setStoredTips(data.tips || []);
+      }
+    } catch (error) {
+      console.error("Failed to load tips:", error);
+    } finally {
+      setIsLoadingTips(false);
+    }
+  }, [challengeProgressId]);
+
+  // Save audit result as tips
+  const saveTipsFromAudit = useCallback(async (result: AuditResult) => {
+    if (!challengeProgressId) return;
+    
+    try {
+      const diagramSnapshot = {
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          type: n.type,
+          label: n.data?.label,
+        })),
+        edges: edges.map((e) => ({
+          source: e.source,
+          target: e.target,
+        })),
+      };
+
+      await fetch("/api/diagram/tips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeProgressId,
+          auditResult: result,
+          diagramSnapshot,
+        }),
+      });
+      
+      // Reload tips to show the new ones
+      await loadTips();
+    } catch (error) {
+      console.error("Failed to save tips:", error);
+    }
+  }, [challengeProgressId, nodes, edges, loadTips]);
+
+  // Dismiss a tip
+  const dismissTip = useCallback(async (tipId: string) => {
+    try {
+      await fetch(`/api/diagram/tips/${tipId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDismissed: true }),
+      });
+      
+      // Update local state
+      setStoredTips((prev) =>
+        prev.map((t) => (t.id === tipId ? { ...t, isDismissed: true, dismissedAt: new Date().toISOString() } : t))
+      );
+    } catch (error) {
+      console.error("Failed to dismiss tip:", error);
+    }
+  }, []);
+
+  // Mark tip as helpful or not
+  const markTipHelpful = useCallback(async (tipId: string, isHelpful: boolean) => {
+    try {
+      await fetch(`/api/diagram/tips/${tipId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isHelpful }),
+      });
+      
+      // Update local state
+      setStoredTips((prev) =>
+        prev.map((t) => (t.id === tipId ? { ...t, isHelpful } : t))
+      );
+    } catch (error) {
+      console.error("Failed to update tip:", error);
+    }
+  }, []);
+
+  // Delete a tip permanently
+  const deleteTip = useCallback(async (tipId: string) => {
+    try {
+      await fetch(`/api/diagram/tips/${tipId}`, {
+        method: "DELETE",
+      });
+      
+      // Update local state
+      setStoredTips((prev) => prev.filter((t) => t.id !== tipId));
+    } catch (error) {
+      console.error("Failed to delete tip:", error);
+    }
+  }, []);
+
+  // Load tips on mount if we have a challengeProgressId
+  useEffect(() => {
+    if (challengeProgressId) {
+      loadTips();
+    }
+  }, [challengeProgressId, loadTips]);
 
   // Handle drag start from service picker
   const onServiceDragStart = useCallback((event: React.DragEvent, service: AWSService) => {
@@ -366,6 +533,9 @@ function DiagramCanvasInner({
       // Get size for this node type
       const size = containerSizes[nodeType];
       
+      // Check if service has a custom iconPath (for user-added services)
+      const serviceWithIcon = service as typeof service & { iconPath?: string };
+      
       const newNode: DiagramNode = {
         id: `${service.id}-${Date.now()}`,
         type: nodeType,
@@ -381,6 +551,7 @@ function DiagramCanvasInner({
           color: service.color,
           config: service.defaultConfig || {},
           subnetType: service.id === "subnet-public" ? "public" : service.id === "subnet-private" ? "private" : undefined,
+          iconPath: serviceWithIcon.iconPath, // Pass custom icon path if available
         },
         zIndex: service.isContainer ? 0 : 10,
       };
@@ -409,6 +580,177 @@ function DiagramCanvasInner({
       setAuditResult(null);
     }
   }, [nodes.length, setNodes, setEdges]);
+
+  // 🔄 UNDO/REDO FUNCTIONS
+  // Save state to history
+  const saveToHistory = useCallback(() => {
+    if (isUndoRedoAction.current) {
+      isUndoRedoAction.current = false;
+      return;
+    }
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push({ nodes: [...nodes], edges: [...edges] });
+      // Keep max 50 history states
+      if (newHistory.length > 50) newHistory.shift();
+      return newHistory;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [nodes, edges, historyIndex]);
+
+  // Track changes for undo/redo
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      saveToHistory();
+    }, 500); // Debounce to avoid too many history entries
+    return () => clearTimeout(timeout);
+  }, [nodes, edges, saveToHistory]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    isUndoRedoAction.current = true;
+    const prevState = history[historyIndex - 1];
+    setNodes(prevState.nodes);
+    setEdges(prevState.edges);
+    setHistoryIndex(prev => prev - 1);
+  }, [canUndo, history, historyIndex, setNodes, setEdges]);
+
+  const handleRedo = useCallback(() => {
+    if (!canRedo) return;
+    isUndoRedoAction.current = true;
+    const nextState = history[historyIndex + 1];
+    setNodes(nextState.nodes);
+    setEdges(nextState.edges);
+    setHistoryIndex(prev => prev + 1);
+  }, [canRedo, history, historyIndex, setNodes, setEdges]);
+
+  // 📋 COPY/PASTE FUNCTIONS
+  const handleCopy = useCallback(() => {
+    if (!selectedNode) return;
+    // Copy selected node and its connected edges
+    const nodesToCopy = nodes.filter(n => n.id === selectedNode.id) as DiagramNode[];
+    const edgesToCopy = edges.filter(e => e.source === selectedNode.id || e.target === selectedNode.id) as DiagramEdge[];
+    setClipboard({ nodes: nodesToCopy, edges: edgesToCopy });
+  }, [selectedNode, nodes, edges]);
+
+  const handlePaste = useCallback(() => {
+    if (!clipboard || clipboard.nodes.length === 0) return;
+    
+    // Create new nodes with offset position and new IDs
+    const idMap: Record<string, string> = {};
+    const newNodes: DiagramNode[] = clipboard.nodes.map(node => {
+      const newId = `${node.data?.serviceId || node.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      idMap[node.id] = newId;
+      return {
+        ...node,
+        id: newId,
+        position: { x: node.position.x + 50, y: node.position.y + 50 },
+        selected: true,
+      } as DiagramNode;
+    });
+    
+    // Create new edges with updated IDs
+    const newEdges: DiagramEdge[] = clipboard.edges
+      .filter(edge => idMap[edge.source] && idMap[edge.target])
+      .map(edge => ({
+        ...edge,
+        id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        source: idMap[edge.source],
+        target: idMap[edge.target],
+      } as DiagramEdge));
+    
+    setNodes(nds => [...nds.map(n => ({ ...n, selected: false }) as DiagramNode), ...newNodes]);
+    setEdges(eds => [...eds, ...newEdges]);
+  }, [clipboard, setNodes, setEdges]);
+
+  const handleDuplicate = useCallback(() => {
+    if (!selectedNode) return;
+    const nodeToDupe = nodes.find(n => n.id === selectedNode.id) as DiagramNode | undefined;
+    if (!nodeToDupe) return;
+    
+    const newId = `${nodeToDupe.data?.serviceId || nodeToDupe.type}-${Date.now()}`;
+    const newNode: DiagramNode = {
+      ...nodeToDupe,
+      id: newId,
+      position: { x: nodeToDupe.position.x + 50, y: nodeToDupe.position.y + 50 },
+      selected: true,
+    };
+    
+    setNodes(nds => [...nds.map(n => ({ ...n, selected: false }) as DiagramNode), newNode]);
+  }, [selectedNode, nodes, setNodes]);
+
+  const handleSelectAll = useCallback(() => {
+    setNodes(nds => nds.map(n => ({ ...n, selected: true })));
+  }, [setNodes]);
+
+  // 🖱️ CONTEXT MENU
+  const handleContextMenu = useCallback((event: React.MouseEvent | MouseEvent, node?: Node) => {
+    event.preventDefault();
+    const mouseEvent = event as MouseEvent;
+    setContextMenu({
+      x: mouseEvent.clientX,
+      y: mouseEvent.clientY,
+      nodeId: node?.id,
+    });
+    if (node) {
+      setSelectedNode(node);
+    }
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // Close context menu on click elsewhere
+  useEffect(() => {
+    const handleClick = () => closeContextMenu();
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, [closeContextMenu]);
+
+  // ⌨️ KEYBOARD SHORTCUTS
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+      const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+      
+      if (cmdKey && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if (cmdKey && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      } else if (cmdKey && e.key === "c") {
+        e.preventDefault();
+        handleCopy();
+      } else if (cmdKey && e.key === "v") {
+        e.preventDefault();
+        handlePaste();
+      } else if (cmdKey && e.key === "d") {
+        e.preventDefault();
+        handleDuplicate();
+      } else if (cmdKey && e.key === "a") {
+        e.preventDefault();
+        handleSelectAll();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedNode) {
+          e.preventDefault();
+          deleteSelectedNode();
+        }
+      } else if (e.key === "Escape") {
+        setIsFullscreen(false);
+      }
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleUndo, handleRedo, handleCopy, handlePaste, handleDuplicate, handleSelectAll, selectedNode, deleteSelectedNode]);
 
   // Audit diagram via Learning Agent
   const auditDiagram = useCallback(async () => {
@@ -461,13 +803,16 @@ function DiagramCanvasInner({
 
       setAuditResult(result);
       onAuditComplete?.(result);
+      
+      // 📦 Save tips to the tip jar
+      await saveTipsFromAudit(result);
     } catch (error) {
       console.error("Audit error:", error);
       setAuditError(error instanceof Error ? error.message : "Failed to audit diagram");
     } finally {
       setIsAuditing(false);
     }
-  }, [nodes, edges, challengeContext, sessionId, apiKey, preferredModel, onAuditComplete]);
+  }, [nodes, edges, challengeContext, sessionId, apiKey, preferredModel, onAuditComplete, saveTipsFromAudit]);
 
   return (
     <div className="flex h-full">
@@ -475,33 +820,46 @@ function DiagramCanvasInner({
       <ServicePicker
         onDragStart={onServiceDragStart}
         suggestedServices={challengeContext?.awsServices}
+        // Control callbacks
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
+        onDuplicate={handleDuplicate}
+        onDelete={deleteSelectedNode}
+        onSelectAll={handleSelectAll}
+        onToggleGrid={() => setShowGrid(prev => !prev)}
+        onZoomIn={() => rfZoomIn()}
+        onZoomOut={() => rfZoomOut()}
+        onFitView={() => fitView()}
+        onClear={clearCanvas}
+        // Control state
+        canUndo={canUndo}
+        canRedo={canRedo}
+        hasSelection={!!selectedNode}
+        showGrid={showGrid}
+        zoomLevel={zoomLevel}
       />
 
       {/* Main Canvas Area */}
-      <div className="flex-1 flex flex-col">
+      <div className={cn(
+        "flex flex-col",
+        isFullscreen ? "fixed inset-0 z-50 bg-slate-950" : "flex-1"
+      )}>
         {/* Toolbar */}
-        <div className="h-12 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-900/50">
+        <div className="h-10 flex items-center justify-between px-3 border-b border-slate-800 bg-slate-900/80">
+          {/* Left side - Fullscreen toggle */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={deleteSelectedNode}
-              disabled={!selectedNode}
-              className="h-8 text-xs gap-1.5"
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearCanvas}
-              disabled={nodes.length === 0}
-              className="h-8 text-xs gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Clear
-            </Button>
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+            {isFullscreen && (
+              <span className="text-xs text-slate-500">Press ESC to exit</span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -599,11 +957,29 @@ function DiagramCanvasInner({
                 </>
               )}
             </Button>
+
+            {/* 📦 Tip Jar Toggle */}
+            {challengeProgressId && (
+              <Button
+                variant={tipJarOpen ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setTipJarOpen(!tipJarOpen)}
+                className="h-8 text-xs gap-1.5"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                Tips
+                {storedTips.filter(t => !t.isDismissed).length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px]">
+                    {storedTips.filter(t => !t.isDismissed).length}
+                  </span>
+                )}
+              </Button>
+            )}
           </div>
         </div>
 
         {/* React Flow Canvas */}
-        <div ref={reactFlowWrapper} className="flex-1 bg-slate-950">
+        <div ref={reactFlowWrapper} className="flex-1 bg-slate-950 relative">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -614,6 +990,8 @@ function DiagramCanvasInner({
             onPaneClick={onPaneClick}
             onDragOver={onDragOver}
             onDrop={onDrop}
+            onNodeContextMenu={(e, node) => handleContextMenu(e, node)}
+            onPaneContextMenu={(e) => handleContextMenu(e)}
             nodeTypes={nodeTypes}
             fitView
             snapToGrid
@@ -626,14 +1004,87 @@ function DiagramCanvasInner({
             }}
             className="bg-slate-950"
           >
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={20}
-              size={1}
-              color="#334155"
-            />
-            <Controls className="!bg-slate-800 !border-slate-700 !rounded-lg [&>button]:!bg-slate-800 [&>button]:!border-slate-700 [&>button]:!text-slate-400 [&>button:hover]:!bg-slate-700" />
+            {showGrid && (
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={20}
+                size={1}
+                color="#334155"
+              />
+            )}
+            {/* Controls removed - now in sidebar */}
           </ReactFlow>
+          
+          {/* 🖱️ CONTEXT MENU */}
+          {contextMenu && (
+            <div
+              className="fixed bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-50 min-w-[160px]"
+              style={{ left: contextMenu.x, top: contextMenu.y }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {contextMenu.nodeId ? (
+                <>
+                  <button
+                    onClick={() => { handleCopy(); closeContextMenu(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <span className="w-4">📋</span> Copy
+                    <span className="ml-auto text-slate-500">⌘C</span>
+                  </button>
+                  <button
+                    onClick={() => { handleDuplicate(); closeContextMenu(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <span className="w-4">📑</span> Duplicate
+                    <span className="ml-auto text-slate-500">⌘D</span>
+                  </button>
+                  <div className="h-px bg-slate-700 my-1" />
+                  <button
+                    onClick={() => { deleteSelectedNode(); closeContextMenu(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-900/30 flex items-center gap-2"
+                  >
+                    <span className="w-4">🗑️</span> Delete
+                    <span className="ml-auto text-slate-500">Del</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { handlePaste(); closeContextMenu(); }}
+                    disabled={!clipboard}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="w-4">📋</span> Paste
+                    <span className="ml-auto text-slate-500">⌘V</span>
+                  </button>
+                  <button
+                    onClick={() => { handleSelectAll(); closeContextMenu(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <span className="w-4">☑️</span> Select All
+                    <span className="ml-auto text-slate-500">⌘A</span>
+                  </button>
+                  <div className="h-px bg-slate-700 my-1" />
+                  <button
+                    onClick={() => { handleUndo(); closeContextMenu(); }}
+                    disabled={!canUndo}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="w-4">↩️</span> Undo
+                    <span className="ml-auto text-slate-500">⌘Z</span>
+                  </button>
+                  <button
+                    onClick={() => { handleRedo(); closeContextMenu(); }}
+                    disabled={!canRedo}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="w-4">↪️</span> Redo
+                    <span className="ml-auto text-slate-500">⌘Y</span>
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {/* 🎮 PRO-TIP TOAST */}
           {proTip && (
@@ -677,26 +1128,44 @@ function DiagramCanvasInner({
         {(auditResult || auditError) && (
           <div className="border-t border-slate-800 bg-slate-900/80 p-4 max-h-48 overflow-y-auto">
             {auditError ? (
-              <div className="flex items-center gap-2 text-red-400">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm">{auditError}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-red-400">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">{auditError}</span>
+                </div>
+                <button
+                  onClick={() => setAuditError(null)}
+                  className="p-1 hover:bg-slate-800 rounded text-slate-500 hover:text-slate-300"
+                  title="Dismiss"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             ) : auditResult && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-slate-200">Audit Results</h4>
-                  <span
-                    className={cn(
-                      "text-lg font-bold",
-                      auditResult.score >= 80
-                        ? "text-green-400"
-                        : auditResult.score >= 50
-                        ? "text-amber-400"
-                        : "text-red-400"
-                    )}
-                  >
-                    {auditResult.score}/100
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "text-lg font-bold",
+                        auditResult.score >= 80
+                          ? "text-green-400"
+                          : auditResult.score >= 50
+                          ? "text-amber-400"
+                          : "text-red-400"
+                      )}
+                    >
+                      {auditResult.score}/100
+                    </span>
+                    <button
+                      onClick={() => setAuditResult(null)}
+                      className="p-1 hover:bg-slate-800 rounded text-slate-500 hover:text-slate-300"
+                      title="Dismiss"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {auditResult.correct.length > 0 && (
@@ -739,6 +1208,132 @@ function DiagramCanvasInner({
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 📦 Tip Jar Panel - Shows all stored tips for this challenge */}
+        {tipJarOpen && (
+          <div className="border-t border-slate-800 bg-slate-900/95 max-h-64 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Archive className="w-4 h-4 text-amber-400" />
+                <h4 className="text-sm font-medium text-slate-200">Tip Jar</h4>
+                <span className="text-xs text-slate-500">
+                  ({storedTips.filter(t => !t.isDismissed).length} active)
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Filter buttons */}
+                <div className="flex gap-1">
+                  {(["all", "correct", "missing", "suggestion"] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setTipJarFilter(filter)}
+                      className={cn(
+                        "px-2 py-0.5 text-xs rounded",
+                        tipJarFilter === filter
+                          ? "bg-cyan-500/20 text-cyan-400"
+                          : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                      )}
+                    >
+                      {filter === "all" ? "All" : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setTipJarOpen(false)}
+                  className="p-1 hover:bg-slate-800 rounded text-slate-500 hover:text-slate-300"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {isLoadingTips ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+                </div>
+              ) : storedTips.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-4">
+                  No tips yet. Run an audit to get feedback!
+                </p>
+              ) : (
+                storedTips
+                  .filter((tip) => {
+                    if (tipJarFilter === "all") return !tip.isDismissed;
+                    return tip.category === tipJarFilter && !tip.isDismissed;
+                  })
+                  .map((tip) => (
+                    <div
+                      key={tip.id}
+                      className={cn(
+                        "p-2 rounded-lg border text-xs",
+                        tip.category === "correct" && "bg-green-500/10 border-green-500/30",
+                        tip.category === "missing" && "bg-amber-500/10 border-amber-500/30",
+                        tip.category === "suggestion" && "bg-cyan-500/10 border-cyan-500/30",
+                        tip.category === "feedback" && "bg-slate-800 border-slate-700"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <span
+                            className={cn(
+                              "text-[10px] font-medium uppercase",
+                              tip.category === "correct" && "text-green-400",
+                              tip.category === "missing" && "text-amber-400",
+                              tip.category === "suggestion" && "text-cyan-400",
+                              tip.category === "feedback" && "text-slate-400"
+                            )}
+                          >
+                            {tip.category}
+                          </span>
+                          <p className="text-slate-300 mt-0.5">{tip.content}</p>
+                          <p className="text-slate-600 text-[10px] mt-1">
+                            Score: {tip.auditScore}/100 • {new Date(tip.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => markTipHelpful(tip.id, true)}
+                            className={cn(
+                              "p-1 rounded hover:bg-white/10",
+                              tip.isHelpful === true ? "text-green-400" : "text-slate-600"
+                            )}
+                            title="Helpful"
+                          >
+                            <ThumbsUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => markTipHelpful(tip.id, false)}
+                            className={cn(
+                              "p-1 rounded hover:bg-white/10",
+                              tip.isHelpful === false ? "text-red-400" : "text-slate-600"
+                            )}
+                            title="Not helpful"
+                          >
+                            <ThumbsDown className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => dismissTip(tip.id)}
+                            className="p-1 rounded hover:bg-white/10 text-slate-600 hover:text-slate-400"
+                            title="Dismiss"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => deleteTip(tip.id)}
+                            className="p-1 rounded hover:bg-white/10 text-slate-600 hover:text-red-400"
+                            title="Delete permanently"
+                          >
+                            <TrashIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -846,6 +846,7 @@ model AcademyUserProfile {
   coachingSessions           CoachingSession[]
   customLocations            CustomLocation[]
   flashcardProgress          FlashcardUserProgress[]
+  portfolios                 AcademyPortfolio[]
   quizAttempts               QuizAttempt[]
   scenarioAttempts           ScenarioAttempt[]
   studyNotesProgress         StudyNotesProgress[]
@@ -911,24 +912,25 @@ model ScenarioAttempt {
 }
 
 model ChallengeProgress {
-  id               String           @id @default(cuid())
+  id               String            @id @default(cuid())
   attemptId        String
   challengeId      String
-  status           String           @default("locked")
+  status           String            @default("locked")
   unlockedAt       DateTime?
   startedAt        DateTime?
   completedAt      DateTime?
-  pointsEarned     Int              @default(0)
-  bonusEarned      Int              @default(0)
-  hintsUsed        Int              @default(0)
-  attemptsCount    Int              @default(0)
-  timeSpentMinutes Int              @default(0)
+  pointsEarned     Int               @default(0)
+  bonusEarned      Int               @default(0)
+  hintsUsed        Int               @default(0)
+  attemptsCount    Int               @default(0)
+  timeSpentMinutes Int               @default(0)
   solution         Json?
   solutionNotes    String?
   feedback         Json?
   evaluatedAt      DateTime?
-  attempt          ScenarioAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  challenge        AcademyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  attempt          ScenarioAttempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  challenge        AcademyChallenge  @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  diagramAuditTips DiagramAuditTip[]
 
   @@unique([attemptId, challengeId])
   @@index([challengeId])
@@ -1695,4 +1697,80 @@ model WellArchitectedPrinciple {
   createdAt       DateTime @default(now())
 
   @@index([pillar])
+}
+
+// Portfolio - stores user's completed challenge work for showcase
+model AcademyPortfolio {
+  id                    String              @id @default(cuid())
+  profileId             String?
+  title                 String
+  description           String?
+  status                String              @default("draft")
+  type                  String              @default("generated")
+  isExample             Boolean             @default(false)
+  businessUseCase       String?
+  problemStatement      String?
+  solutionSummary       String?
+  awsServices           Json                @default("[]")
+  architectureDiagram   Json?
+  diagramSvg            String?
+  keyDecisions          Json                @default("[]")
+  complianceAchieved    Json                @default("[]")
+  challengeScore        Int                 @default(0)
+  maxScore              Int                 @default(0)
+  completionTimeMinutes Int                 @default(0)
+  hintsUsed             Int                 @default(0)
+  scenarioAttemptId     String?
+  challengeProgressId   String?
+  locationSlug          String?
+  locationName          String?
+  companyName           String?
+  industry              String?
+  pdfUrl                String?
+  thumbnailUrl          String?
+  generatedAt           DateTime?
+  generationError       String?
+  isPublic              Boolean             @default(false)
+  shareCode             String?             @unique
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  profile               AcademyUserProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([status])
+  @@index([type])
+  @@index([isExample])
+  @@index([isPublic])
+}
+
+// Diagram Audit Tips - "Tip Jar" for storing AI feedback on architecture diagrams
+model DiagramAuditTip {
+  id                String              @id @default(cuid())
+  challengeProgressId String
+  profileId         String
+  
+  // Audit result data
+  auditScore        Int                 // Score from 0-100
+  category          String              // "correct", "missing", "suggestion", "feedback"
+  content           String              // The actual tip/feedback text
+  
+  // Context
+  diagramSnapshot   Json?               // Optional: snapshot of diagram state when tip was given
+  awsServicesInvolved Json              @default("[]") // AWS services related to this tip
+  
+  // User interaction
+  isDismissed       Boolean             @default(false)
+  dismissedAt       DateTime?
+  isHelpful         Boolean?            // User can mark tips as helpful or not
+  userNotes         String?             // User can add notes to tips
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  challengeProgress ChallengeProgress   @relation(fields: [challengeProgressId], references: [id], onDelete: Cascade)
+
+  @@index([challengeProgressId])
+  @@index([profileId])
+  @@index([isDismissed])
+  @@index([category])
 }

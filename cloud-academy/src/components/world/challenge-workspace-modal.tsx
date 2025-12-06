@@ -174,6 +174,7 @@ export function ChallengeWorkspaceModal({
   const [diagramData, setDiagramData] = useState<DiagramData | null>(null);
   const [diagramSessionId, setDiagramSessionId] = useState<string | undefined>();
   const [lastAuditResult, setLastAuditResult] = useState<AuditResult | null>(null);
+  const [challengeProgressId, setChallengeProgressId] = useState<string | null>(null);
   
   // Right panel state (chat or terminal)
   const [rightPanelTab, setRightPanelTab] = useState<"chat" | "terminal">("chat");
@@ -191,8 +192,14 @@ export function ChallengeWorkspaceModal({
       );
       if (response.ok) {
         const data = await response.json();
-        if (data.exists && data.progress?.solution) {
-          return data.progress;
+        if (data.exists && data.progress) {
+          // Store the progress ID for tip jar functionality
+          if (data.progress.id) {
+            setChallengeProgressId(data.progress.id);
+          }
+          if (data.progress.solution) {
+            return data.progress;
+          }
         }
       }
     } catch (err) {
@@ -353,6 +360,7 @@ export function ChallengeWorkspaceModal({
       setEarnedPoints(0);
       setRevealedQuestionHints(new Set());
       setMessages([]);
+      setChallengeProgressId(null);
       fetchQuestions();
     }
   }, [isOpen, challenge?.id, fetchQuestions]);
@@ -887,10 +895,11 @@ export function ChallengeWorkspaceModal({
                         challengeBrief: questionsData?.brief || challenge.description,
                         awsServices: challenge.aws_services_relevant,
                       }}
+                      challengeProgressId={challengeProgressId || undefined}
                       sessionId={diagramSessionId}
                       apiKey={apiKey || undefined}
                       preferredModel={preferredModel || undefined}
-                      onSave={(data) => {
+                      onSave={async (data) => {
                         setDiagramData(data);
                         // Also save to challenge progress
                         if (attemptId && challenge.id) {
@@ -906,7 +915,7 @@ export function ChallengeWorkspaceModal({
                               answeredAt: new Date().toISOString(),
                             }));
                           
-                          fetch("/api/challenge/progress", {
+                          const response = await fetch("/api/challenge/progress", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
@@ -924,7 +933,15 @@ export function ChallengeWorkspaceModal({
                                 estimatedTimeMinutes: questionsData.estimated_time_minutes,
                               } : undefined,
                             }),
-                          }).catch(console.error);
+                          });
+                          
+                          // Store the progress ID if we get it back
+                          if (response.ok) {
+                            const result = await response.json();
+                            if (result.progressId && !challengeProgressId) {
+                              setChallengeProgressId(result.progressId);
+                            }
+                          }
                         }
                       }}
                       onAuditComplete={(result) => {

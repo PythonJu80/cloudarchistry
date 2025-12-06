@@ -149,11 +149,13 @@ interface AWSResourceNodeData {
   sublabel?: string;
   color: string;
   config?: Record<string, unknown>;
+  iconPath?: string; // Custom icon path for user-added services
 }
 
 export const AWSResourceNode = memo(({ data, selected }: { data: AWSResourceNodeData; selected?: boolean }) => {
   const Icon = iconMap[data.serviceId] || Server;
   const color = data.color || "#ED7100";
+  const hasCustomIcon = data.iconPath && data.iconPath.startsWith("/aws-icons/");
 
   return (
     <div
@@ -166,12 +168,17 @@ export const AWSResourceNode = memo(({ data, selected }: { data: AWSResourceNode
       <Handle type="target" position={Position.Top} className={handleClass(selected)} />
       <Handle type="target" position={Position.Left} id="left" className={handleClass(selected)} />
       
-      {/* Icon */}
+      {/* Icon - supports both Lucide icons and AWS SVG icons */}
       <div
         className="w-12 h-12 rounded flex items-center justify-center mb-2"
         style={{ backgroundColor: `${color}15` }}
       >
-        <Icon className="w-7 h-7" style={{ color }} />
+        {hasCustomIcon ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={data.iconPath} alt={data.label} className="w-8 h-8" />
+        ) : (
+          <Icon className="w-7 h-7" style={{ color }} />
+        )}
       </div>
       
       {/* Label - abbreviated for cleaner display */}
