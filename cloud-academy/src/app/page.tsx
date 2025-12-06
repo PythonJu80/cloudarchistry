@@ -127,6 +127,10 @@ export default function Home() {
               <Link href="/challenges" className="text-white/70 hover:text-white transition-colors text-sm font-medium">
                 Challenges
               </Link>
+              <Link href="/game" className="text-red-400 hover:text-red-300 transition-colors text-sm font-medium flex items-center gap-1">
+                <Swords className="w-4 h-4" />
+                Game Zone
+              </Link>
               <Link href="/leaderboard" className="text-white/70 hover:text-white transition-colors text-sm font-medium">
                 Leaderboard
               </Link>

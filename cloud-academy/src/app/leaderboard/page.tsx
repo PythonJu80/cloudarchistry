@@ -9,7 +9,8 @@ import {
   Crown,
   Star,
   TrendingUp,
-  Calendar
+  Calendar,
+  Swords
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,6 +153,10 @@ export default function LeaderboardPage() {
             </Link>
             <Link href="/challenges" className="text-muted-foreground hover:text-foreground transition-colors">
               Challenges
+            </Link>
+            <Link href="/game" className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+              <Swords className="w-4 h-4" />
+              Game Zone
             </Link>
             <Link href="/leaderboard" className="text-foreground font-medium">
               Leaderboard

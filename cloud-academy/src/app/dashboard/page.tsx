@@ -22,6 +22,7 @@ import {
   MapPin,
   TrendingUp,
   Calendar,
+  Swords,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -304,6 +305,13 @@ export default function DashboardPage() {
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Challenges
+            </Link>
+            <Link
+              href="/game"
+              className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+            >
+              <Swords className="w-4 h-4" />
+              Game Zone
             </Link>
             <Link
               href="/leaderboard"

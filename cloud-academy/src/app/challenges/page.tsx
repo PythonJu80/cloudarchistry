@@ -12,7 +12,8 @@ import {
   Shield,
   Database,
   Server,
-  Lock
+  Lock,
+  Swords
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,6 +145,10 @@ export default function ChallengesPage() {
             </Link>
             <Link href="/challenges" className="text-foreground font-medium">
               Challenges
+            </Link>
+            <Link href="/game" className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+              <Swords className="w-4 h-4" />
+              Game Zone
             </Link>
             <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">
               Leaderboard
