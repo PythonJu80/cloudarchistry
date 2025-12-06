@@ -9,12 +9,13 @@ const registerSchema = z.object({
   password: z.string().min(8),
   name: z.string().min(2),
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
-  organizationName: z.string().min(2).optional(),  // Optional - for team signups
+  organizationName: z.string().min(2).optional().or(z.literal("")),  // Optional - for team signups, allow empty string
 });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    console.log("Registration attempt with body:", JSON.stringify(body, null, 2));
     const { email, password, name, username, organizationName } = registerSchema.parse(body);
 
     // Check if Academy user exists (separate from main CloudMigrate users)
@@ -105,8 +106,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error("Registration validation error:", error.message);
+      console.error("Zod issues:", error.issues);
       return NextResponse.json(
-        { error: "Invalid input", details: error.errors },
+        { error: "Invalid input", details: error.issues },
         { status: 400 }
       );
     }
