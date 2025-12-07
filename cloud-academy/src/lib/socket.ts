@@ -1,0 +1,116 @@
+/**
+ * Socket.io server singleton for real-time versus mode
+ */
+
+import { Server as SocketIOServer } from "socket.io";
+import { Server as HTTPServer } from "http";
+
+// Global socket server instance
+let io: SocketIOServer | null = null;
+
+// Track which users are in which match rooms
+const matchRooms = new Map<string, Set<string>>(); // matchCode -> Set of socket IDs
+
+export function initSocketServer(httpServer: HTTPServer): SocketIOServer {
+  if (io) {
+    return io;
+  }
+
+  io = new SocketIOServer(httpServer, {
+    path: "/api/socket",
+    addTrailingSlash: false,
+    cors: {
+      origin: process.env.NEXTAUTH_URL || "http://localhost:6060",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  });
+
+  io.on("connection", (socket) => {
+    console.log(`[Socket] Client connected: ${socket.id}`);
+
+    // Join a match room
+    socket.on("join-match", (matchCode: string, userId: string) => {
+      socket.join(`match:${matchCode}`);
+      
+      // Track user in room
+      if (!matchRooms.has(matchCode)) {
+        matchRooms.set(matchCode, new Set());
+      }
+      matchRooms.get(matchCode)!.add(socket.id);
+      
+      // Store user info on socket
+      socket.data.matchCode = matchCode;
+      socket.data.userId = userId;
+      
+      console.log(`[Socket] User ${userId} joined match:${matchCode}`);
+      
+      // Notify others in the room
+      socket.to(`match:${matchCode}`).emit("player-joined", { userId });
+    });
+
+    // Leave a match room
+    socket.on("leave-match", (matchCode: string) => {
+      socket.leave(`match:${matchCode}`);
+      matchRooms.get(matchCode)?.delete(socket.id);
+      console.log(`[Socket] Socket ${socket.id} left match:${matchCode}`);
+    });
+
+    // Chat message
+    socket.on("chat-message", (data: { matchCode: string; message: string; playerId: string; playerName: string }) => {
+      // Broadcast to everyone in the match room (including sender for confirmation)
+      io?.to(`match:${data.matchCode}`).emit("chat-message", {
+        id: `msg-${Date.now()}`,
+        playerId: data.playerId,
+        playerName: data.playerName,
+        message: data.message,
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    // Buzz in
+    socket.on("buzz", (data: { matchCode: string; playerId: string }) => {
+      // Broadcast buzz to everyone in match
+      io?.to(`match:${data.matchCode}`).emit("player-buzzed", {
+        playerId: data.playerId,
+        timestamp: Date.now(),
+      });
+    });
+
+    // Answer submitted
+    socket.on("answer-submitted", (data: { matchCode: string; playerId: string; correct: boolean; points: number }) => {
+      io?.to(`match:${data.matchCode}`).emit("answer-result", data);
+    });
+
+    // Match state update (scores, question, etc.)
+    socket.on("match-update", (data: { matchCode: string; update: Record<string, unknown> }) => {
+      io?.to(`match:${data.matchCode}`).emit("match-update", data.update);
+    });
+
+    // Handle disconnect
+    socket.on("disconnect", () => {
+      const matchCode = socket.data.matchCode;
+      if (matchCode) {
+        matchRooms.get(matchCode)?.delete(socket.id);
+        socket.to(`match:${matchCode}`).emit("player-disconnected", {
+          userId: socket.data.userId,
+        });
+      }
+      console.log(`[Socket] Client disconnected: ${socket.id}`);
+    });
+  });
+
+  console.log("[Socket] Socket.io server initialized");
+  return io;
+}
+
+export function getSocketServer(): SocketIOServer | null {
+  return io;
+}
+
+// Helper to emit to a specific match room from API routes
+export function emitToMatch(matchCode: string, event: string, data: unknown) {
+  if (io) {
+    io.to(`match:${matchCode}`).emit(event, data);
+  }
+}

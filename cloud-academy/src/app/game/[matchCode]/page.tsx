@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useSocket } from "@/hooks/use-socket";
 import {
   Loader2,
   Trophy,
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Wifi, WifiOff } from "lucide-react";
 
 interface Player {
   id: string;
@@ -93,7 +95,7 @@ export default function GameMatchPage() {
   
   // Chat state
   const [chatMessage, setChatMessage] = useState("");
-  const [sendingChat, setSendingChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   // Quiz state
@@ -101,9 +103,12 @@ export default function GameMatchPage() {
   const [answering, setAnswering] = useState(false);
   const [lastResult, setLastResult] = useState<AnswerResult | null>(null);
   const [showResult, setShowResult] = useState(false);
+  
+  // Connection status
+  const [opponentOnline, setOpponentOnline] = useState(false);
 
   // Fetch match data
-  const fetchMatch = async () => {
+  const fetchMatch = useCallback(async () => {
     try {
       const res = await fetch(`/api/versus/${matchCode}`);
       const data = await res.json();
@@ -114,16 +119,20 @@ export default function GameMatchPage() {
       }
       
       setMatch(data.match);
+      // Initialize chat messages from match data
+      if (data.match.chatMessages) {
+        setChatMessages(data.match.chatMessages);
+      }
       setError(null);
     } catch {
       setError("Failed to load match");
     } finally {
       setLoading(false);
     }
-  };
+  }, [matchCode]);
 
   // Fetch current question
-  const fetchQuestion = async () => {
+  const fetchQuestion = useCallback(async () => {
     if (!match || match.status !== "active") return;
     
     try {
@@ -136,7 +145,94 @@ export default function GameMatchPage() {
     } catch (err) {
       console.error("Failed to fetch question:", err);
     }
-  };
+  }, [match, matchCode]);
+
+  // Socket event handlers
+  const handleSocketChatMessage = useCallback((msg: ChatMessage) => {
+    setChatMessages(prev => {
+      // Avoid duplicates
+      if (prev.some(m => m.id === msg.id)) return prev;
+      return [...prev, msg];
+    });
+  }, []);
+
+  const handleSocketBuzz = useCallback((event: { playerId: string; playerName: string }) => {
+    // Update question state with who buzzed
+    setQuestion(prev => prev ? { ...prev, buzzedBy: event.playerId, canBuzz: false } : null);
+  }, []);
+
+  const handleSocketAnswerResult = useCallback((result: { playerId: string; correct: boolean; points: number; correctAnswer?: number }) => {
+    // Show result overlay for the answering player
+    if (match && result.playerId === match.myPlayerId) {
+      setLastResult({
+        correct: result.correct,
+        points: result.points,
+        correctAnswer: result.correctAnswer || 0,
+      });
+      setShowResult(true);
+      setTimeout(() => {
+        setShowResult(false);
+        setLastResult(null);
+      }, 2000);
+    }
+    // Refresh match and question data
+    fetchMatch();
+    fetchQuestion();
+  }, [match, fetchMatch, fetchQuestion]);
+
+  const handleSocketScoreUpdate = useCallback((scores: { player1Score: number; player2Score: number }) => {
+    setMatch(prev => prev ? { ...prev, player1Score: scores.player1Score, player2Score: scores.player2Score } : null);
+  }, []);
+
+  const handleSocketMatchStatus = useCallback((status: { status: string; winnerId?: string }) => {
+    setMatch(prev => prev ? { ...prev, status: status.status, winnerId: status.winnerId || null } : null);
+  }, []);
+
+  const handleSocketNewQuestion = useCallback((questionData: unknown) => {
+    setQuestion(questionData as QuestionData);
+  }, []);
+
+  const handleSocketRoomUpdate = useCallback((update: { players: Array<{ userId: string }>; playerCount: number }) => {
+    // Check if opponent is online
+    if (match) {
+      const opponentId = match.isPlayer1 ? match.player2.id : match.player1.id;
+      setOpponentOnline(update.players.some(p => p.userId === opponentId));
+    }
+  }, [match]);
+
+  const handleSocketPlayerDisconnected = useCallback((data: { userId: string }) => {
+    if (match) {
+      const opponentId = match.isPlayer1 ? match.player2.id : match.player1.id;
+      if (data.userId === opponentId) {
+        setOpponentOnline(false);
+      }
+    }
+  }, [match]);
+
+  // Initialize socket connection
+  const {
+    isConnected,
+    sendChatMessage: socketSendChat,
+    buzz: socketBuzz,
+    submitAnswerResult,
+    updateScores,
+    sendNextQuestion,
+    updateMatchStatus,
+  } = useSocket({
+    matchCode,
+    userId: match?.myPlayerId || "",
+    userName: match?.isPlayer1 
+      ? (match?.player1.name || match?.player1.username || "Player 1")
+      : (match?.player2.name || match?.player2.username || "Player 2"),
+    onChatMessage: handleSocketChatMessage,
+    onPlayerBuzzed: handleSocketBuzz,
+    onAnswerResult: handleSocketAnswerResult,
+    onScoreUpdate: handleSocketScoreUpdate,
+    onMatchStatus: handleSocketMatchStatus,
+    onNewQuestion: handleSocketNewQuestion,
+    onRoomUpdate: handleSocketRoomUpdate,
+    onPlayerDisconnected: handleSocketPlayerDisconnected,
+  });
 
   // Initial load
   useEffect(() => {
@@ -148,33 +244,34 @@ export default function GameMatchPage() {
     if (authStatus === "authenticated" && matchCode) {
       fetchMatch();
     }
-  }, [authStatus, matchCode, router]);
+  }, [authStatus, matchCode, router, fetchMatch]);
 
-  // Poll for updates when match is active
+  // Fallback polling (less frequent since we have WebSockets)
   useEffect(() => {
-    if (!match) return;
+    if (!match || !isConnected) return;
     
+    // Only poll every 10 seconds as a fallback when connected via WebSocket
     const interval = setInterval(() => {
       fetchMatch();
       if (match.status === "active") {
         fetchQuestion();
       }
-    }, 2000); // Poll every 2 seconds
+    }, 10000);
     
     return () => clearInterval(interval);
-  }, [match?.status, matchCode]);
+  }, [match?.status, matchCode, isConnected, fetchMatch, fetchQuestion]);
 
   // Fetch question when match becomes active
   useEffect(() => {
     if (match?.status === "active") {
       fetchQuestion();
     }
-  }, [match?.status]);
+  }, [match?.status, fetchQuestion]);
 
   // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [match?.chatMessages]);
+  }, [chatMessages]);
 
   // Accept match
   const handleAccept = async () => {
@@ -226,50 +323,43 @@ export default function GameMatchPage() {
     }
   };
 
-  // Send chat message
-  const handleSendChat = async () => {
-    if (!chatMessage.trim() || sendingChat) return;
+  // Send chat message - now via WebSocket!
+  const handleSendChat = () => {
+    if (!chatMessage.trim()) return;
     
-    setSendingChat(true);
-    try {
-      const res = await fetch(`/api/versus/${matchCode}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "chat", 
-          data: { message: chatMessage } 
-        }),
-      });
-      
-      if (res.ok) {
-        setChatMessage("");
-        fetchMatch();
-      }
-    } catch (err) {
-      console.error("Failed to send chat:", err);
-    } finally {
-      setSendingChat(false);
-    }
+    // Send via WebSocket for instant delivery
+    socketSendChat(chatMessage);
+    setChatMessage("");
+    
+    // Also persist to database in background
+    fetch(`/api/versus/${matchCode}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        action: "chat", 
+        data: { message: chatMessage } 
+      }),
+    }).catch(err => console.error("Failed to persist chat:", err));
   };
 
-  // Buzz in
+  // Buzz in - now via WebSocket for instant response!
   const handleBuzz = async () => {
     if (buzzing || !question?.canBuzz) return;
     
     setBuzzing(true);
+    
+    // Send buzz via WebSocket immediately
+    socketBuzz();
+    
+    // Also persist to database
     try {
-      const res = await fetch(`/api/versus/${matchCode}`, {
+      await fetch(`/api/versus/${matchCode}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "buzz" }),
       });
-      
-      if (res.ok) {
-        fetchMatch();
-        fetchQuestion();
-      }
     } catch (err) {
-      console.error("Failed to buzz:", err);
+      console.error("Failed to persist buzz:", err);
     } finally {
       setBuzzing(false);
     }
@@ -293,10 +383,29 @@ export default function GameMatchPage() {
       const data = await res.json();
       
       if (res.ok) {
+        // Broadcast result via WebSocket
+        submitAnswerResult(data.result.correct, data.result.points, data.result.correctAnswer);
+        
+        // Update scores via WebSocket
+        if (data.match) {
+          updateScores(data.match.player1Score, data.match.player2Score);
+        }
+        
+        // Show result locally
         setLastResult(data.result);
         setShowResult(true);
         
-        // Hide result after 2 seconds and move to next question
+        // If there's a next question, broadcast it
+        if (data.nextQuestion) {
+          sendNextQuestion(data.nextQuestion);
+        }
+        
+        // If match is complete, broadcast status
+        if (data.match?.status === "completed") {
+          updateMatchStatus("completed", data.match.winnerId);
+        }
+        
+        // Hide result after 2 seconds
         setTimeout(() => {
           setShowResult(false);
           setLastResult(null);
@@ -310,6 +419,12 @@ export default function GameMatchPage() {
       setAnswering(false);
     }
   };
+  
+  // Suppress unused variable warnings - these are used in socket callbacks
+  void updateScores;
+  void sendNextQuestion;
+  void updateMatchStatus;
+  void submitAnswerResult;
 
   if (loading || authStatus === "loading") {
     return (
@@ -353,6 +468,11 @@ export default function GameMatchPage() {
           </Link>
           
           <div className="flex items-center gap-2">
+            {/* Connection indicator */}
+            <div className={`flex items-center gap-1 text-xs ${isConnected ? "text-green-500" : "text-red-500"}`}>
+              {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              {isConnected ? "Live" : "Reconnecting..."}
+            </div>
             <Badge variant={match.status === "active" ? "default" : "secondary"}>
               {match.status === "pending" && "Waiting..."}
               {match.status === "active" && "LIVE"}
@@ -631,20 +751,28 @@ export default function GameMatchPage() {
           <div className="lg:col-span-1">
             <Card className="h-[500px] flex flex-col">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <MessageCircle className="w-4 h-4" />
-                  Live Chat
+                <CardTitle className="flex items-center justify-between text-base">
+                  <span className="flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4" />
+                    Live Chat
+                  </span>
+                  {opponentOnline && (
+                    <span className="flex items-center gap-1 text-xs text-green-500">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      Online
+                    </span>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col overflow-hidden">
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto space-y-2 mb-3">
-                  {match.chatMessages.length === 0 && (
+                  {chatMessages.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       No messages yet. Say hi! 👋
                     </p>
                   )}
-                  {match.chatMessages.map((msg) => (
+                  {chatMessages.map((msg) => (
                     <div
                       key={msg.id}
                       className={`p-2 rounded-lg text-sm ${
@@ -669,10 +797,10 @@ export default function GameMatchPage() {
                     value={chatMessage}
                     onChange={(e) => setChatMessage(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
-                    disabled={sendingChat}
+                    disabled={!isConnected}
                   />
-                  <Button size="icon" onClick={handleSendChat} disabled={sendingChat || !chatMessage.trim()}>
-                    {sendingChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  <Button size="icon" onClick={handleSendChat} disabled={!isConnected || !chatMessage.trim()}>
+                    <Send className="w-4 h-4" />
                   </Button>
                 </div>
               </CardContent>
