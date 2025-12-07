@@ -35,7 +35,6 @@ export async function GET() {
       },
     });
 
-    // Convert short code to long code for world map compatibility
     const shortCode = profile?.targetCertification || "SAA";
     const longCode = CERT_CODE_MAP[shortCode] || shortCode;
 
@@ -63,7 +62,6 @@ export async function PUT(request: NextRequest) {
     
     const updateData: Record<string, string> = {};
     
-    // Validate and set cert code if provided
     if (certCode) {
       const validCerts = [
         "solutions-architect-associate", "developer-associate", "sysops-associate",

@@ -169,12 +169,12 @@ export async function POST(req: NextRequest) {
           </html>
         `,
       });
+      return NextResponse.json({ match, emailSent: true, emailTo: opponent.email });
     } catch (emailError) {
       console.error("Failed to send challenge email:", emailError);
-      // Don't fail the request - match is still created
+      // Match is still created, but email failed
+      return NextResponse.json({ match, emailSent: false, emailError: "Failed to send email" });
     }
-
-    return NextResponse.json({ match });
   } catch (error) {
     console.error("Error creating versus match:", error);
     return NextResponse.json({ error: "Failed to create match" }, { status: 500 });

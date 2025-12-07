@@ -1252,6 +1252,7 @@ model AcademyUserProfile {
   
   // Skill level & preferences
   skillLevel  String   @default("intermediate")
+  targetCertification String?  // AWS certification goal: SAA, SAP, DVA, SOA, DOP, ANS, SCS, DBS, MLS, PAS, CLF
   preferredIndustries Json @default("[]")
   preferredDifficulty String?
   

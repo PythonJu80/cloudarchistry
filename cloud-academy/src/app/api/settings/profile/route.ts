@@ -33,36 +33,59 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.academyProfileId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Please sign in to view profile" },
         { status: 401 }
       );
     }
 
-    const profile = await prisma.academyUserProfile.findUnique({
-      where: { id: session.user.academyProfileId },
-      select: {
-        displayName: true,
-        avatarUrl: true,
-        bio: true,
-        skillLevel: true,
-        targetCertification: true,
-        preferredDifficulty: true,
-        preferredIndustries: true,
-        // Stats (read-only)
-        totalPoints: true,
-        level: true,
-        xp: true,
-        currentStreak: true,
-        longestStreak: true,
-        challengesCompleted: true,
-        scenariosCompleted: true,
-        locationsVisited: true,
-        totalTimeMinutes: true,
-        lastActivityDate: true,
-      },
-    });
+    // Use academyProfileId if available, otherwise lookup by user id
+    const profile = session.user.academyProfileId
+      ? await prisma.academyUserProfile.findUnique({
+          where: { id: session.user.academyProfileId },
+          select: {
+            displayName: true,
+            avatarUrl: true,
+            bio: true,
+            skillLevel: true,
+            targetCertification: true,
+            preferredDifficulty: true,
+            preferredIndustries: true,
+            totalPoints: true,
+            level: true,
+            xp: true,
+            currentStreak: true,
+            longestStreak: true,
+            challengesCompleted: true,
+            scenariosCompleted: true,
+            locationsVisited: true,
+            totalTimeMinutes: true,
+            lastActivityDate: true,
+          },
+        })
+      : await prisma.academyUserProfile.findFirst({
+          where: { academyUserId: session.user.id },
+          select: {
+            displayName: true,
+            avatarUrl: true,
+            bio: true,
+            skillLevel: true,
+            targetCertification: true,
+            preferredDifficulty: true,
+            preferredIndustries: true,
+            totalPoints: true,
+            level: true,
+            xp: true,
+            currentStreak: true,
+            longestStreak: true,
+            challengesCompleted: true,
+            scenariosCompleted: true,
+            locationsVisited: true,
+            totalTimeMinutes: true,
+            lastActivityDate: true,
+          },
+        });
 
     if (!profile) {
       return NextResponse.json(
@@ -79,8 +102,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Get profile error:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
     return NextResponse.json(
-      { error: "Failed to get profile" },
+      { error: "Failed to get profile", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -94,10 +118,27 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.academyProfileId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Please sign in to update profile" },
         { status: 401 }
+      );
+    }
+
+    // Get profile ID - use session value or lookup by user id
+    let profileId = session.user.academyProfileId;
+    if (!profileId) {
+      const profile = await prisma.academyUserProfile.findFirst({
+        where: { academyUserId: session.user.id },
+        select: { id: true },
+      });
+      profileId = profile?.id;
+    }
+
+    if (!profileId) {
+      return NextResponse.json(
+        { error: "Profile not found. Please contact support." },
+        { status: 404 }
       );
     }
 
@@ -176,7 +217,7 @@ export async function POST(request: NextRequest) {
 
     // Update the profile
     const updatedProfile = await prisma.academyUserProfile.update({
-      where: { id: session.user.academyProfileId },
+      where: { id: profileId },
       data: updateData,
       select: {
         displayName: true,
@@ -195,8 +236,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Update profile error:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
     return NextResponse.json(
-      { error: "Failed to update profile" },
+      { error: "Failed to update profile", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

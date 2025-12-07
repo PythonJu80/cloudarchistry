@@ -23,6 +23,9 @@ import {
   TrendingUp,
   Calendar,
   Swords,
+  Users,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,6 +134,23 @@ interface DashboardData {
   }>;
 }
 
+interface VersusMatch {
+  id: string;
+  matchCode: string;
+  status: string;
+  player1Score: number;
+  player2Score: number;
+  player1: { id: string; name: string | null; username: string | null };
+  player2: { id: string; name: string | null; username: string | null };
+  createdAt: string;
+  completedAt: string | null;
+}
+
+interface VersusData {
+  activeMatches: VersusMatch[];
+  recentMatches: VersusMatch[];
+}
+
 function getStatusColor(status: string) {
   switch (status) {
     case "completed":
@@ -198,6 +218,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [versusData, setVersusData] = useState<VersusData | null>(null);
+  const [versusLoading, setVersusLoading] = useState(true);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -207,6 +230,7 @@ export default function DashboardPage() {
 
     if (status === "authenticated") {
       fetchDashboardData();
+      fetchVersusData();
       // Load avatar from localStorage
       const localAvatar = localStorage.getItem("academy-avatar");
       if (localAvatar) {
@@ -231,6 +255,36 @@ export default function DashboardPage() {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchVersusData() {
+    try {
+      // Fetch versus matches
+      const versusRes = await fetch("/api/versus");
+      if (versusRes.ok) {
+        const data = await versusRes.json();
+        setVersusData(data);
+      }
+      
+      // Fetch user ID from team data
+      const teamsRes = await fetch("/api/team");
+      if (teamsRes.ok) {
+        const teamsData = await teamsRes.json();
+        for (const team of teamsData.teams || []) {
+          const myMember = team.members.find(
+            (m: { academyUser?: { email?: string; id?: string } }) => m.academyUser?.email === session?.user?.email
+          );
+          if (myMember?.academyUser?.id) {
+            setMyUserId(myMember.academyUser.id);
+            break;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch versus data:", err);
+    } finally {
+      setVersusLoading(false);
     }
   }
 
@@ -775,6 +829,206 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+          {/* Game Zone Section - Full Width */}
+          <div className="mt-8">
+            <Card className="bg-gradient-to-br from-red-500/10 via-card/50 to-orange-500/10 border-red-500/30">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
+                    <Swords className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      Game Zone
+                      <Badge variant="destructive" className="text-xs">BETA</Badge>
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Challenge teammates to head-to-head quiz battles
+                    </p>
+                  </div>
+                </div>
+                <Link href="/game">
+                  <Button variant="glow" className="gap-2 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600">
+                    <Swords className="w-4 h-4" />
+                    Enter Game Zone
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent>
+                {versusLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {/* Stats Summary */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-yellow-500" />
+                        Your Battle Stats
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
+                          <p className="text-2xl font-bold text-green-400">
+                            {versusData?.recentMatches.filter(m => {
+                              const isPlayer1 = m.player1.id === myUserId;
+                              return isPlayer1 ? m.player1Score > m.player2Score : m.player2Score > m.player1Score;
+                            }).length || 0}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Wins</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
+                          <p className="text-2xl font-bold text-red-400">
+                            {versusData?.recentMatches.filter(m => {
+                              const isPlayer1 = m.player1.id === myUserId;
+                              return isPlayer1 ? m.player1Score < m.player2Score : m.player2Score < m.player1Score;
+                            }).length || 0}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Losses</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
+                          <p className="text-2xl font-bold text-primary">
+                            {(versusData?.activeMatches.length || 0) + (versusData?.recentMatches.length || 0)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Total Matches</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
+                          <p className="text-2xl font-bold text-amber-400">
+                            {versusData?.activeMatches.length || 0}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Active</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active/Pending Matches */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-yellow-500" />
+                        Active Matches
+                      </h4>
+                      {!versusData?.activeMatches.length ? (
+                        <div className="text-center py-6 text-muted-foreground">
+                          <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No active matches</p>
+                          <p className="text-xs">Challenge a teammate!</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {versusData.activeMatches.slice(0, 3).map((match) => {
+                            const isChallenger = match.player1.id === myUserId;
+                            const opponent = isChallenger ? match.player2 : match.player1;
+                            const needsResponse = !isChallenger && match.status === "pending";
+                            
+                            return (
+                              <Link key={match.id} href={`/game/${match.matchCode}`}>
+                                <div className={`p-3 rounded-lg border transition-colors ${
+                                  needsResponse 
+                                    ? "bg-red-500/10 border-red-500/30 hover:bg-red-500/20" 
+                                    : "bg-background/50 border-border/50 hover:bg-muted/50"
+                                }`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                        needsResponse ? "bg-red-500/20" : "bg-primary/20"
+                                      }`}>
+                                        {needsResponse ? (
+                                          <Swords className="w-4 h-4 text-red-500" />
+                                        ) : (
+                                          <Users className="w-4 h-4 text-primary" />
+                                        )}
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium">
+                                          vs {opponent.name || opponent.username}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {needsResponse ? "Respond now!" : 
+                                           match.status === "pending" ? "Waiting..." : "In progress"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Badge variant={needsResponse ? "destructive" : "secondary"} className="text-xs">
+                                      {needsResponse ? "!" : match.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Recent Results */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-purple-500" />
+                        Recent Results
+                      </h4>
+                      {!versusData?.recentMatches.length ? (
+                        <div className="text-center py-6 text-muted-foreground">
+                          <Trophy className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No matches yet</p>
+                          <p className="text-xs">Start battling!</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {versusData.recentMatches.slice(0, 3).map((match) => {
+                            const isPlayer1 = match.player1.id === myUserId;
+                            const myScore = isPlayer1 ? match.player1Score : match.player2Score;
+                            const theirScore = isPlayer1 ? match.player2Score : match.player1Score;
+                            const opponent = isPlayer1 ? match.player2 : match.player1;
+                            const won = myScore > theirScore;
+                            const draw = myScore === theirScore;
+                            
+                            return (
+                              <div
+                                key={match.id}
+                                className={`p-3 rounded-lg border ${
+                                  won ? "bg-green-500/10 border-green-500/30" :
+                                  draw ? "bg-muted/50 border-border/50" :
+                                  "bg-red-500/10 border-red-500/30"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      won ? "bg-green-500/20" : draw ? "bg-muted" : "bg-red-500/20"
+                                    }`}>
+                                      {won ? (
+                                        <Trophy className="w-4 h-4 text-green-500" />
+                                      ) : draw ? (
+                                        <span className="text-sm">🤝</span>
+                                      ) : (
+                                        <XCircle className="w-4 h-4 text-red-500" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium">
+                                        vs {opponent.name || opponent.username}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {myScore} - {theirScore}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Badge variant={won ? "default" : draw ? "secondary" : "destructive"} className="text-xs">
+                                    {won ? "Won" : draw ? "Draw" : "Lost"}
+                                  </Badge>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 interface TeamMember {
   id: string;
@@ -59,6 +60,7 @@ export default function GameModePage() {
   const [loading, setLoading] = useState(true);
   const [challenging, setChallenging] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (authStatus === "unauthenticated") {
@@ -119,10 +121,34 @@ export default function GameModePage() {
       const data = await res.json();
 
       if (res.ok && data.match) {
-        router.push(`/game/${data.match.matchCode}`);
+        // Show toast notification about email status
+        if (data.emailSent) {
+          toast({
+            title: "⚔️ Challenge Sent!",
+            description: `Email sent to ${data.emailTo}. They've been notified!`,
+            duration: 5000,
+          });
+        } else {
+          toast({
+            title: "⚔️ Challenge Created",
+            description: "Match created but email failed. Share the link manually.",
+            variant: "destructive",
+            duration: 5000,
+          });
+        }
+        
+        // Short delay so user sees the toast before redirect
+        setTimeout(() => {
+          router.push(`/game/${data.match.matchCode}`);
+        }, 1500);
       }
     } catch (err) {
       console.error("Failed to create challenge:", err);
+      toast({
+        title: "Error",
+        description: "Failed to create challenge. Try again.",
+        variant: "destructive",
+      });
     } finally {
       setChallenging(null);
     }
@@ -167,38 +193,124 @@ export default function GameModePage() {
       </nav>
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* Active Matches */}
-        {matches.activeMatches.length > 0 && (
-          <Card>
+        {/* Incoming Challenges - matches where I'm player2 and need to accept */}
+        {matches.activeMatches.filter(m => m.player2.id === myUserId && m.status === "pending").length > 0 && (
+          <Card className="border-red-500/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-500" />
-                Active Matches
+                <Swords className="w-5 h-5 text-red-500" />
+                Incoming Challenges
               </CardTitle>
               <CardDescription>
-                You have matches waiting for you!
+                You&apos;ve been challenged! Accept or decline.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {matches.activeMatches.map((match) => (
+              {matches.activeMatches
+                .filter(m => m.player2.id === myUserId && m.status === "pending")
+                .map((match) => (
+                <Link key={match.id} href={`/game/${match.matchCode}`}>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <Swords className="w-5 h-5 text-red-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {match.player1.name || match.player1.username} challenged you!
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Click to accept or decline
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="destructive">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Respond
+                    </Badge>
+                  </div>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* My Pending Challenges - matches I created, waiting for opponent */}
+        {matches.activeMatches.filter(m => m.player1.id === myUserId && m.status === "pending").length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-yellow-500" />
+                Awaiting Response
+              </CardTitle>
+              <CardDescription>
+                Challenges you sent, waiting for opponent to accept.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {matches.activeMatches
+                .filter(m => m.player1.id === myUserId && m.status === "pending")
+                .map((match) => (
                 <Link key={match.id} href={`/game/${match.matchCode}`}>
                   <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Users className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-yellow-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          vs {match.player2.name || match.player2.username}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Waiting for them to accept...
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary">
+                      <Clock className="w-3 h-3 mr-1" />
+                      pending
+                    </Badge>
+                  </div>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Active Games - matches in progress */}
+        {matches.activeMatches.filter(m => m.status === "active").length > 0 && (
+          <Card className="border-green-500/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-green-500" />
+                Live Matches
+              </CardTitle>
+              <CardDescription>
+                Games in progress - jump back in!
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {matches.activeMatches
+                .filter(m => m.status === "active")
+                .map((match) => (
+                <Link key={match.id} href={`/game/${match.matchCode}`}>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 hover:bg-green-500/20 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-green-500" />
                       </div>
                       <div>
                         <p className="font-medium">
                           {match.player1.name || match.player1.username} vs {match.player2.name || match.player2.username}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {match.status === "pending" ? "Waiting for acceptance" : "In progress"}
+                          Score: {match.player1Score} - {match.player2Score}
                         </p>
                       </div>
                     </div>
-                    <Badge variant={match.status === "pending" ? "secondary" : "default"}>
-                      {match.status === "pending" ? <Clock className="w-3 h-3 mr-1" /> : <Zap className="w-3 h-3 mr-1" />}
-                      {match.status}
+                    <Badge className="bg-green-500">
+                      <Zap className="w-3 h-3 mr-1" />
+                      LIVE
                     </Badge>
                   </div>
                 </Link>
