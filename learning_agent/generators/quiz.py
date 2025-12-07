@@ -216,6 +216,7 @@ async def grade_free_text_answer(
     user_level: str = "intermediate",
 ) -> dict:
     """Grade a free-text answer using AI."""
+    from utils import get_request_model
     
     system_prompt = f"""Grade this cloud architecture answer.
 Return JSON with: score (0-100), is_correct (boolean), strengths (list), weaknesses (list), feedback (string)
@@ -231,7 +232,7 @@ Be fair - partial credit for partial understanding."""
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"User's answer: {user_answer}"},
         ],
-        model="gpt-4o-mini",
+        model=get_request_model(),
     )
     
     return {

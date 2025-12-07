@@ -286,6 +286,7 @@ async def grade_challenge_answer(
     For multiple choice, this is straightforward.
     For free-text/architecture questions, uses AI grading.
     """
+    from utils import get_request_model
     
     # Multiple choice - simple check
     if question.options:
@@ -322,7 +323,7 @@ Be fair - partial credit for partial understanding."""
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"User's answer: {user_answer}"},
         ],
-        model="gpt-4o-mini",  # Faster for grading
+        model=get_request_model(),
     )
     
     return {

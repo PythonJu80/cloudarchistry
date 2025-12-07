@@ -2480,13 +2480,14 @@ async def async_chat_completion_json(
 
 async def detect_skill_level(message: str) -> str:
     """Detect user's skill level from their message."""
+    from utils import get_request_model
     try:
         response = await async_chat_completion(
             messages=[
                 {"role": "system", "content": SKILL_DETECTOR_PROMPT},
                 {"role": "user", "content": message},
             ],
-            model="gpt-4o-mini",
+            model=get_request_model(),
             temperature=0.3,
         )
         level = response.strip().lower()
@@ -2503,6 +2504,7 @@ async def detect_skill_level(message: str) -> str:
 
 async def research_company(company_name: str, industry: Optional[str] = None) -> ResearchResult:
     """Research a company using web search and AI analysis"""
+    from utils import get_request_model
     logger.info(f"Researching company: {company_name}")
     
     queries = [
@@ -2554,7 +2556,7 @@ Industry Hint: {industry or 'Unknown'}
 Research Data:
 {combined_info}"""},
             ],
-            model="gpt-4o-mini",
+            model=get_request_model(),
         )
         
         return ResearchResult(
@@ -2586,7 +2588,16 @@ async def get_coaching_response(
     challenge_id: Optional[str] = None,
     context: Optional[Dict[str, Any]] = None
 ) -> dict:
-    """Get a coaching response for the user's message with dynamic persona switching"""
+    """Get a coaching response for the user's message with dynamic persona switching.
+    
+    Architecture:
+    - Base capabilities & tools from agent_prompt.py (SYSTEM_PROMPT)
+    - Persona (name, cert, style) from prompts.py
+    - Learner context built here from the request
+    """
+    
+    # Import base agent capabilities from agent_prompt.py
+    from agent_prompt import SYSTEM_PROMPT as BASE_AGENT_PROMPT
     
     # Map certification codes to persona IDs
     CERT_TO_PERSONA = {
@@ -2610,12 +2621,15 @@ async def get_coaching_response(
     persona_id = CERT_TO_PERSONA.get(target_cert, "solutions-architect-associate")
     persona_prompt = get_persona_prompt(persona_id)
     persona_info = get_persona_info(persona_id)
+    persona_name = persona_info['name']
     
-    logger.info(f"Persona switch: target_cert={target_cert} -> persona={persona_id} -> name={persona_info['name']} ({persona_info['cert']})")
+    logger.info(f"Persona switch: target_cert={target_cert} -> persona={persona_id} -> name={persona_name} ({persona_info['cert']})")
     
+    # =========================================================================
+    # BUILD LEARNER CONTEXT
+    # =========================================================================
     context_parts = []
     
-    # Build learner profile context
     if context:
         learner_parts = []
         
@@ -2678,21 +2692,14 @@ async def get_coaching_response(
                 context_parts.append(f"Success Criteria: {', '.join(challenge.success_criteria)}")
                 context_parts.append(f"Relevant AWS Services: {', '.join(challenge.aws_services_relevant)}")
     
-    system_context = "\n".join(context_parts) if context_parts else "General cloud architecture discussion"
+    learner_context = "\n".join(context_parts) if context_parts else ""
     
-    # Build skill-level adaptation
-    skill_level = context.get("skill_level", "intermediate") if context else "intermediate"
-    skill_guidance = {
-        "beginner": "Explain concepts simply using analogies. Avoid jargon. Build confidence. One concept at a time.",
-        "intermediate": "Discuss trade-offs and best practices. Explain the 'why' behind recommendations.",
-        "advanced": "Be concise, assume foundational knowledge. Focus on nuances, edge cases, and optimization.",
-        "expert": "Peer-level discussion. Challenge their thinking. Discuss architectural patterns at scale."
-    }.get(skill_level, "Adapt to the learner's demonstrated knowledge level.")
-    
-    # Build system prompt with persona name from prompts.py
-    persona_name = persona_info['name']
-    
-    system_prompt = f"""You are {persona_name}, an AWS learning coach specializing in the {persona_info['cert']}.
+    # =========================================================================
+    # BUILD COMBINED SYSTEM PROMPT
+    # Structure: Base Agent (tools/capabilities) + Persona + Learner Context
+    # =========================================================================
+    system_prompt = f"""## YOUR PERSONA FOR THIS SESSION
+You are {persona_name}, an AWS learning coach specializing in the {persona_info['cert']}.
 
 YOUR IDENTITY:
 - Your name is {persona_name}. When asked your name, always say "{persona_name}".
@@ -2701,69 +2708,145 @@ YOUR IDENTITY:
 
 {persona_prompt}
 
-LEARNER ADAPTATION:
-Skill Level: {skill_level}
-{skill_guidance}
+## BASE AGENT CAPABILITIES & TOOLS
+{BASE_AGENT_PROMPT}
 
-{system_context}
+## CURRENT LEARNER CONTEXT
+{learner_context}
 
-Use the learner's profile to personalize your response.
-
-IMPORTANT: You must respond in this exact JSON format:
-{{
-  "response": "Your helpful response here...",
-  "key_terms": [
-    {{"term": "Service or Concept Name", "category": "Category"}}
-  ]
-}}
-
-For key_terms, extract 3-8 important AWS services, concepts, or technical terms mentioned in YOUR response. Categories: Compute, Storage, Database, Networking, Security, Management, Analytics, Machine Learning, Containers, DevOps, Concepts."""
+## INSTRUCTIONS
+- Use your tools when they would help the learner (search docs, generate flashcards, etc.)
+- Adapt your responses to the learner's skill level and certification goal
+- When asked about your tools/capabilities, explain what you can do for them
+- Be {persona_name} - stay in character with your coaching style"""
 
     try:
-        from utils import get_request_model
+        from utils import get_request_model, get_request_api_key
         model = get_request_model()
+        api_key = get_request_api_key()
         
-        # Search knowledge base for relevant chunks
-        knowledge_context = ""
-        try:
-            search_results = await search_documents(query=message, match_count=3)
-            if search_results:
-                chunks = []
-                for r in search_results:
-                    chunk_text = r.get("content", "")[:500]  # Limit chunk size
-                    source = r.get("source_url", "")
-                    if chunk_text:
-                        chunks.append(f"[Source: {source}]\n{chunk_text}")
-                if chunks:
-                    knowledge_context = "\n\nRELEVANT KNOWLEDGE FROM AWS DOCUMENTATION:\n" + "\n---\n".join(chunks)
-        except Exception as e:
-            logger.warning(f"Knowledge search failed: {e}")
+        if not api_key:
+            return {"response": "API key not configured. Please add your OpenAI API key in Settings.", "key_terms": []}
         
-        # Add knowledge context to user message if found
-        augmented_message = message
-        if knowledge_context:
-            augmented_message = f"{message}\n{knowledge_context}"
+        client = OpenAI(api_key=api_key)
         
-        response = await async_chat_completion(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": augmented_message},
-            ],
+        # Build messages array
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": message},
+        ]
+        
+        # Initial API call with tools
+        response = client.chat.completions.create(
             model=model,
+            messages=messages,
+            tools=CHAT_TOOLS,
+            tool_choice="auto",
             temperature=0.7,
+            max_tokens=2000
         )
         
-        # Parse JSON response
+        assistant_message = response.choices[0].message
+        
+        # Handle tool calls if any
+        tools_used = []
+        while assistant_message.tool_calls:
+            # Process each tool call
+            tool_results = []
+            for tool_call in assistant_message.tool_calls:
+                tool_name = tool_call.function.name
+                tool_args = json.loads(tool_call.function.arguments)
+                
+                logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
+                
+                # Execute the tool
+                result = await execute_tool(tool_name, tool_args)
+                
+                tools_used.append({
+                    "tool": tool_name,
+                    "args": tool_args,
+                    "result_preview": result[:200] + "..." if len(result) > 200 else result
+                })
+                
+                tool_results.append({
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "content": result
+                })
+            
+            # Add assistant message with tool calls to messages
+            messages.append({
+                "role": "assistant",
+                "content": assistant_message.content,
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    }
+                    for tc in assistant_message.tool_calls
+                ]
+            })
+            
+            # Add tool results
+            messages.extend(tool_results)
+            
+            # Get next response
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=CHAT_TOOLS,
+                tool_choice="auto",
+                temperature=0.7,
+                max_tokens=2000
+            )
+            
+            assistant_message = response.choices[0].message
+        
+        # Final response
+        final_content = assistant_message.content or "I apologize, but I couldn't generate a response."
+        
+        # Log tools used
+        if tools_used:
+            logger.info(f"Tools used in response: {[t['tool'] for t in tools_used]}")
+        
+        # Try to parse as JSON (for key_terms extraction)
         try:
-            parsed = json.loads(response)
-            return parsed
+            parsed = json.loads(final_content)
+            if isinstance(parsed, dict) and "response" in parsed:
+                parsed["tools_used"] = tools_used
+                return parsed
         except json.JSONDecodeError:
-            # Fallback if model doesn't return valid JSON
-            return {"response": response, "key_terms": []}
+            pass
+        
+        # Extract key terms from response using a quick follow-up call
+        key_terms = []
+        try:
+            extraction_response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "Extract 3-8 key AWS services or technical concepts from the text. Return JSON array: [{\"term\": \"name\", \"category\": \"category\"}]. Categories: Compute, Storage, Database, Networking, Security, Management, Analytics, Machine Learning, Containers, DevOps, Concepts. Only return the JSON array, nothing else."},
+                    {"role": "user", "content": final_content[:1500]}
+                ],
+                temperature=0.3,
+                max_tokens=500
+            )
+            key_terms = json.loads(extraction_response.choices[0].message.content)
+        except Exception as e:
+            logger.warning(f"Key terms extraction failed: {e}")
+        
+        return {
+            "response": final_content,
+            "key_terms": key_terms,
+            "tools_used": tools_used
+        }
             
     except Exception as e:
         logger.error(f"Coach response failed: {e}")
-        return {"response": "I'm having trouble processing that. Could you rephrase your question?", "key_terms": []}
+        return {"response": "I'm having trouble processing that. Could you rephrase your question?", "key_terms": [], "tools_used": []}
 
 
 # ============================================
@@ -2969,7 +3052,8 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                     # Randomly select 2-3 focus areas each time for variety
                     selected_focus = kb_random.sample(cert_focus, min(3, len(cert_focus)))
                     kb_query = f"{' '.join(selected_focus)} {skill_context} AWS {research.company_info.industry}"
-                    yield f"data: {json.dumps({'type': 'status', 'message': f'🎲 Focus: {', '.join(selected_focus)} ({request.user_level})'})}\n\n"
+                    focus_str = ', '.join(selected_focus)
+                    yield f"data: {json.dumps({'type': 'status', 'message': f'🎲 Focus: {focus_str} ({request.user_level})'})}\n\n"
                 else:
                     kb_query = f"{research.company_info.industry} {skill_context} AWS architecture"
                 
@@ -3144,9 +3228,10 @@ async def learning_chat_endpoint(request: LearningChatRequestWithSession):
             context=request.context
         )
         
-        # Extract response text and key_terms
+        # Extract response text, key_terms, and tools_used
         response_text = result.get("response", "") if isinstance(result, dict) else result
         key_terms = result.get("key_terms", []) if isinstance(result, dict) else []
+        tools_used = result.get("tools_used", []) if isinstance(result, dict) else []
         
         # Save assistant response to DB
         try:
@@ -3154,6 +3239,7 @@ async def learning_chat_endpoint(request: LearningChatRequestWithSession):
                 session_id=session_id,
                 role="assistant",
                 content=response_text,
+                metadata={"tools_used": tools_used} if tools_used else None,
             )
         except Exception as db_err:
             logger.warning(f"Failed to save assistant message: {db_err}")
@@ -3161,6 +3247,7 @@ async def learning_chat_endpoint(request: LearningChatRequestWithSession):
         return {
             "response": response_text,
             "key_terms": key_terms,
+            "tools_used": tools_used,
             "session_id": session_id,
             "scenario_id": request.scenario_id,
             "challenge_id": request.challenge_id
@@ -3193,6 +3280,7 @@ async def evaluate_solution_endpoint(
     solution: Dict[str, Any]
 ):
     """Evaluate a user's solution to a challenge"""
+    from utils import get_request_model
     scenario = await db.get_scenario(scenario_id)
     if not scenario:
         raise HTTPException(status_code=404, detail="Scenario not found")
@@ -3216,7 +3304,7 @@ Return JSON with: score (0-100), passed (boolean), strengths (list), improvement
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": "Evaluate this solution."},
         ],
-        model="gpt-4o",
+        model=get_request_model(),
     )
     
     return {
