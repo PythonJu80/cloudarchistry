@@ -466,56 +466,6 @@ export function ScenarioGenerationModal({
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className="gap-2 h-14 border-purple-500/30 hover:bg-purple-500/10"
-                onClick={() => onQuiz?.(result.scenario, result.companyInfo)}
-              >
-                <BookOpen className="w-5 h-5 text-purple-400" />
-                <div className="text-left">
-                  <div className="font-medium">Quiz</div>
-                  <div className="text-xs text-muted-foreground">Test your knowledge</div>
-                </div>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="gap-2 h-14 border-green-500/30 hover:bg-green-500/10"
-                onClick={() => onNotes?.(result.scenario, result.companyInfo)}
-              >
-                <FileText className="w-5 h-5 text-green-400" />
-                <div className="text-left">
-                  <div className="font-medium">Notes</div>
-                  <div className="text-xs text-muted-foreground">Study materials</div>
-                </div>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="gap-2 h-14 border-amber-500/30 hover:bg-amber-500/10"
-                onClick={() => onFlashcards?.(result.scenario, result.companyInfo)}
-              >
-                <Layers className="w-5 h-5 text-amber-400" />
-                <div className="text-left">
-                  <div className="font-medium">Flashcards</div>
-                  <div className="text-xs text-muted-foreground">Quick review</div>
-                </div>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="gap-2 h-14 border-cyan-500/30 hover:bg-cyan-500/10"
-                onClick={() => onCoach?.(result.scenario, result.companyInfo)}
-              >
-                <MessageSquare className="w-5 h-5 text-cyan-400" />
-                <div className="text-left">
-                  <div className="font-medium">Coach with AI</div>
-                  <div className="text-xs text-muted-foreground">Get guided help</div>
-                </div>
-              </Button>
-            </div>
           </div>
         )}
 

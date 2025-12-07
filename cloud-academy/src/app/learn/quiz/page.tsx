@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Plus,
   ListTodo,
   Sparkles,
   ChevronLeft,
@@ -11,158 +10,329 @@ import {
   Clock,
   Target,
   Trophy,
+  Loader2,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+interface QuizOption {
+  id: string;
+  text: string;
+}
 
 interface QuizQuestion {
   id: string;
   question: string;
-  options: string[];
-  correctIndex: number;
-  explanation: string;
+  questionType: string;
+  options: QuizOption[];
+  difficulty: string;
+  points: number;
 }
 
 interface Quiz {
   id: string;
   title: string;
-  description: string;
-  category: string;
+  description: string | null;
+  quizType: string;
+  passingScore: number;
+  questionCount: number;
+  estimatedMinutes: number;
   questions: QuizQuestion[];
-  timeLimit?: number; // minutes
+  userAttempts: { score: number; passed: boolean; completedAt: string }[];
+  bestScore: number | null;
+  hasPassed: boolean;
 }
 
-// Placeholder quizzes
-const placeholderQuizzes: Quiz[] = [
-  {
-    id: "1",
-    title: "IAM Quick Check",
-    description: "Test your knowledge of AWS Identity and Access Management",
-    category: "Security",
-    timeLimit: 5,
-    questions: [
-      {
-        id: "q1",
-        question: "Which IAM entity is used to delegate access to AWS services?",
-        options: ["IAM User", "IAM Group", "IAM Role", "IAM Policy"],
-        correctIndex: 2,
-        explanation: "IAM Roles are used to delegate access. They can be assumed by users, applications, or AWS services to gain temporary credentials.",
-      },
-      {
-        id: "q2",
-        question: "What is the maximum size of an IAM policy document?",
-        options: ["2 KB", "5 KB", "6 KB", "10 KB"],
-        correctIndex: 2,
-        explanation: "The maximum size for a managed policy is 6,144 characters (approximately 6 KB).",
-      },
-      {
-        id: "q3",
-        question: "Which statement about IAM is correct?",
-        options: [
-          "IAM is regional",
-          "IAM is global",
-          "IAM requires a VPC",
-          "IAM has a monthly cost"
-        ],
-        correctIndex: 1,
-        explanation: "IAM is a global service. Users, groups, roles, and policies are available across all AWS regions.",
-      },
-    ],
-  },
-  {
-    id: "2",
-    title: "S3 Fundamentals",
-    description: "Core concepts of Amazon Simple Storage Service",
-    category: "Storage",
-    timeLimit: 10,
-    questions: [
-      {
-        id: "s1",
-        question: "What is the maximum size of a single S3 object?",
-        options: ["5 GB", "5 TB", "50 TB", "Unlimited"],
-        correctIndex: 1,
-        explanation: "The maximum size of a single S3 object is 5 TB. For objects larger than 5 GB, you must use multipart upload.",
-      },
-    ],
-  },
-];
+interface GradedAnswer {
+  questionId: string;
+  isCorrect: boolean;
+  pointsEarned: number;
+  correctOptions: string[];
+  explanation: string;
+}
+
+interface QuizResult {
+  score: number;
+  passed: boolean;
+  totalPoints: number;
+  earnedPoints: number;
+  correctCount: number;
+  totalQuestions: number;
+  gradedAnswers: GradedAnswer[];
+}
 
 export default function QuizPage() {
-  const [quizzes] = useState<Quiz[]>(placeholderQuizzes);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Active quiz state
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
+  const [activeQuizQuestions, setActiveQuizQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
-  const [answers, setAnswers] = useState<(number | null)[]>([]);
+  const [answers, setAnswers] = useState<Map<string, string[]>>(new Map());
   const [quizComplete, setQuizComplete] = useState(false);
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+  const [startTime, setStartTime] = useState<number>(0);
+  const [currentGradedAnswer, setCurrentGradedAnswer] = useState<GradedAnswer | null>(null);
+  
+  // Generate dialog
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [generateTopic, setGenerateTopic] = useState("");
+  const [generateCount, setGenerateCount] = useState(10);
 
-  const currentQuestion = activeQuiz?.questions[currentQuestionIndex];
-  const isCorrect = selectedAnswer === currentQuestion?.correctIndex;
+  // Fetch quizzes from API
+  const fetchQuizzes = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/quiz");
+      if (response.ok) {
+        const data = await response.json();
+        setQuizzes(data.quizzes || []);
+      }
+    } catch (error) {
+      console.error("Error fetching quizzes:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const startQuiz = (quiz: Quiz) => {
-    setActiveQuiz(quiz);
-    setCurrentQuestionIndex(0);
-    setSelectedAnswer(null);
-    setShowResult(false);
-    setAnswers(new Array(quiz.questions.length).fill(null));
-    setQuizComplete(false);
-  };
+  useEffect(() => {
+    fetchQuizzes();
+  }, [fetchQuizzes]);
 
-  const submitAnswer = () => {
-    if (selectedAnswer === null) return;
+  // Generate new quiz
+  const handleGenerateQuiz = async () => {
+    if (!generateTopic.trim()) return;
     
-    const newAnswers = [...answers];
-    newAnswers[currentQuestionIndex] = selectedAnswer;
-    setAnswers(newAnswers);
-    setShowResult(true);
-  };
+    try {
+      setGenerating(true);
+      const response = await fetch("/api/quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: generateTopic,
+          questionCount: generateCount,
+        }),
+      });
 
-  const nextQuestion = () => {
-    if (!activeQuiz) return;
-    
-    if (currentQuestionIndex < activeQuiz.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswer(null);
-      setShowResult(false);
-    } else {
-      setQuizComplete(true);
+      if (response.ok) {
+        setShowGenerateDialog(false);
+        setGenerateTopic("");
+        await fetchQuizzes();
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to generate quiz");
+      }
+    } catch (error) {
+      console.error("Error generating quiz:", error);
+      alert("Failed to generate quiz");
+    } finally {
+      setGenerating(false);
     }
   };
 
+  // Start a quiz
+  const startQuiz = async (quiz: Quiz) => {
+    try {
+      // Fetch full quiz with questions
+      const response = await fetch(`/api/quiz/${quiz.id}`);
+      if (!response.ok) throw new Error("Failed to load quiz");
+      
+      const fullQuiz = await response.json();
+      
+      setActiveQuiz(quiz);
+      setActiveQuizQuestions(fullQuiz.questions);
+      setCurrentQuestionIndex(0);
+      setSelectedOptions([]);
+      setShowResult(false);
+      setAnswers(new Map());
+      setQuizComplete(false);
+      setQuizResult(null);
+      setCurrentGradedAnswer(null);
+      setStartTime(Date.now());
+    } catch (error) {
+      console.error("Error starting quiz:", error);
+      alert("Failed to load quiz");
+    }
+  };
+
+  const currentQuestion = activeQuizQuestions[currentQuestionIndex];
+
+  // Handle option selection
+  const toggleOption = (optionId: string) => {
+    if (showResult) return;
+    
+    if (currentQuestion?.questionType === "multi_select") {
+      setSelectedOptions((prev) =>
+        prev.includes(optionId)
+          ? prev.filter((id) => id !== optionId)
+          : [...prev, optionId]
+      );
+    } else {
+      setSelectedOptions([optionId]);
+    }
+  };
+
+  // Submit current answer and get immediate feedback
+  const submitAnswer = async () => {
+    if (selectedOptions.length === 0 || !activeQuiz) return;
+    
+    try {
+      // Record answer locally
+      const newAnswers = new Map(answers);
+      newAnswers.set(currentQuestion.id, selectedOptions);
+      setAnswers(newAnswers);
+      
+      // Get grading for this question
+      const response = await fetch(`/api/quiz/${activeQuiz.id}/grade`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionId: currentQuestion.id,
+          selectedOptions,
+        }),
+      });
+      
+      if (response.ok) {
+        const graded = await response.json();
+        setCurrentGradedAnswer(graded);
+      }
+      
+      setShowResult(true);
+    } catch (error) {
+      console.error("Error grading answer:", error);
+      setShowResult(true);
+    }
+  };
+
+  // Move to next question
+  const nextQuestion = () => {
+    if (currentQuestionIndex < activeQuizQuestions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+      setSelectedOptions([]);
+      setShowResult(false);
+      setCurrentGradedAnswer(null);
+    } else {
+      // Submit quiz
+      submitQuiz();
+    }
+  };
+
+  // Submit entire quiz
+  const submitQuiz = async () => {
+    if (!activeQuiz) return;
+    
+    try {
+      setSubmitting(true);
+      const timeSpent = Math.round((Date.now() - startTime) / 1000);
+      
+      // Convert answers map to array
+      const answersArray = Array.from(answers.entries()).map(([questionId, opts]) => ({
+        questionId,
+        selectedOptions: opts,
+      }));
+
+      const response = await fetch(`/api/quiz/${activeQuiz.id}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers: answersArray,
+          timeSpentSeconds: timeSpent,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setQuizResult(result);
+        setQuizComplete(true);
+      } else {
+        throw new Error("Failed to submit quiz");
+      }
+    } catch (error) {
+      console.error("Error submitting quiz:", error);
+      alert("Failed to submit quiz");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Exit quiz
   const exitQuiz = () => {
     setActiveQuiz(null);
+    setActiveQuizQuestions([]);
     setCurrentQuestionIndex(0);
-    setSelectedAnswer(null);
+    setSelectedOptions([]);
     setShowResult(false);
-    setAnswers([]);
+    setAnswers(new Map());
     setQuizComplete(false);
+    setQuizResult(null);
+    setCurrentGradedAnswer(null);
+    fetchQuizzes(); // Refresh to show updated attempts
+  };
+
+  // Delete quiz
+  const deleteQuiz = async (quizId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Delete this quiz?")) return;
+    
+    try {
+      const response = await fetch(`/api/quiz/${quizId}`, { method: "DELETE" });
+      if (response.ok) {
+        await fetchQuizzes();
+      }
+    } catch (error) {
+      console.error("Error deleting quiz:", error);
+    }
   };
 
   // Quiz complete view
-  if (activeQuiz && quizComplete) {
-    const correctCount = answers.filter((a, i) => a === activeQuiz.questions[i].correctIndex).length;
-    const score = Math.round((correctCount / activeQuiz.questions.length) * 100);
-    
+  if (activeQuiz && quizComplete && quizResult) {
     return (
       <div className="p-6">
         <div className="max-w-xl mx-auto text-center py-12">
           <div className={`w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center ${
-            score >= 80 ? "bg-green-500/20" : score >= 60 ? "bg-amber-500/20" : "bg-red-500/20"
+            quizResult.passed ? "bg-green-500/20" : "bg-red-500/20"
           }`}>
             <Trophy className={`w-10 h-10 ${
-              score >= 80 ? "text-green-400" : score >= 60 ? "text-amber-400" : "text-red-400"
+              quizResult.passed ? "text-green-400" : "text-red-400"
             }`} />
           </div>
           <h2 className="text-2xl font-bold mb-2">Quiz Complete!</h2>
           <p className="text-muted-foreground mb-6">{activeQuiz.title}</p>
           
           <div className="p-6 rounded-xl bg-muted/30 border border-border/50 mb-6">
-            <div className="text-4xl font-bold mb-2">{score}%</div>
+            <div className="text-4xl font-bold mb-2">{quizResult.score}%</div>
             <p className="text-muted-foreground">
-              {correctCount} of {activeQuiz.questions.length} correct
+              {quizResult.correctCount} of {quizResult.totalQuestions} correct
+            </p>
+            <p className="text-sm mt-2">
+              {quizResult.earnedPoints} / {quizResult.totalPoints} points earned
             </p>
           </div>
+
+          {quizResult.passed ? (
+            <Badge className="bg-green-500/20 text-green-400 mb-6">Passed!</Badge>
+          ) : (
+            <Badge className="bg-red-500/20 text-red-400 mb-6">
+              Need {activeQuiz.passingScore}% to pass
+            </Badge>
+          )}
           
           <div className="flex items-center justify-center gap-3">
             <Button variant="outline" onClick={exitQuiz}>
@@ -179,6 +349,8 @@ export default function QuizPage() {
 
   // Active quiz view
   if (activeQuiz && currentQuestion) {
+    const isOptionSelected = (optionId: string) => selectedOptions.includes(optionId);
+    
     return (
       <div className="p-6">
         {/* Quiz Header */}
@@ -191,12 +363,12 @@ export default function QuizPage() {
             <div>
               <h2 className="font-semibold">{activeQuiz.title}</h2>
               <p className="text-sm text-muted-foreground">
-                Question {currentQuestionIndex + 1} of {activeQuiz.questions.length}
+                Question {currentQuestionIndex + 1} of {activeQuizQuestions.length}
               </p>
             </div>
           </div>
           <Progress 
-            value={((currentQuestionIndex + 1) / activeQuiz.questions.length) * 100} 
+            value={((currentQuestionIndex + 1) / activeQuizQuestions.length) * 100} 
             className="w-32 h-2" 
           />
         </div>
@@ -204,6 +376,10 @@ export default function QuizPage() {
         {/* Question */}
         <div className="max-w-2xl mx-auto">
           <div className="p-6 rounded-xl bg-muted/30 border border-border/50 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge variant="outline">{currentQuestion.difficulty}</Badge>
+              <Badge variant="secondary">{currentQuestion.points} pts</Badge>
+            </div>
             <p className="text-lg font-medium">{currentQuestion.question}</p>
           </div>
 
@@ -212,42 +388,45 @@ export default function QuizPage() {
             {currentQuestion.options.map((option, index) => {
               let optionClass = "border-border/50 hover:border-primary/50";
               
-              if (showResult) {
-                if (index === currentQuestion.correctIndex) {
+              if (showResult && currentGradedAnswer) {
+                const isCorrect = currentGradedAnswer.correctOptions.includes(option.id);
+                const wasSelected = isOptionSelected(option.id);
+                
+                if (isCorrect) {
                   optionClass = "border-green-500 bg-green-500/10";
-                } else if (index === selectedAnswer && !isCorrect) {
+                } else if (wasSelected && !isCorrect) {
                   optionClass = "border-red-500 bg-red-500/10";
                 }
-              } else if (selectedAnswer === index) {
+              } else if (isOptionSelected(option.id)) {
                 optionClass = "border-primary bg-primary/10";
               }
               
               return (
                 <button
-                  key={index}
-                  onClick={() => !showResult && setSelectedAnswer(index)}
+                  key={option.id}
+                  onClick={() => toggleOption(option.id)}
                   disabled={showResult}
                   className={`w-full p-4 rounded-xl border text-left transition-all ${optionClass}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm font-medium ${
-                      showResult && index === currentQuestion.correctIndex
+                      showResult && currentGradedAnswer?.correctOptions.includes(option.id)
                         ? "border-green-500 text-green-400"
-                        : showResult && index === selectedAnswer && !isCorrect
+                        : showResult && isOptionSelected(option.id) && !currentGradedAnswer?.correctOptions.includes(option.id)
                         ? "border-red-500 text-red-400"
-                        : selectedAnswer === index
+                        : isOptionSelected(option.id)
                         ? "border-primary text-primary"
                         : "border-border"
                     }`}>
-                      {showResult && index === currentQuestion.correctIndex ? (
+                      {showResult && currentGradedAnswer?.correctOptions.includes(option.id) ? (
                         <Check className="w-4 h-4" />
-                      ) : showResult && index === selectedAnswer && !isCorrect ? (
+                      ) : showResult && isOptionSelected(option.id) && !currentGradedAnswer?.correctOptions.includes(option.id) ? (
                         <X className="w-4 h-4" />
                       ) : (
                         String.fromCharCode(65 + index)
                       )}
                     </div>
-                    <span>{option}</span>
+                    <span>{option.text}</span>
                   </div>
                 </button>
               );
@@ -255,15 +434,17 @@ export default function QuizPage() {
           </div>
 
           {/* Explanation */}
-          {showResult && (
+          {showResult && currentGradedAnswer && (
             <div className={`p-4 rounded-xl mb-6 ${
-              isCorrect ? "bg-green-500/10 border border-green-500/30" : "bg-amber-500/10 border border-amber-500/30"
+              currentGradedAnswer.isCorrect 
+                ? "bg-green-500/10 border border-green-500/30" 
+                : "bg-amber-500/10 border border-amber-500/30"
             }`}>
               <p className="font-medium mb-1">
-                {isCorrect ? "Correct!" : "Not quite right"}
+                {currentGradedAnswer.isCorrect ? "Correct!" : "Not quite right"}
               </p>
               <p className="text-sm text-muted-foreground">
-                {currentQuestion.explanation}
+                {currentGradedAnswer.explanation}
               </p>
             </div>
           )}
@@ -271,16 +452,26 @@ export default function QuizPage() {
           {/* Actions */}
           <div className="flex justify-center">
             {!showResult ? (
-              <Button onClick={submitAnswer} disabled={selectedAnswer === null}>
+              <Button onClick={submitAnswer} disabled={selectedOptions.length === 0}>
                 Submit Answer
               </Button>
             ) : (
-              <Button onClick={nextQuestion}>
-                {currentQuestionIndex < activeQuiz.questions.length - 1 ? "Next Question" : "See Results"}
+              <Button onClick={nextQuestion} disabled={submitting}>
+                {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {currentQuestionIndex < activeQuizQuestions.length - 1 ? "Next Question" : "See Results"}
               </Button>
             )}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -293,19 +484,13 @@ export default function QuizPage() {
         <div>
           <h1 className="text-2xl font-bold">Quiz</h1>
           <p className="text-muted-foreground">
-            Test your knowledge with quick quizzes
+            Test your knowledge with AI-generated quizzes
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Sparkles className="w-4 h-4 mr-2" />
-            Generate from sources
-          </Button>
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Create quiz
-          </Button>
-        </div>
+        <Button onClick={() => setShowGenerateDialog(true)}>
+          <Sparkles className="w-4 h-4 mr-2" />
+          Generate Quiz
+        </Button>
       </div>
 
       {/* Quizzes Grid */}
@@ -314,52 +499,107 @@ export default function QuizPage() {
           <ListTodo className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No quizzes yet</h3>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Create quizzes manually or generate them from your learning sources.
+            Generate quizzes on any AWS topic to test your knowledge.
           </p>
-          <div className="flex items-center justify-center gap-3">
-            <Button variant="outline">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate from sources
-            </Button>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create quiz
-            </Button>
-          </div>
+          <Button onClick={() => setShowGenerateDialog(true)}>
+            <Sparkles className="w-4 h-4 mr-2" />
+            Generate Quiz
+          </Button>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {quizzes.map((quiz) => (
             <div
               key={quiz.id}
-              className="p-5 rounded-xl border border-border/50 hover:border-primary/50 hover:bg-muted/30 transition-all"
+              className="p-5 rounded-xl border border-border/50 hover:border-primary/50 hover:bg-muted/30 transition-all group"
             >
               <div className="flex items-center justify-between mb-3">
-                <Badge variant="secondary">{quiz.category}</Badge>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {quiz.timeLimit && (
-                    <>
-                      <Clock className="w-4 h-4" />
-                      {quiz.timeLimit}m
-                    </>
+                <Badge variant="secondary">{quiz.quizType}</Badge>
+                <div className="flex items-center gap-2">
+                  {quiz.hasPassed && (
+                    <Badge className="bg-green-500/20 text-green-400">Passed</Badge>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="opacity-0 group-hover:opacity-100 h-8 w-8"
+                    onClick={(e) => deleteQuiz(quiz.id, e)}
+                  >
+                    <Trash2 className="w-4 h-4 text-muted-foreground" />
+                  </Button>
                 </div>
               </div>
               <h3 className="font-semibold mb-1">{quiz.title}</h3>
-              <p className="text-sm text-muted-foreground mb-4">{quiz.description}</p>
+              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                {quiz.description || "Test your AWS knowledge"}
+              </p>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Target className="w-4 h-4" />
-                  {quiz.questions.length} questions
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Target className="w-4 h-4" />
+                    {quiz.questionCount}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    ~{quiz.estimatedMinutes}m
+                  </div>
                 </div>
                 <Button size="sm" onClick={() => startQuiz(quiz)}>
-                  Start Quiz
+                  {quiz.userAttempts.length > 0 ? "Retry" : "Start"}
                 </Button>
               </div>
+              {quiz.bestScore !== null && (
+                <div className="mt-3 pt-3 border-t border-border/50 text-sm text-muted-foreground">
+                  Best: {quiz.bestScore}% • {quiz.userAttempts.length} attempt{quiz.userAttempts.length !== 1 ? "s" : ""}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
+
+      {/* Generate Quiz Dialog */}
+      <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Quiz</DialogTitle>
+            <DialogDescription>
+              Create an AI-generated quiz on any AWS topic
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="topic">Topic</Label>
+              <Input
+                id="topic"
+                placeholder="e.g., S3 Security, Lambda Best Practices, VPC Networking"
+                value={generateTopic}
+                onChange={(e) => setGenerateTopic(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="count">Number of Questions</Label>
+              <Input
+                id="count"
+                type="number"
+                min={5}
+                max={20}
+                value={generateCount}
+                onChange={(e) => setGenerateCount(parseInt(e.target.value) || 10)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleGenerateQuiz} disabled={generating || !generateTopic.trim()}>
+              {generating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

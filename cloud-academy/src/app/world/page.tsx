@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { 
@@ -445,6 +446,7 @@ function DifficultySection({
 
 export default function WorldPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [visitedLocations, setVisitedLocations] = useState<string[]>([]);
     const [mapView, setMapView] = useState<"globe" | "satellite">("globe");
@@ -1672,9 +1674,34 @@ export default function WorldPage() {
             country={generationTarget.country}
             apiKey={userApiKey}
             preferredModel={preferredModel}
-            onQuiz={(scenario, companyInfo) => {
-              console.log("Generate quiz for:", scenario, companyInfo);
-              // TODO: Navigate to quiz generation
+            onQuiz={async (scenario) => {
+              const scenarioId = (scenario as { id?: string }).id;
+              if (!scenarioId) {
+                alert("Scenario ID not found. Please accept the challenge first.");
+                return;
+              }
+              
+              try {
+                const response = await fetch("/api/quiz", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    scenarioId,
+                    questionCount: 10,
+                  }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                  router.push("/learn/quiz");
+                } else {
+                  alert(`Failed to generate quiz: ${data.error || "Unknown error"}`);
+                }
+              } catch (error) {
+                console.error("Error generating quiz:", error);
+                alert("Failed to generate quiz. Check console for details.");
+              }
             }}
             onNotes={(scenario, companyInfo) => {
               console.log("Generate notes for:", scenario, companyInfo);

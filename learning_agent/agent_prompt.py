@@ -135,6 +135,14 @@ TOOL_DESCRIPTIONS = {
     
     "generate_quiz": "Create a quiz to test understanding. Offer this when users want to check their knowledge.",
     
+    "get_quiz": "Retrieve an existing quiz by ID with all its questions. Use when users want to take or review a specific quiz.",
+    
+    "list_quizzes": "List all quizzes for a scenario. Use when users want to see available quizzes for a learning scenario.",
+    
+    "save_quiz_attempt": "Save a user's quiz attempt with their answers and score. Use after a user completes a quiz to record their progress.",
+    
+    "get_quiz_stats": "Get a user's overall quiz statistics including total attempts, average score, and best score. Use when users want to see their quiz performance.",
+    
     "evaluate_solution": "Evaluate a user's solution to a challenge. Use when users submit their work for feedback.",
     
     "audit_architecture_diagram": "Audit a user's AWS architecture diagram. The diagram is provided as JSON with 'nodes' (AWS services) and 'connections' (data flow between services). Analyze against the challenge requirements and return a structured response with: score (0-100), correct (list of what they got right), missing (list of what's missing), suggestions (list of improvements), and feedback (overall assessment). Be encouraging but honest.",

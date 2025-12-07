@@ -1609,6 +1609,104 @@ CHAT_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "get_quiz",
+            "description": TOOL_DESCRIPTIONS["get_quiz"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "quiz_id": {
+                        "type": "string",
+                        "description": "The ID of the quiz to retrieve"
+                    }
+                },
+                "required": ["quiz_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_quizzes",
+            "description": TOOL_DESCRIPTIONS["list_quizzes"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "scenario_id": {
+                        "type": "string",
+                        "description": "The ID of the scenario to list quizzes for"
+                    }
+                },
+                "required": ["scenario_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "save_quiz_attempt",
+            "description": TOOL_DESCRIPTIONS["save_quiz_attempt"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "profile_id": {
+                        "type": "string",
+                        "description": "The user's profile ID"
+                    },
+                    "quiz_id": {
+                        "type": "string",
+                        "description": "The ID of the quiz taken"
+                    },
+                    "answers": {
+                        "type": "array",
+                        "description": "Array of answer objects with question_id, selected_options, is_correct, points_earned",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "question_id": {"type": "string"},
+                                "selected_options": {"type": "array", "items": {"type": "string"}},
+                                "free_text": {"type": "string"},
+                                "is_correct": {"type": "boolean"},
+                                "points_earned": {"type": "integer"}
+                            }
+                        }
+                    },
+                    "score": {
+                        "type": "integer",
+                        "description": "Overall score percentage (0-100)"
+                    },
+                    "passed": {
+                        "type": "boolean",
+                        "description": "Whether the user passed the quiz"
+                    },
+                    "time_spent_seconds": {
+                        "type": "integer",
+                        "description": "Time spent on the quiz in seconds"
+                    }
+                },
+                "required": ["profile_id", "quiz_id", "answers", "score", "passed", "time_spent_seconds"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_quiz_stats",
+            "description": TOOL_DESCRIPTIONS["get_quiz_stats"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "profile_id": {
+                        "type": "string",
+                        "description": "The user's profile ID"
+                    }
+                },
+                "required": ["profile_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "generate_study_notes",
             "description": "Generate comprehensive study notes on an AWS topic. Use when users want to learn about a topic in depth.",
             "parameters": {
@@ -1738,6 +1836,72 @@ async def execute_tool(tool_name: str, tool_args: dict) -> str:
                 return f"Generated {quiz.total_questions} questions on '{topic}':\n\n" + "\n".join(questions_text) + f"\n\n... and {max(0, quiz.total_questions - 3)} more questions."
             except Exception as e:
                 return f"Quiz generation in progress. Use /api/learning/generate-quiz endpoint for full quiz. Error: {str(e)}"
+        
+        elif tool_name == "get_quiz":
+            quiz_id = tool_args.get("quiz_id")
+            quiz = await db.get_quiz(quiz_id)
+            if quiz:
+                questions_preview = []
+                for i, q in enumerate(quiz.get("questions", [])[:5], 1):
+                    questions_preview.append(f"**Q{i}:** {q.get('question', '')[:100]}...")
+                return json.dumps({
+                    "id": quiz["id"],
+                    "title": quiz["title"],
+                    "description": quiz["description"],
+                    "question_count": quiz["question_count"],
+                    "passing_score": quiz["passing_score"],
+                    "questions_preview": questions_preview,
+                    "full_quiz_available": True
+                }, indent=2)
+            return f"Quiz not found: {quiz_id}"
+        
+        elif tool_name == "list_quizzes":
+            scenario_id = tool_args.get("scenario_id")
+            quizzes = await db.get_quizzes_for_scenario(scenario_id)
+            if quizzes:
+                quiz_list = []
+                for q in quizzes:
+                    quiz_list.append(f"- **{q['title']}** (ID: {q['id']}) - {q['question_count']} questions, passing: {q['passing_score']}%")
+                return f"Found {len(quizzes)} quizzes for scenario:\n\n" + "\n".join(quiz_list)
+            return f"No quizzes found for scenario: {scenario_id}"
+        
+        elif tool_name == "save_quiz_attempt":
+            profile_id = tool_args.get("profile_id")
+            quiz_id = tool_args.get("quiz_id")
+            answers = tool_args.get("answers", [])
+            score = tool_args.get("score", 0)
+            passed = tool_args.get("passed", False)
+            time_spent = tool_args.get("time_spent_seconds", 0)
+            
+            attempt_id = await db.save_quiz_attempt(
+                profile_id=profile_id,
+                quiz_id=quiz_id,
+                answers=answers,
+                score=score,
+                passed=passed,
+                time_spent_seconds=time_spent
+            )
+            return json.dumps({
+                "success": True,
+                "attempt_id": attempt_id,
+                "score": score,
+                "passed": passed,
+                "message": f"Quiz attempt saved! {'Congratulations, you passed!' if passed else 'Keep practicing!'}"
+            }, indent=2)
+        
+        elif tool_name == "get_quiz_stats":
+            profile_id = tool_args.get("profile_id")
+            stats = await db.get_user_quiz_stats(profile_id)
+            if stats:
+                return json.dumps({
+                    "total_attempts": stats.get("total_attempts", 0),
+                    "quizzes_passed": stats.get("quizzes_passed", 0),
+                    "average_score": round(stats.get("avg_score", 0), 1),
+                    "best_score": stats.get("best_score", 0),
+                    "total_time_minutes": round(stats.get("total_time", 0) / 60, 1),
+                    "pass_rate": f"{round(stats.get('quizzes_passed', 0) / max(stats.get('total_attempts', 1), 1) * 100, 1)}%"
+                }, indent=2)
+            return json.dumps({"total_attempts": 0, "message": "No quiz attempts yet. Take a quiz to start tracking your progress!"})
         
         elif tool_name == "generate_study_notes":
             topic = tool_args.get("topic", "AWS")
