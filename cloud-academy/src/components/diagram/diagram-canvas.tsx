@@ -901,7 +901,7 @@ function DiagramCanvasInner({
     setAuditResult(null);
 
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "http://localhost:1027";
+      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
       
       // Use the dedicated audit endpoint with full hierarchy data
       const response = await fetch(`${learningAgentUrl}/api/learning/audit-diagram`, {

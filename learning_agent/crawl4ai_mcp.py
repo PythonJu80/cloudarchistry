@@ -2585,13 +2585,88 @@ async def get_coaching_response(
     scenario: Optional[CloudScenario] = None,
     challenge_id: Optional[str] = None,
     context: Optional[Dict[str, Any]] = None
-) -> str:
-    """Get a coaching response for the user's message"""
+) -> dict:
+    """Get a coaching response for the user's message with dynamic persona switching"""
+    
+    # Map certification codes to persona IDs
+    CERT_TO_PERSONA = {
+        "CLF": "cloud-practitioner",
+        "SAA": "solutions-architect-associate",
+        "DVA": "developer-associate",
+        "SOA": "sysops-associate",
+        "SAP": "solutions-architect-professional",
+        "DOP": "devops-professional",
+        "ANS": "networking-specialty",
+        "DAS": "data-analytics-specialty",
+        "SCS": "security-specialty",
+        "MLS": "machine-learning-specialty",
+        "DBS": "database-specialty",
+        "PAS": "sap-specialty",
+    }
+    
+    # Get persona based on target certification
+    from prompts import get_persona_prompt, get_persona_info
+    target_cert = context.get("target_certification") if context else None
+    persona_id = CERT_TO_PERSONA.get(target_cert, "solutions-architect-associate")
+    persona_prompt = get_persona_prompt(persona_id)
+    persona_info = get_persona_info(persona_id)
+    
+    logger.info(f"Persona switch: target_cert={target_cert} -> persona={persona_id} -> name={persona_info['name']} ({persona_info['cert']})")
     
     context_parts = []
     
+    # Build learner profile context
+    if context:
+        learner_parts = []
+        
+        # Basic info
+        if context.get("user_name"):
+            learner_parts.append(f"Name: {context['user_name']}")
+        if context.get("skill_level"):
+            learner_parts.append(f"Skill Level: {context['skill_level']}")
+        if context.get("target_certification"):
+            learner_parts.append(f"Studying for: {context['target_certification']}")
+        
+        # Stats
+        stats = context.get("stats", {})
+        if stats:
+            learner_parts.append(f"Level {stats.get('level', 1)} | {stats.get('total_points', 0)} points | {stats.get('challenges_completed', 0)} challenges completed")
+            if stats.get("current_streak", 0) > 0:
+                learner_parts.append(f"Current streak: {stats['current_streak']} days")
+        
+        # Recent scenarios
+        recent_scenarios = context.get("recent_scenarios", [])
+        if recent_scenarios:
+            scenario_summaries = []
+            for s in recent_scenarios[:3]:
+                if s.get("title"):
+                    status = "✓" if s.get("status") == "completed" else "→"
+                    scenario_summaries.append(f"{status} {s['title']} ({s.get('difficulty', 'unknown')})")
+            if scenario_summaries:
+                learner_parts.append(f"Recent scenarios: {', '.join(scenario_summaries)}")
+        
+        # Recent quizzes
+        recent_quizzes = context.get("recent_quizzes", [])
+        if recent_quizzes:
+            quiz_summaries = []
+            for q in recent_quizzes[:3]:
+                if q.get("title"):
+                    result = "✓" if q.get("passed") else f"{q.get('score', 0)}%"
+                    quiz_summaries.append(f"{q['title']}: {result}")
+            if quiz_summaries:
+                learner_parts.append(f"Recent quizzes: {', '.join(quiz_summaries)}")
+        
+        # Practiced services
+        practiced = context.get("practiced_services", [])
+        if practiced:
+            learner_parts.append(f"AWS services practiced: {', '.join(practiced[:10])}")
+        
+        if learner_parts:
+            context_parts.append("LEARNER PROFILE:\n" + "\n".join(learner_parts))
+    
+    # Scenario context
     if scenario:
-        context_parts.append(f"Current Scenario: {scenario.scenario_title}")
+        context_parts.append(f"\nCURRENT SCENARIO: {scenario.scenario_title}")
         context_parts.append(f"Company: {scenario.company_name}")
         context_parts.append(f"Business Context: {scenario.business_context}")
         
@@ -2603,29 +2678,92 @@ async def get_coaching_response(
                 context_parts.append(f"Success Criteria: {', '.join(challenge.success_criteria)}")
                 context_parts.append(f"Relevant AWS Services: {', '.join(challenge.aws_services_relevant)}")
     
-    if context:
-        context_parts.append(f"\nAdditional Context: {json.dumps(context)}")
-    
     system_context = "\n".join(context_parts) if context_parts else "General cloud architecture discussion"
     
-    system_prompt = f"""{SOPHIA_PERSONA}
+    # Build skill-level adaptation
+    skill_level = context.get("skill_level", "intermediate") if context else "intermediate"
+    skill_guidance = {
+        "beginner": "Explain concepts simply using analogies. Avoid jargon. Build confidence. One concept at a time.",
+        "intermediate": "Discuss trade-offs and best practices. Explain the 'why' behind recommendations.",
+        "advanced": "Be concise, assume foundational knowledge. Focus on nuances, edge cases, and optimization.",
+        "expert": "Peer-level discussion. Challenge their thinking. Discuss architectural patterns at scale."
+    }.get(skill_level, "Adapt to the learner's demonstrated knowledge level.")
+    
+    # Build system prompt with persona name from prompts.py
+    persona_name = persona_info['name']
+    
+    system_prompt = f"""You are {persona_name}, an AWS learning coach specializing in the {persona_info['cert']}.
 
-CURRENT CONTEXT:
-{system_context}"""
+YOUR IDENTITY:
+- Your name is {persona_name}. When asked your name, always say "{persona_name}".
+- You specialize in: {', '.join(persona_info['focus'])}
+- Your coaching style: {persona_info['style']}
+
+{persona_prompt}
+
+LEARNER ADAPTATION:
+Skill Level: {skill_level}
+{skill_guidance}
+
+{system_context}
+
+Use the learner's profile to personalize your response.
+
+IMPORTANT: You must respond in this exact JSON format:
+{{
+  "response": "Your helpful response here...",
+  "key_terms": [
+    {{"term": "Service or Concept Name", "category": "Category"}}
+  ]
+}}
+
+For key_terms, extract 3-8 important AWS services, concepts, or technical terms mentioned in YOUR response. Categories: Compute, Storage, Database, Networking, Security, Management, Analytics, Machine Learning, Containers, DevOps, Concepts."""
 
     try:
+        from utils import get_request_model
+        model = get_request_model()
+        
+        # Search knowledge base for relevant chunks
+        knowledge_context = ""
+        try:
+            search_results = await search_documents(query=message, match_count=3)
+            if search_results:
+                chunks = []
+                for r in search_results:
+                    chunk_text = r.get("content", "")[:500]  # Limit chunk size
+                    source = r.get("source_url", "")
+                    if chunk_text:
+                        chunks.append(f"[Source: {source}]\n{chunk_text}")
+                if chunks:
+                    knowledge_context = "\n\nRELEVANT KNOWLEDGE FROM AWS DOCUMENTATION:\n" + "\n---\n".join(chunks)
+        except Exception as e:
+            logger.warning(f"Knowledge search failed: {e}")
+        
+        # Add knowledge context to user message if found
+        augmented_message = message
+        if knowledge_context:
+            augmented_message = f"{message}\n{knowledge_context}"
+        
         response = await async_chat_completion(
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message},
+                {"role": "user", "content": augmented_message},
             ],
-            model="gpt-4o",
+            model=model,
             temperature=0.7,
         )
-        return response
+        
+        # Parse JSON response
+        try:
+            parsed = json.loads(response)
+            return parsed
+        except json.JSONDecodeError:
+            # Fallback if model doesn't return valid JSON
+            return {"response": response, "key_terms": []}
+            
     except Exception as e:
         logger.error(f"Coach response failed: {e}")
-        return "I'm having trouble processing that. Could you rephrase your question?"
+        return {"response": "I'm having trouble processing that. Could you rephrase your question?", "key_terms": []}
 
 
 # ============================================
@@ -2998,26 +3136,31 @@ async def learning_chat_endpoint(request: LearningChatRequestWithSession):
         except Exception as db_err:
             logger.warning(f"Failed to save user message: {db_err}")
         
-        # Get coaching response
-        response = await get_coaching_response(
+        # Get coaching response (now returns dict with response and key_terms)
+        result = await get_coaching_response(
             message=request.message,
             scenario=scenario,
             challenge_id=request.challenge_id,
             context=request.context
         )
         
+        # Extract response text and key_terms
+        response_text = result.get("response", "") if isinstance(result, dict) else result
+        key_terms = result.get("key_terms", []) if isinstance(result, dict) else []
+        
         # Save assistant response to DB
         try:
             await db.save_coaching_message(
                 session_id=session_id,
                 role="assistant",
-                content=response,
+                content=response_text,
             )
         except Exception as db_err:
             logger.warning(f"Failed to save assistant message: {db_err}")
         
         return {
-            "response": response,
+            "response": response_text,
+            "key_terms": key_terms,
             "session_id": session_id,
             "scenario_id": request.scenario_id,
             "challenge_id": request.challenge_id

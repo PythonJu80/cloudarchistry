@@ -21,7 +21,6 @@ import {
   Award,
   MapPin,
   TrendingUp,
-  Calendar,
   Swords,
   Users,
   XCircle,
@@ -32,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { JourneyTimeline } from "@/components/dashboard/journey-timeline";
 
 interface DashboardData {
   profile: {
@@ -65,19 +65,51 @@ interface DashboardData {
   userJourneys: Array<{
     id: string;
     scenarioId: string;
-    scenarioTitle: string;
-    locationName: string;
-    locationCompany: string;
-    locationIcon: string;
     status: string;
     startedAt: string;
     lastActivityAt: string;
     completedAt: string | null;
     pointsEarned: number;
     maxPoints: number;
+    scenario: {
+      id: string;
+      title: string;
+      description: string;
+      difficulty: string;
+      companyInfo: Record<string, unknown>;
+    };
+    location: {
+      id: string;
+      name: string;
+      company: string;
+      icon: string;
+      slug: string;
+      lat: number;
+      lng: number;
+      country: string | null;
+      industry: string;
+      difficulty: string;
+    };
+    challenges: Array<{
+      id: string;
+      title: string;
+      description: string;
+      difficulty: string;
+      points: number;
+      orderIndex: number;
+      estimatedMinutes: number;
+      awsServices: string[];
+      hints: string[];
+      successCriteria: string[];
+      status: string;
+      startedAt: string | null;
+      completedAt: string | null;
+      pointsEarned: number;
+      hintsUsed: number;
+      progressId: string | null;
+    }>;
     totalChallenges: number;
-    completedChallenges: number;
-    inProgressChallenges: number;
+    challengesCompleted: number;
     progress: number;
   }>;
   challengeDetails: Array<{
@@ -152,21 +184,6 @@ interface VersusData {
   recentMatches: VersusMatch[];
 }
 
-function getStatusColor(status: string) {
-  switch (status) {
-    case "completed":
-      return "text-green-400";
-    case "in_progress":
-      return "text-amber-400";
-    case "available":
-      return "text-blue-400";
-    case "locked":
-      return "text-muted-foreground";
-    default:
-      return "text-muted-foreground";
-  }
-}
-
 function getStatusIcon(status: string) {
   switch (status) {
     case "completed":
@@ -195,21 +212,6 @@ function getDifficultyColor(difficulty: string) {
     default:
       return "bg-muted text-muted-foreground";
   }
-}
-
-function formatTimeAgo(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
 }
 
 export default function DashboardPage() {
@@ -507,9 +509,9 @@ export default function DashboardPage() {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* User Journeys */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Active Journeys */}
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between">
+              {/* Active Journeys - Interactive Timeline */}
+              <Card className="bg-card/50 border-border/50 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="flex items-center gap-2">
                     <PlayCircle className="w-5 h-5 text-amber-400" />
                     Active Journeys
@@ -521,66 +523,12 @@ export default function DashboardPage() {
                     </Button>
                   </Link>
                 </CardHeader>
-                <CardContent>
-                  {userJourneys.filter((j) => j.status === "in_progress").length === 0 ? (
-                    <div className="text-center py-8">
-                      <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-muted-foreground mb-4">
-                        No active journeys. Start exploring the world map!
-                      </p>
-                      <Link href="/world">
-                        <Button variant="glow" size="sm">
-                          Start a Journey
-                        </Button>
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {userJourneys
-                        .filter((j) => j.status === "in_progress")
-                        .slice(0, 3)
-                        .map((journey) => (
-                          <div
-                            key={journey.id}
-                            className="p-4 rounded-lg bg-background/50 border border-border/50 hover:border-primary/50 transition-colors"
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <span className="text-2xl">{journey.locationIcon}</span>
-                                <div>
-                                  <h4 className="font-semibold">{journey.scenarioTitle}</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {journey.locationCompany} • {journey.locationName}
-                                  </p>
-                                </div>
-                              </div>
-                              <Badge variant="outline" className="text-amber-400 border-amber-400/30">
-                                In Progress
-                              </Badge>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">
-                                  {journey.completedChallenges}/{journey.totalChallenges} challenges
-                                </span>
-                                <span className="font-medium">{journey.progress}%</span>
-                              </div>
-                              <Progress value={journey.progress} className="h-2" />
-                            </div>
-                            <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
-                              <span>
-                                <Calendar className="w-3 h-3 inline mr-1" />
-                                Last active {formatTimeAgo(journey.lastActivityAt)}
-                              </span>
-                              <span>
-                                <Trophy className="w-3 h-3 inline mr-1" />
-                                {journey.pointsEarned} pts earned
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
+                <CardContent className="pt-2">
+                  <JourneyTimeline 
+                    journeys={userJourneys} 
+                    apiKey={profile.hasOpenAiKey && profile.openaiKeyLastFour ? profile.openaiKeyLastFour : undefined}
+                    onRefresh={fetchDashboardData}
+                  />
                 </CardContent>
               </Card>
 
@@ -677,11 +625,11 @@ export default function DashboardPage() {
                             className="flex items-center justify-between p-3 rounded-lg bg-green-500/5 border border-green-500/20"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-xl">{journey.locationIcon}</span>
+                              <span className="text-xl">{journey.location.icon}</span>
                               <div>
-                                <p className="font-medium">{journey.scenarioTitle}</p>
+                                <p className="font-medium">{journey.scenario.title}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {journey.locationCompany}
+                                  {journey.location.company}
                                 </p>
                               </div>
                             </div>
@@ -690,7 +638,7 @@ export default function DashboardPage() {
                                 {journey.pointsEarned} pts
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {journey.completedChallenges} challenges
+                                {journey.challengesCompleted} challenges
                               </p>
                             </div>
                           </div>

@@ -116,31 +116,83 @@ export async function GET() {
       take: 5,
     });
 
-    // Format user journeys (scenarios in progress or completed)
-    const userJourneys = scenarioAttempts.map((attempt) => ({
-      id: attempt.id,
-      scenarioId: attempt.scenarioId,
-      scenarioTitle: attempt.scenario.title,
-      locationName: attempt.scenario.location.name,
-      locationCompany: attempt.scenario.location.company,
-      locationIcon: attempt.scenario.location.icon,
-      status: attempt.status,
-      startedAt: attempt.startedAt,
-      lastActivityAt: attempt.lastActivityAt,
-      completedAt: attempt.completedAt,
-      pointsEarned: attempt.pointsEarned,
-      maxPoints: attempt.maxPoints,
-      totalChallenges: attempt.scenario.challenges.length,
-      completedChallenges: attempt.challengeProgress.filter((cp) => cp.status === "completed").length,
-      inProgressChallenges: attempt.challengeProgress.filter((cp) => cp.status === "in_progress").length,
-      progress: attempt.scenario.challenges.length > 0
-        ? Math.round(
-            (attempt.challengeProgress.filter((cp) => cp.status === "completed").length /
-              attempt.scenario.challenges.length) *
-              100
-          )
-        : 0,
-    }));
+    // Format user journeys (scenarios in progress or completed) with full challenge data for modal
+    const userJourneys = scenarioAttempts.map((attempt) => {
+      // Sort challenges by orderIndex and map progress
+      const sortedChallenges = [...attempt.scenario.challenges].sort((a, b) => a.orderIndex - b.orderIndex);
+      
+      // Full challenge data for the ChallengeWorkspaceModal
+      const challenges = sortedChallenges.map((challenge) => {
+        const progress = attempt.challengeProgress.find((cp) => cp.challengeId === challenge.id);
+        return {
+          id: challenge.id,
+          title: challenge.title,
+          description: challenge.description,
+          difficulty: challenge.difficulty,
+          points: challenge.points,
+          orderIndex: challenge.orderIndex,
+          estimatedMinutes: challenge.estimatedMinutes,
+          awsServices: challenge.awsServices as string[],
+          hints: challenge.hints as string[],
+          successCriteria: challenge.successCriteria as string[],
+          status: progress?.status || "locked",
+          startedAt: progress?.startedAt,
+          completedAt: progress?.completedAt,
+          pointsEarned: progress?.pointsEarned || 0,
+          hintsUsed: progress?.hintsUsed || 0,
+          progressId: progress?.id,
+        };
+      });
+
+      return {
+        // Attempt data
+        id: attempt.id,
+        scenarioId: attempt.scenarioId,
+        status: attempt.status,
+        startedAt: attempt.startedAt,
+        lastActivityAt: attempt.lastActivityAt,
+        completedAt: attempt.completedAt,
+        pointsEarned: attempt.pointsEarned,
+        maxPoints: attempt.maxPoints,
+        
+        // Scenario data (for ChallengeWorkspaceModal)
+        scenario: {
+          id: attempt.scenario.id,
+          title: attempt.scenario.title,
+          description: attempt.scenario.description,
+          difficulty: attempt.scenario.difficulty,
+          companyInfo: attempt.scenario.companyInfo as Record<string, unknown>,
+        },
+        
+        // Location data (for ChallengeWorkspaceModal)
+        location: {
+          id: attempt.scenario.location.id,
+          name: attempt.scenario.location.name,
+          company: attempt.scenario.location.company,
+          icon: attempt.scenario.location.icon,
+          slug: attempt.scenario.location.slug,
+          lat: attempt.scenario.location.lat,
+          lng: attempt.scenario.location.lng,
+          country: attempt.scenario.location.country,
+          industry: attempt.scenario.location.industry,
+          difficulty: attempt.scenario.location.difficulty,
+        },
+        
+        // Full challenges array for modal navigation
+        challenges,
+        
+        // Stats for display
+        totalChallenges: attempt.scenario.challenges.length,
+        challengesCompleted: attempt.challengeProgress.filter((cp) => cp.status === "completed").length,
+        progress: attempt.scenario.challenges.length > 0
+          ? Math.round(
+              (attempt.challengeProgress.filter((cp) => cp.status === "completed").length /
+                attempt.scenario.challenges.length) *
+                100
+            )
+          : 0,
+      };
+    });
 
     // Format challenge details
     const challengeDetails = scenarioAttempts.flatMap((attempt) =>

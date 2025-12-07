@@ -8,24 +8,20 @@ import {
   Clock,
   Trophy,
   Users,
-  Star,
   Lock,
   ChevronRight,
   Target,
   TrendingUp,
-  Award,
   CheckCircle,
-  XCircle,
   Loader2,
   GraduationCap,
-  Swords,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { NavbarAvatar } from "@/components/navbar";
+import { Navbar } from "@/components/navbar";
 
 interface Exam {
   id: string;
@@ -115,47 +111,7 @@ export default function ExamsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <NavbarAvatar />
-            <span className="text-xl font-bold">CloudAcademy</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/world" className="text-muted-foreground hover:text-foreground transition-colors">
-              World Map
-            </Link>
-            <Link href="/challenges" className="text-muted-foreground hover:text-foreground transition-colors">
-              Challenges
-            </Link>
-            <Link href="/exams" className="text-foreground font-medium flex items-center gap-1">
-              <GraduationCap className="w-4 h-4" />
-              Practice Exams
-            </Link>
-            <Link href="/game" className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
-              <Swords className="w-4 h-4" />
-              Game Zone
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            {authStatus === "authenticated" ? (
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm">Dashboard</Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm">Sign In</Button>
-                </Link>
-                <Link href="/register">
-                  <Button variant="glow" size="sm">Start Free</Button>
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+      <Navbar activePath="/exams" />
 
       {/* Hero Section */}
       <section className="pt-24 pb-12 px-6 bg-gradient-to-b from-primary/5 to-transparent">
@@ -166,7 +122,7 @@ export default function ExamsPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold">AWS Practice Exams</h1>
-              <p className="text-muted-foreground">Tutorials Dojo-style exam preparation</p>
+              <p className="text-muted-foreground">AWS Certification Exam Preparation</p>
             </div>
           </div>
           

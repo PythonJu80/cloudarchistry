@@ -1,22 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { 
-  Globe, 
   Trophy,
   Medal,
   Crown,
   Star,
   TrendingUp,
   Calendar,
-  Swords,
-  GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { NavbarAvatar } from "@/components/navbar";
+import { Navbar } from "@/components/navbar";
 
 const leaderboardData = [
   {
@@ -141,42 +137,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <NavbarAvatar />
-            <span className="text-xl font-bold">CloudAcademy</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/world" className="text-muted-foreground hover:text-foreground transition-colors">
-              World Map
-            </Link>
-            <Link href="/challenges" className="text-muted-foreground hover:text-foreground transition-colors">
-              Challenges
-            </Link>
-            <Link href="/exams" className="text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1">
-              <GraduationCap className="w-4 h-4" />
-              Practice Exams
-            </Link>
-            <Link href="/game" className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
-              <Swords className="w-4 h-4" />
-              Game Zone
-            </Link>
-            <Link href="/leaderboard" className="text-foreground font-medium">
-              Leaderboard
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">Sign In</Button>
-            </Link>
-            <Link href="/register">
-              <Button variant="glow" size="sm">Start Free</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar activePath="/leaderboard" />
 
       {/* Header */}
       <section className="pt-24 pb-8 px-6">

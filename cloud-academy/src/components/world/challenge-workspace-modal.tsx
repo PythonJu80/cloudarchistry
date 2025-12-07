@@ -262,7 +262,7 @@ export function ChallengeWorkspaceModal({
       }
       
       // No saved progress - generate new questions
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "http://localhost:1027";
+      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
       const response = await fetch(`${learningAgentUrl}/api/learning/challenge-questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -389,7 +389,7 @@ export function ChallengeWorkspaceModal({
     setIsChatLoading(true);
 
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "http://localhost:1027";
+      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
       const response = await fetch(`${learningAgentUrl}/api/learning/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

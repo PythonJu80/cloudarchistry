@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import { 
   Zap, 
   Trophy, 
@@ -23,12 +22,10 @@ import {
   Server,
   Database,
   Lock,
-  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { NavbarAvatar } from "@/components/navbar";
-import { UserNav } from "@/components/user-nav";
+import { Navbar } from "@/components/navbar";
 
 // Floating particles component
 function FloatingParticles() {
@@ -163,7 +160,6 @@ const leaderboard = [
 ];
 
 export default function Home() {
-  const { data: session } = useSession();
   const [selectedClass, setSelectedClass] = useState(0);
   const [mounted, setMounted] = useState(false);
 
@@ -240,45 +236,7 @@ export default function Home() {
         <div className="absolute inset-0 z-10 bg-gradient-to-r from-slate-950/40 via-transparent to-slate-950/40" />
         
         {/* Navigation */}
-        <nav className="absolute top-0 left-0 right-0 z-50 px-6 py-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 group">
-              <NavbarAvatar />
-              <span className="text-xl font-bold text-white group-hover:text-cyan-400 transition-colors">CloudAcademy</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/world" className="text-white/70 hover:text-cyan-400 transition-colors text-sm font-medium relative group">
-                World Map
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300" />
-              </Link>
-              <Link href="/challenges" className="text-white/70 hover:text-cyan-400 transition-colors text-sm font-medium relative group">
-                Challenges
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300" />
-              </Link>
-              <Link href="/exams" className="text-amber-400 hover:text-amber-300 transition-colors text-sm font-medium flex items-center gap-1 relative group">
-                <GraduationCap className="w-4 h-4" />
-                Practice Exams
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-400 group-hover:w-full transition-all duration-300" />
-              </Link>
-              <Link href="/game" className="text-red-400 hover:text-red-300 transition-colors text-sm font-medium flex items-center gap-1 relative group">
-                <Swords className="w-4 h-4" />
-                Game Zone
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-400 group-hover:w-full transition-all duration-300" />
-              </Link>
-              <Link href="/leaderboard" className="text-white/70 hover:text-cyan-400 transition-colors text-sm font-medium relative group">
-                Leaderboard
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300" />
-              </Link>
-              <Link href="/pricing" className="text-white/70 hover:text-cyan-400 transition-colors text-sm font-medium relative group">
-                Pricing
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300" />
-              </Link>
-            </div>
-            <div className="flex items-center gap-3">
-              <UserNav user={session?.user ? { username: session.user.username, subscriptionTier: session.user.subscriptionTier } : null} />
-            </div>
-          </div>
-        </nav>
+        <Navbar variant="transparent" />
         
         {/* Hero Content */}
         <div className="absolute inset-0 z-20 flex items-center justify-center">

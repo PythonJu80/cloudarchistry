@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
       userLevel = "intermediate",
       latitude,
       longitude,
+      country,
       industry,
     } = body;
 
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
         industry: industry || companyInfo.industry as string || "Technology",
         lat: latitude || 0,
         lng: longitude || 0,
+        country: country || null,
         description: companyInfo.description as string || "",
         difficulty: userLevel,
       },

@@ -1321,10 +1321,43 @@ model AcademyUserProfile {
   // Practice Exams
   examAttempts     ExamAttempt[]
   
+  // Learning Centre Chat
+  learningChats    LearningChat[]
+  
   @@index([academyUserId])
   @@index([academyTenantId])
   @@index([totalPoints])
   @@index([level])
+}
+
+// Learning Centre Chat - Persistent chat history for AI tutor
+model LearningChat {
+  id          String   @id @default(cuid())
+  
+  profileId   String
+  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // Chat session info
+  title       String   @default("New Chat")  // Auto-generated from first message
+  
+  // Messages stored as JSON array for simplicity
+  // [{ id, role, content, timestamp, keywords? }]
+  messages    Json     @default("[]")
+  
+  // Extracted keywords from this chat (for agent context)
+  keywords    Json     @default("[]")  // ["VPC", "Lambda", "S3"]
+  
+  // Analytics for agent to understand user struggles
+  topicsDiscussed Json @default("[]")  // Categories discussed
+  questionsAsked  Int  @default(0)
+  
+  // Timestamps
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([profileId])
+  @@index([lastMessageAt])
 }
 
 // Portfolio - Generated PDF showcasing completed challenges
@@ -3127,8 +3160,7 @@ model GameAchievementUnlock {
 }
 
 // ============================================
-// Practice Exams - Tutorials Dojo Style
-// AWS Certification Exam Preparation
+// Practice Exams - AWS Certification Prep
 // ============================================
 
 // Practice Exam - Certification exam simulation
@@ -3206,7 +3238,7 @@ model ExamQuestion {
   options           Json     // [{ id: "A", text: "...", isCorrect: false }, ...]
   correctAnswers    Json     // ["A"] or ["A", "C"] for multi-select
   
-  // Explanation (Tutorials Dojo's key differentiator)
+  // Detailed explanation for learning
   explanation       String   @db.Text
   whyCorrect        String?  @db.Text  // Why the correct answer is right
   whyWrong          Json     @default("{}")  // { "A": "This is wrong because...", "B": "..." }
@@ -3230,9 +3262,22 @@ model ExamQuestion {
   // Tags for filtering
   tags              Json     @default("[]")  // ["security", "iam", "best-practices"]
   
+  // Question source & type
+  sourceType        String   @default("ai_generated")  // official_pdf, ai_generated, community
+  isDiagnostic      Boolean  @default(false)           // Part of initial diagnostic set
+  diagnosticOrder   Int?                               // Order in diagnostic sequence (1-10)
+  
+  // For AI-generated questions
+  generatedFromContext String? @db.Text                // RAG context used to generate
+  generatedAt       DateTime?                          // When AI created it
+  generatedModel    String?                            // "gpt-4", "claude-3", etc.
+  
   // Quality control
-  isVerified        Boolean  @default(false)
-  reportCount       Int      @default(0)  // User reports for issues
+  isVerified        Boolean  @default(false)           // Human-reviewed
+  verifiedBy        String?                            // Admin who verified
+  verifiedAt        DateTime?
+  reportCount       Int      @default(0)               // User reports for issues
+  reportReasons     Json     @default("[]")           // ["incorrect_answer", "unclear", ...]
   
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
@@ -3243,6 +3288,8 @@ model ExamQuestion {
   @@index([examId])
   @@index([domain])
   @@index([difficulty])
+  @@index([sourceType])
+  @@index([isDiagnostic])
   @@index([isActive])
 }
 
@@ -3257,11 +3304,17 @@ model ExamAttempt {
   exam              PracticeExam @relation(fields: [examId], references: [id], onDelete: Cascade)
   
   // Attempt mode
-  mode              String   @default("timed")  // timed, review, domain_focus
+  mode              String   @default("adaptive")  // adaptive, timed, review, domain_focus
   focusDomain       String?  // For domain_focus mode
   
+  // Adaptive exam state
+  isAdaptive        Boolean  @default(true)
+  diagnosticComplete Boolean @default(false)          // Has user finished diagnostic phase?
+  diagnosticProfile  Json    @default("{}")          // { "domain1": { correct: 2, total: 3, percentage: 66 }, ... }
+  adaptiveStrategy   Json    @default("{}")          // { "focusDomains": ["Security"], "difficultyBias": "harder" }
+  
   // Attempt state
-  status            String   @default("in_progress")  // in_progress, completed, abandoned, timed_out
+  status            String   @default("in_progress")  // in_progress, diagnostic, adaptive, completed, abandoned, timed_out
   
   // Question set for this attempt (randomized from pool)
   questionIds       Json     @default("[]")  // [questionId, ...]
@@ -3373,4 +3426,93 @@ model ExamAnalytics {
   @@index([profileId])
   @@index([examId])
   @@index([readinessScore])
+}
+
+// ============================================
+// Exam Configuration - Certification Metadata
+// ============================================
+
+// AWS Certification - Master list of all certifications
+model AWSCertification {
+  id                String   @id @default(cuid())
+  
+  // Certification identity
+  code              String   @unique  // "SAA-C03", "DVA-C02", "CLF-C02"
+  name              String            // "AWS Certified Solutions Architect - Associate"
+  shortName         String            // "Solutions Architect Associate"
+  
+  // Level & category
+  level             String            // foundational, associate, professional, specialty
+  category          String?           // "Architect", "Developer", "Operations", "Data", "Security"
+  
+  // Exam details
+  questionCount     Int      @default(65)   // Questions in real exam
+  timeMinutes       Int      @default(130)  // Time limit
+  passingScore      Int      @default(720)  // AWS uses 100-1000 scale
+  passingPercentage Int      @default(72)   // Approximate percentage
+  
+  // Official resources
+  examGuideUrl      String?  // URL to exam guide PDF
+  sampleQuestionsUrl String? // URL to sample questions PDF
+  awsPageUrl        String?  // URL to AWS certification page
+  
+  // Domains (from exam guide)
+  domains           Json     @default("[]")  // [{ id: "1", name: "Design Secure Architectures", weight: 30, taskStatements: [...] }]
+  
+  // Status
+  isActive          Boolean  @default(true)
+  retiredAt         DateTime?
+  replacedBy        String?  // Code of replacement cert (e.g., "SAA-C03" replaced "SAA-C02")
+  
+  // Metadata
+  lastUpdated       DateTime @default(now())  // When exam guide was last updated
+  version           String?  // "C03", "C02"
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  diagnosticSets    DiagnosticQuestionSet[]
+  
+  @@index([level])
+  @@index([isActive])
+}
+
+// Diagnostic Question Set - Official questions for each certification
+model DiagnosticQuestionSet {
+  id                String   @id @default(cuid())
+  
+  certificationId   String
+  certification     AWSCertification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  
+  // Set metadata
+  name              String   @default("Official Sample Questions")
+  description       String?  @db.Text
+  
+  // Source
+  sourceUrl         String?  // PDF URL
+  sourceName        String   @default("AWS Official")  // "AWS Official", "Community", etc.
+  
+  // Questions in this set (ordered)
+  questionIds       Json     @default("[]")  // [questionId, ...] in diagnostic order
+  questionCount     Int      @default(10)
+  
+  // Domain coverage
+  domainCoverage    Json     @default("{}")  // { "Domain 1": 3, "Domain 2": 2, ... }
+  
+  // Status
+  isActive          Boolean  @default(true)
+  isPrimary         Boolean  @default(true)  // Primary diagnostic set for this cert
+  
+  // Import metadata
+  importedAt        DateTime?
+  importedBy        String?
+  parseErrors       Json     @default("[]")  // Any errors during PDF parsing
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([certificationId])
+  @@index([isActive])
+  @@index([isPrimary])
 }

@@ -49,6 +49,7 @@ interface ScenarioGenerationModalProps {
   userLevel?: string;
   latitude?: number;
   longitude?: number;
+  country?: string;
   apiKey?: string | null;
   preferredModel?: string | null;
   onQuiz?: (scenario: Record<string, unknown>, companyInfo: Record<string, unknown>) => void;
@@ -67,6 +68,7 @@ export function ScenarioGenerationModal({
   userLevel = "intermediate",
   latitude,
   longitude,
+  country,
   apiKey,
   preferredModel,
   onQuiz,
@@ -151,6 +153,7 @@ export function ScenarioGenerationModal({
           userLevel: userLevel,
           latitude: latitude,
           longitude: longitude,
+          country: country,
           industry: industry,
         }),
       });
@@ -177,7 +180,7 @@ export function ScenarioGenerationModal({
     setLogs([]);
 
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "http://localhost:1027";
+      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
       const response = await fetch(`${learningAgentUrl}/api/learning/generate-scenario-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

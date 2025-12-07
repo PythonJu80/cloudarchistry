@@ -254,7 +254,7 @@ export function CLISimulator({
     setIsExecuting(true);
     
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "http://localhost:1027";
+      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
       const response = await fetch(`${learningAgentUrl}/api/learning/cli-simulate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -367,7 +367,7 @@ export function CLISimulator({
     addLine("info", `Fetching help for: ${topic}...`);
     
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "http://localhost:1027";
+      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
       const response = await fetch(`${learningAgentUrl}/api/learning/cli-help`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -451,7 +451,7 @@ export function CLISimulator({
     addLine("info", "Thinking...");
     
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "http://localhost:1027";
+      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
       const response = await fetch(`${learningAgentUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

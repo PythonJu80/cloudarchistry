@@ -621,6 +621,7 @@ export default function WorldPage() {
     industry: string;
     latitude?: number;
     longitude?: number;
+    country?: string;
     skillLevel?: "beginner" | "intermediate" | "advanced" | "expert";
   } | null>(null);
   const [activeIndustries, setActiveIndustries] = useState<Set<string>>(new Set([
@@ -1223,11 +1224,15 @@ export default function WorldPage() {
                       className="w-full gap-2"
                       disabled={!customBusinessName.trim() || !customBusinessAddress.trim()}
                       onClick={() => {
+                        // Extract country from custom address (last part after comma)
+                        const addressParts = customBusinessAddress.split(',');
+                        const customCountry = addressParts.length > 0 ? addressParts[addressParts.length - 1].trim() : undefined;
                         setGenerationTarget({
                           businessName: customBusinessName,
                           industry: customBusinessIndustry,
                           latitude: targetCoords?.lat,
                           longitude: targetCoords?.lng,
+                          country: customCountry,
                           skillLevel: selectedSkillLevel,
                         });
                         setShowGenerationModal(true);
@@ -1584,11 +1589,15 @@ export default function WorldPage() {
                       className="w-full gap-2"
                       onClick={() => {
                         const industry = selectedBusiness?.types ? detectIndustry(selectedBusiness.types) : "Technology";
+                        // Extract country from address (last part after comma)
+                        const addressParts = selectedBusiness?.address?.split(',') || [];
+                        const country = addressParts.length > 0 ? addressParts[addressParts.length - 1].trim() : undefined;
                         setGenerationTarget({
                           businessName: selectedBusiness?.name || "",
                           industry: industry,
                           latitude: selectedBusiness?.lat,
                           longitude: selectedBusiness?.lng,
+                          country: country,
                           skillLevel: selectedSkillLevel,
                         });
                         setShowGenerationModal(true);
@@ -1660,6 +1669,7 @@ export default function WorldPage() {
             userLevel={generationTarget.skillLevel || "intermediate"}
             latitude={generationTarget.latitude}
             longitude={generationTarget.longitude}
+            country={generationTarget.country}
             apiKey={userApiKey}
             preferredModel={preferredModel}
             onQuiz={(scenario, companyInfo) => {
