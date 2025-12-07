@@ -1318,6 +1318,9 @@ model AcademyUserProfile {
   // CLI proficiency tracking
   cliProficiency CLIProficiency?
   
+  // Practice Exams
+  examAttempts     ExamAttempt[]
+  
   @@index([academyUserId])
   @@index([academyTenantId])
   @@index([totalPoints])
@@ -3121,4 +3124,253 @@ model GameAchievementUnlock {
   @@index([userId])
   @@index([achievementId])
   @@index([unlockedAt])
+}
+
+// ============================================
+// Practice Exams - Tutorials Dojo Style
+// AWS Certification Exam Preparation
+// ============================================
+
+// Practice Exam - Certification exam simulation
+model PracticeExam {
+  id                String   @id @default(cuid())
+  
+  // Exam identity
+  slug              String   @unique  // "saa-c03", "sap-c02", "dva-c02"
+  title             String            // "AWS Solutions Architect Associate"
+  shortTitle        String?           // "SAA-C03"
+  certificationCode String            // "SAA-C03"
+  
+  // Description
+  description       String   @db.Text
+  
+  // Exam simulation settings (matches real AWS exams)
+  questionCount     Int      @default(65)   // Questions per attempt
+  timeLimit         Int      @default(130)  // Minutes
+  passingScore      Int      @default(72)   // Percentage to pass
+  
+  // Question pool
+  totalQuestions    Int      @default(0)    // Total questions in pool
+  
+  // Domains/Categories (AWS exam domains)
+  domains           Json     @default("[]") // [{ id, name, weight }]
+  
+  // Pricing/Access
+  isFree            Boolean  @default(false)
+  requiredTier      String   @default("learner")  // free, learner, pro
+  price             Float?   // For individual purchase
+  
+  // Display
+  icon              String   @default("📝")
+  color             String   @default("#FF9900")  // AWS Orange
+  difficulty        String   @default("associate")  // foundational, associate, professional, specialty
+  
+  // Stats (denormalized for performance)
+  totalAttempts     Int      @default(0)
+  avgScore          Float    @default(0)
+  passRate          Float    @default(0)
+  
+  // Metadata
+  lastUpdated       DateTime @default(now())  // When questions were last updated
+  examVersion       String?  // "2024" for versioned exams
+  isActive          Boolean  @default(true)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  questions         ExamQuestion[]
+  attempts          ExamAttempt[]
+  
+  @@index([certificationCode])
+  @@index([difficulty])
+  @@index([isActive])
+  @@index([requiredTier])
+}
+
+// Exam Question - Individual practice question
+model ExamQuestion {
+  id                String   @id @default(cuid())
+  
+  examId            String
+  exam              PracticeExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  
+  // Question content
+  questionText      String   @db.Text
+  questionType      String   @default("single")  // single, multiple (select X)
+  selectCount       Int      @default(1)         // For "select 2" or "select 3" questions
+  
+  // Scenario/context (for scenario-based questions)
+  scenario          String?  @db.Text
+  
+  // Options
+  options           Json     // [{ id: "A", text: "...", isCorrect: false }, ...]
+  correctAnswers    Json     // ["A"] or ["A", "C"] for multi-select
+  
+  // Explanation (Tutorials Dojo's key differentiator)
+  explanation       String   @db.Text
+  whyCorrect        String?  @db.Text  // Why the correct answer is right
+  whyWrong          Json     @default("{}")  // { "A": "This is wrong because...", "B": "..." }
+  
+  // Domain categorization (maps to AWS exam domains)
+  domain            String   // "Design Secure Architectures"
+  domainId          String?  // For structured domain reference
+  subdomain         String?  // "Design secure access to AWS resources"
+  
+  // AWS services covered
+  awsServices       Json     @default("[]")  // ["IAM", "KMS", "Secrets Manager"]
+  
+  // Difficulty & stats
+  difficulty        String   @default("medium")  // easy, medium, hard
+  correctRate       Float    @default(0)         // % of users who got it right
+  totalAttempts     Int      @default(0)
+  
+  // Reference materials
+  referenceLinks    Json     @default("[]")  // [{ title: "IAM Best Practices", url: "..." }]
+  
+  // Tags for filtering
+  tags              Json     @default("[]")  // ["security", "iam", "best-practices"]
+  
+  // Quality control
+  isVerified        Boolean  @default(false)
+  reportCount       Int      @default(0)  // User reports for issues
+  
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  answers           ExamAnswer[]
+  
+  @@index([examId])
+  @@index([domain])
+  @@index([difficulty])
+  @@index([isActive])
+}
+
+// Exam Attempt - User's exam session
+model ExamAttempt {
+  id                String   @id @default(cuid())
+  
+  profileId         String
+  profile           AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  examId            String
+  exam              PracticeExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  
+  // Attempt mode
+  mode              String   @default("timed")  // timed, review, domain_focus
+  focusDomain       String?  // For domain_focus mode
+  
+  // Attempt state
+  status            String   @default("in_progress")  // in_progress, completed, abandoned, timed_out
+  
+  // Question set for this attempt (randomized from pool)
+  questionIds       Json     @default("[]")  // [questionId, ...]
+  questionOrder     Json     @default("[]")  // Shuffled order
+  currentIndex      Int      @default(0)     // Current question index
+  
+  // Flagged questions (for review)
+  flaggedQuestions  Json     @default("[]")  // [questionId, ...]
+  
+  // Results (populated on completion)
+  score             Float?   // Percentage score
+  passed            Boolean?
+  correctCount      Int      @default(0)
+  incorrectCount    Int      @default(0)
+  unansweredCount   Int      @default(0)
+  
+  // Domain breakdown
+  domainScores      Json     @default("{}")  // { "Domain 1": { correct: 5, total: 10, percentage: 50 } }
+  
+  // Time tracking
+  startedAt         DateTime @default(now())
+  completedAt       DateTime?
+  timeSpentSeconds  Int      @default(0)
+  timeRemaining     Int?     // Seconds remaining when paused/completed
+  
+  // Points earned (for gamification)
+  pointsEarned      Int      @default(0)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  answers           ExamAnswer[]
+  
+  @@index([profileId])
+  @@index([examId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+// Exam Answer - User's answer to a question
+model ExamAnswer {
+  id                String   @id @default(cuid())
+  
+  attemptId         String
+  attempt           ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  
+  questionId        String
+  question          ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  // User's selected answer(s)
+  selectedOptions   Json     @default("[]")  // ["A"] or ["A", "C"]
+  
+  // Grading
+  isCorrect         Boolean?
+  isPartiallyCorrect Boolean @default(false)  // For multi-select
+  
+  // Time spent on this question
+  timeSpentSeconds  Int      @default(0)
+  
+  // Was this question flagged for review?
+  wasFlagged        Boolean  @default(false)
+  
+  // Confidence (optional - for analytics)
+  confidence        String?  // low, medium, high
+  
+  answeredAt        DateTime @default(now())
+  
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+  @@index([questionId])
+  @@index([isCorrect])
+}
+
+// Exam Analytics - Aggregated user performance
+model ExamAnalytics {
+  id                String   @id @default(cuid())
+  
+  profileId         String
+  examId            String
+  
+  // Aggregated stats
+  totalAttempts     Int      @default(0)
+  bestScore         Float    @default(0)
+  avgScore          Float    @default(0)
+  passCount         Int      @default(0)
+  
+  // Domain performance
+  domainPerformance Json     @default("{}")  // { "Domain 1": { attempts: 10, avgScore: 75 } }
+  
+  // Weak areas (auto-identified)
+  weakDomains       Json     @default("[]")  // ["Domain 2", "Domain 4"]
+  weakServices      Json     @default("[]")  // ["Lambda", "API Gateway"]
+  
+  // Time stats
+  avgTimeSeconds    Int      @default(0)
+  totalTimeSeconds  Int      @default(0)
+  
+  // Readiness score (0-100, based on recent performance)
+  readinessScore    Int      @default(0)
+  readinessUpdatedAt DateTime?
+  
+  // Last activity
+  lastAttemptAt     DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([profileId, examId])
+  @@index([profileId])
+  @@index([examId])
+  @@index([readinessScore])
 }

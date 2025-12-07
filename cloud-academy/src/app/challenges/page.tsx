@@ -13,7 +13,8 @@ import {
   Database,
   Server,
   Lock,
-  Swords
+  Swords,
+  GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,6 +146,10 @@ export default function ChallengesPage() {
             </Link>
             <Link href="/challenges" className="text-foreground font-medium">
               Challenges
+            </Link>
+            <Link href="/exams" className="text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1">
+              <GraduationCap className="w-4 h-4" />
+              Practice Exams
             </Link>
             <Link href="/game" className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
               <Swords className="w-4 h-4" />

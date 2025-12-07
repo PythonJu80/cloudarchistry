@@ -23,6 +23,7 @@ import {
   Server,
   Database,
   Lock,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -253,6 +254,11 @@ export default function Home() {
               <Link href="/challenges" className="text-white/70 hover:text-cyan-400 transition-colors text-sm font-medium relative group">
                 Challenges
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300" />
+              </Link>
+              <Link href="/exams" className="text-amber-400 hover:text-amber-300 transition-colors text-sm font-medium flex items-center gap-1 relative group">
+                <GraduationCap className="w-4 h-4" />
+                Practice Exams
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-400 group-hover:w-full transition-all duration-300" />
               </Link>
               <Link href="/game" className="text-red-400 hover:text-red-300 transition-colors text-sm font-medium flex items-center gap-1 relative group">
                 <Swords className="w-4 h-4" />
