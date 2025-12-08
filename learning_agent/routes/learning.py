@@ -16,6 +16,7 @@ from models.learning import (
     GenerateContentRequest,
     LearningChatRequestWithSession,
     CloudScenario,
+    StudyPlanRequest,
 )
 from models.diagram import AuditDiagramRequest, AuditDiagramResponse
 from models.challenge import ChallengeQuestionsRequest, GradeChallengeAnswerRequest
@@ -25,6 +26,7 @@ from services.web_search import search_web
 
 import db
 from prompts import CERTIFICATION_PERSONAS, SOLUTION_EVALUATOR_PROMPT
+from generators import generate_study_plan, StudyPlanContext
 
 router = APIRouter()
 
@@ -425,6 +427,45 @@ async def generate_quiz_endpoint(request: GenerateContentRequest):
     """Generate quiz"""
     from crawl4ai_mcp import generate_quiz_endpoint as original_endpoint
     return await original_endpoint(request)
+
+
+@router.post("/generate-study-plan")
+async def generate_study_plan_endpoint(request: StudyPlanRequest):
+    """Generate a SMART study plan grounded in telemetry."""
+    try:
+        from utils import set_request_api_key, set_request_model
+
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+
+        telemetry_summary = request.telemetry_summary or "No telemetry available"
+
+        context = StudyPlanContext(
+            target_exam=request.target_exam,
+            time_horizon=f"{request.time_horizon_weeks} weeks",
+            study_hours_per_week=request.study_hours_per_week,
+            confidence_level=request.confidence_level,
+            weak_areas=request.weak_areas,
+            focus_domains=request.focus_domains,
+            preferred_formats=request.preferred_formats,
+            learner_notes=request.learner_notes,
+            telemetry_summary=telemetry_summary,
+        )
+
+        plan = await generate_study_plan(context)
+        return {"success": True, "plan": plan}
+    except ApiKeyRequiredError as key_err:
+        raise HTTPException(status_code=402, detail=str(key_err)) from key_err
+    except Exception as exc:
+        logger.error("Study plan generation failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Study plan generation failed") from exc
+    finally:
+        from utils import set_request_api_key, set_request_model
+
+        set_request_api_key(None)
+        set_request_model(None)
 
 
 @router.post("/detect-skill")
