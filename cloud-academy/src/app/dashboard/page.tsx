@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -224,19 +224,7 @@ export default function DashboardPage() {
   const [versusLoading, setVersusLoading] = useState(true);
   const [myUserId, setMyUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-
-    if (status === "authenticated") {
-      fetchDashboardData();
-      fetchVersusData();
-    }
-  }, [status, router]);
-
-  async function fetchDashboardData() {
+  const fetchDashboardData = useCallback(async () => {
     try {
       const response = await fetch("/api/dashboard");
       if (!response.ok) {
@@ -249,9 +237,9 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function fetchVersusData() {
+  const fetchVersusData = useCallback(async () => {
     try {
       // Fetch versus matches
       const versusRes = await fetch("/api/versus");
@@ -279,7 +267,19 @@ export default function DashboardPage() {
     } finally {
       setVersusLoading(false);
     }
-  }
+  }, [session?.user?.email]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    if (status === "authenticated") {
+      fetchDashboardData();
+      fetchVersusData();
+    }
+  }, [status, router, fetchDashboardData, fetchVersusData]);
 
   if (status === "loading" || loading) {
     return (
