@@ -11,6 +11,7 @@ import {
   ListTodo,
   GraduationCap,
   Trophy,
+  Lightbulb,
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 
@@ -19,7 +20,8 @@ interface LearnLayoutProps {
 }
 
 const tabs = [
-  { href: "/learn", label: "Guide", icon: BookOpen, exact: true },
+  { href: "/learn", label: "Overview", icon: BookOpen, exact: true },
+  { href: "/learn/guide", label: "Guide", icon: Lightbulb },
   { href: "/learn/sources", label: "Sources", icon: Layers },
   { href: "/learn/chat", label: "Chat", icon: MessageSquare },
   { href: "/learn/flashcards", label: "Flashcards", icon: GraduationCap },

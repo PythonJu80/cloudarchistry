@@ -14,3 +14,4 @@ from .cli_simulator import (
     CLIResponse,
     CLIValidationResult,
 )
+from .study_plan import generate_study_plan, StudyPlanContext

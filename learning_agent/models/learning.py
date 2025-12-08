@@ -95,6 +95,21 @@ class GenerateContentRequest(BaseModel):
     preferred_model: Optional[str] = None  # User's preferred model
 
 
+class StudyPlanRequest(BaseModel):
+    """Request to generate a personalized study plan"""
+    target_exam: Optional[str] = None
+    time_horizon_weeks: int = 6
+    study_hours_per_week: int = 6
+    confidence_level: str = "intermediate"
+    weak_areas: List[str] = []
+    focus_domains: List[str] = []
+    preferred_formats: List[str] = []
+    learner_notes: Optional[str] = None
+    telemetry_summary: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
 class LearningChatRequestWithSession(BaseModel):
     """Request for learning chat with session tracking"""
     message: str

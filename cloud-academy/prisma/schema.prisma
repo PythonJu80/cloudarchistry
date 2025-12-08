@@ -1281,10 +1281,12 @@ model AcademyUserProfile {
   scenariosCompleted Int @default(0)
   locationsVisited Int @default(0)
   totalTimeMinutes Int @default(0)
-  
+
   // Preferences
   settings    Json     @default("{}")  // UI preferences, notifications, etc.
-  
+
+  studyPlans  StudyPlan[]
+
   // BYOK - Bring Your Own Key (encrypted)
   // Format: iv:authTag:encryptedData (same as Secret model)
   openaiApiKey      String?  // Encrypted OpenAI API key
@@ -1906,6 +1908,26 @@ model FlashcardProgress {
 // ============================================
 // Study Notes
 // ============================================
+
+// Personalized study plan generations for Guide tab
+model StudyPlan {
+  id                 String   @id @default(cuid())
+  profileId          String   @map("profile_id")
+  targetExam         String?  @map("target_exam")
+  examDate           DateTime? @map("exam_date")
+  studyHoursPerWeek  Int?     @map("study_hours_per_week")
+  confidenceLevel    String?  @map("confidence_level")
+  planInputs         Json     @map("plan_inputs")
+  planOutput         Json?    @map("plan_output")
+  generatedAt        DateTime @default(now()) @map("generated_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  profile            AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([generatedAt(sort: Desc)])
+  @@map("StudyPlan")
+}
 
 // AI-generated or user-created study notes for a scenario
 model StudyNotes {
