@@ -1,34 +1,34 @@
 """
-CLI Simulator Pydantic models.
+CLI Simulator Pydantic models (legacy shape used by crawler and frontend).
 """
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 from pydantic import BaseModel
 
 
 class CLISimulatorRequest(BaseModel):
-    """Request to simulate a CLI command"""
-    session_id: str
+    """Request to simulate an AWS CLI command"""
     command: str
-    scenario_id: Optional[str] = None
-    challenge_id: Optional[str] = None
-    aws_services: List[str] = []
+    session_id: Optional[str] = None
+    challenge_context: Optional[Dict[str, Any]] = None  # title, description, aws_services, success_criteria
+    company_name: str = "Acme Corp"
+    industry: str = "Technology"
+    business_context: str = ""
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
 
 
 class CLIHelpRequest(BaseModel):
-    """Request for CLI help"""
-    session_id: str
-    command: Optional[str] = None
-    topic: Optional[str] = None
+    """Request for CLI help on a topic"""
+    topic: str
+    challenge_context: Optional[Dict[str, Any]] = None
+    user_level: str = "intermediate"
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
 
 
 class CLIValidateRequest(BaseModel):
-    """Request to validate CLI commands against challenge requirements"""
+    """Request to validate CLI session against challenge"""
     session_id: str
-    challenge_id: str
-    challenge_requirements: List[str]
+    challenge_context: Dict[str, Any]
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,6 +24,23 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+function subscribeToAvatar(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
+function getAvatarSnapshot() {
+  return localStorage.getItem("academy-avatar");
+}
+
+function useAvatar() {
+  return useSyncExternalStore(
+    subscribeToAvatar,
+    getAvatarSnapshot,
+    () => null
+  );
+}
 
 // Dynamically import ChallengeWorkspaceModal to avoid SSR issues
 const ChallengeWorkspaceModal = dynamic(
@@ -106,32 +123,108 @@ function formatTimeAgo(dateString: string) {
   return date.toLocaleDateString();
 }
 
+const FALLBACK_FLAG_CODE = "un";
+
+const ISO_ALPHA2_CODES = [
+  "AF","AX","AL","DZ","AS","AD","AO","AI","AQ","AG","AR","AM","AW","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BM","BT","BO","BQ","BA","BW","BV","BR","IO","BN","BG","BF","BI","KH",
+  "CM","CA","CV","KY","CF","TD","CL","CN","CX","CC","CO","KM","CG","CD","CK","CR","CI","HR","CU","CW","CY","CZ","DK","DJ","DM","DO","EC","EG","SV","GQ","ER","EE","SZ","ET","FK","FO","FJ","FI",
+  "FR","GF","PF","TF","GA","GM","GE","DE","GH","GI","GR","GL","GD","GP","GU","GT","GG","GN","GW","GY","HT","HM","VA","HN","HK","HU","IS","IN","ID","IR","IQ","IE","IM","IL","IT","JM","JP","JE",
+  "JO","KZ","KE","KI","KP","KR","KW","KG","LA","LV","LB","LS","LR","LY","LI","LT","LU","MO","MG","MW","MY","MV","ML","MT","MQ","MR","MU","YT","MX","FM","MD","MC","MN","ME","MS","MA","MZ","MM",
+  "NA","NR","NP","NL","NC","NZ","NI","NE","NG","NU","NF","MK","MP","NO","OM","PK","PW","PS","PA","PG","PY","PE","PH","PN","PL","PT","PR","QA","RE","RO","RU","RW","BL","SH","KN","LC","MF","PM",
+  "VC","WS","SM","ST","SA","SN","RS","SC","SL","SG","SX","SK","SI","SB","SO","ZA","GS","SS","ES","LK","SD","SR","SJ","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TK","TO","TT","TN","TR","TM",
+  "TC","TV","UG","UA","AE","GB","US","UM","UY","UZ","VU","VE","VN","VG","VI","WF","EH","YE","ZM","ZW",
+];
+
+const regionNameToIsoMap: Map<string, string> | null = (() => {
+  if (typeof Intl.DisplayNames === "undefined") {
+    return null;
+  }
+
+  const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
+  const entries = ISO_ALPHA2_CODES.map((code) => {
+    const name = displayNames.of(code);
+    return name ? [name.toLowerCase(), code.toLowerCase()] : null;
+  }).filter((entry): entry is [string, string] => Boolean(entry));
+
+  return new Map(entries);
+})();
+
+const LOCATION_FLAG_MAP: Record<string, string> = {
+  "hsbc-london": "gb",
+  "barclays-canary": "gb",
+  "nhs-london": "gb",
+  "google-mv": "us",
+  "meta-menlo": "us",
+  "amazon-seattle": "us",
+  "netflix-la": "us",
+  "nintendo-kyoto": "jp",
+  "bmw-munich": "de",
+  "dbs-singapore": "sg",
+  "emirates-dubai": "ae",
+  "lvmh-paris": "fr",
+};
+
+const manualCountryAliases: Record<string, string> = {
+  "united states of america": "us",
+  "united states": "us",
+  "usa": "us",
+  "us": "us",
+  "united kingdom": "gb",
+  "great britain": "gb",
+  "uk": "gb",
+  "england": "gb",
+  "south korea": "kr",
+  "korea, republic of": "kr",
+  "north korea": "kp",
+  "u.a.e.": "ae",
+  "uae": "ae",
+  "united arab emirates": "ae",
+  "czech republic": "cz",
+  "taiwan": "tw",
+  "hong kong": "hk",
+  "brasil": "br",
+  "ivory coast": "ci",
+  "côte d’ivoire": "ci",
+  "cote d'ivoire": "ci",
+};
+
+function normalizeCountryName(country: string) {
+  return country
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[’']/g, "'"); // normalize apostrophes
+}
+
 // Get country code for flag display
-function getCountryCode(country: string | null): string {
-  if (!country) return "un"; // UN flag as fallback
-  // Map common country names to ISO codes
-  const countryMap: Record<string, string> = {
-    "Spain": "es", "ES": "es",
-    "United States": "us", "USA": "us", "US": "us",
-    "United Kingdom": "gb", "UK": "gb", "GB": "gb",
-    "Germany": "de", "DE": "de",
-    "France": "fr", "FR": "fr",
-    "Japan": "jp", "JP": "jp",
-    "Australia": "au", "AU": "au",
-    "Singapore": "sg", "SG": "sg",
-    "India": "in", "IN": "in",
-    "Brazil": "br", "BR": "br",
-    "Canada": "ca", "CA": "ca",
-    "Netherlands": "nl", "NL": "nl",
-    "Switzerland": "ch", "CH": "ch",
-    "Ireland": "ie", "IE": "ie",
-    "Sweden": "se", "SE": "se",
-    "UAE": "ae", "AE": "ae",
-    "China": "cn", "CN": "cn",
-    "South Korea": "kr", "KR": "kr",
-    "Mexico": "mx", "MX": "mx",
-  };
-  return countryMap[country] || country.toLowerCase().slice(0, 2);
+function getCountryCode(country: string | null, slug?: string): string {
+  if (slug && LOCATION_FLAG_MAP[slug]) {
+    return LOCATION_FLAG_MAP[slug];
+  }
+
+  if (!country) return FALLBACK_FLAG_CODE;
+
+  const normalized = normalizeCountryName(country);
+
+  if (manualCountryAliases[normalized]) {
+    return manualCountryAliases[normalized];
+  }
+
+  // ISO-3166 alpha-2 directly provided
+  if (/^[a-z]{2}$/i.test(country.trim())) {
+    return country.trim().toLowerCase();
+  }
+
+  // Try dynamic lookup using Intl data (matches official English names)
+  const isoFromIntl =
+    regionNameToIsoMap?.get(normalized) ??
+    regionNameToIsoMap?.get(normalized.split(/[,(-]/)[0]?.trim() || "");
+
+  if (isoFromIntl) {
+    return isoFromIntl;
+  }
+
+  return FALLBACK_FLAG_CODE;
 }
 
 // Visual journey path component - like a game map
@@ -146,7 +239,9 @@ function JourneyPath({
   const currentIndex = challenges.findIndex(
     (c: ChallengeData) => c.status === "in_progress" || c.status === "available"
   );
-  const countryCode = getCountryCode(journey.location.country);
+  const countryCode = getCountryCode(journey.location.country, journey.location.slug);
+  const avatar = useAvatar();
+  const startImageSrc = avatar || `https://flagcdn.com/w40/${countryCode}.png`;
   
   return (
     <div className="relative py-6 overflow-x-auto">
@@ -165,9 +260,9 @@ function JourneyPath({
             <div className="relative w-12 h-12 rounded-full bg-slate-800 border-2 border-green-500 flex items-center justify-center shadow-lg shadow-green-500/30 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
-                src={`https://flagcdn.com/w40/${countryCode}.png`}
-                alt={journey.location.country || "Location"}
-                className="w-7 h-5 object-cover rounded-sm"
+                src={startImageSrc}
+                alt="Profile avatar"
+                className="w-12 h-12 object-cover"
                 onError={(e) => {
                   // Fallback to icon if flag fails to load
                   (e.target as HTMLImageElement).style.display = "none";

@@ -747,6 +747,183 @@ async def research_endpoint(request: LocationRequest):
         set_request_model(None)
 
 
+@app.post("/api/learning/generate-scenario-stream")
+async def generate_scenario_stream_endpoint(request: LocationRequest):
+    """Generate scenario with SSE streaming for real-time progress updates"""
+
+    async def event_stream():
+        from utils import set_request_api_key, set_request_model, get_request_api_key
+        from generators.scenario import generate_scenario as gen_scenario, CompanyInfo as GenCompanyInfo
+        from prompts import CERTIFICATION_PERSONAS
+
+        try:
+            # Set request-scoped API key
+            if request.openai_api_key:
+                set_request_api_key(request.openai_api_key)
+            if request.preferred_model:
+                set_request_model(request.preferred_model)
+
+            # Step 1: Starting
+            yield f"data: {json.dumps({'type': 'status', 'message': '🚀 Starting scenario generation...', 'step': 1, 'total_steps': 5})}\n\n"
+            await asyncio.sleep(0.1)
+
+            # Step 2: Research
+            yield f"data: {json.dumps({'type': 'status', 'message': f'🔍 Researching {request.company_name}...', 'step': 2, 'total_steps': 5})}\n\n"
+
+            # Perform web search
+            queries = [
+                f"{request.company_name} company overview business",
+                f"{request.company_name} technology infrastructure cloud",
+            ]
+            if request.industry:
+                queries.append(f"{request.company_name} {request.industry} industry")
+
+            all_sources = []
+            for query in queries:
+                yield f"data: {json.dumps({'type': 'search', 'message': f'🌐 Searching: {query}'})}\n\n"
+                results = await search_web(query, max_results=3)
+                for r in results:
+                    if r.get("url"):
+                        all_sources.append(r["url"])
+                        yield f"data: {json.dumps({'type': 'source', 'url': r['url'], 'title': r.get('title', 'Source')})}\n\n"
+                await asyncio.sleep(0.1)
+
+            # Step 3: Analyzing
+            yield f"data: {json.dumps({'type': 'status', 'message': '🧠 Analyzing company information...', 'step': 3, 'total_steps': 5})}\n\n"
+
+            research = await research_company(
+                company_name=request.company_name,
+                industry=request.industry
+            )
+
+            yield f"data: {json.dumps({'type': 'research', 'company': research.company_info.model_dump(), 'sources': list(set(all_sources))[:5]})}\n\n"
+
+            # Step 3.5: Search AWS knowledge base for relevant content
+            yield f"data: {json.dumps({'type': 'status', 'message': '📚 Searching AWS knowledge base...', 'step': 3, 'total_steps': 6})}\n\n"
+
+            knowledge_context = ""
+            knowledge_topics = []
+            try:
+                import random as kb_random
+                from openai import AsyncOpenAI
+
+                skill_keywords = {
+                    "beginner": "basics fundamentals getting started",
+                    "intermediate": "best practices configuration",
+                    "advanced": "optimization multi-region high availability",
+                    "expert": "enterprise scale architecture patterns",
+                }
+                skill_context = skill_keywords.get(request.user_level, "best practices")
+
+                if request.cert_code and request.cert_code in CERTIFICATION_PERSONAS:
+                    cert_focus = CERTIFICATION_PERSONAS[request.cert_code]["focus"]
+                    selected_focus = kb_random.sample(cert_focus, min(3, len(cert_focus)))
+                    kb_query = f"{' '.join(selected_focus)} {skill_context} AWS {research.company_info.industry}"
+                    focus_str = ", ".join(selected_focus)
+                    yield f"data: {json.dumps({'type': 'status', 'message': f'🎲 Focus: {focus_str} ({request.user_level})'})}\n\n"
+                else:
+                    kb_query = f"{research.company_info.industry} {skill_context} AWS architecture"
+
+                client = AsyncOpenAI(api_key=get_request_api_key())
+                embed_response = await client.embeddings.create(
+                    model="text-embedding-3-small",
+                    input=kb_query
+                )
+                query_embedding = embed_response.data[0].embedding
+
+                kb_results = await db.search_knowledge_chunks(
+                    query_embedding=query_embedding,
+                    limit=5
+                )
+
+                if kb_results:
+                    yield f"data: {json.dumps({'type': 'status', 'message': f'📖 Found {len(kb_results)} relevant AWS knowledge chunks'})}\n\n"
+                    for chunk in kb_results:
+                        yield f"data: {json.dumps({'type': 'knowledge', 'url': chunk['url'], 'similarity': round(chunk['similarity'], 2)})}\n\n"
+                        knowledge_context += f"\n\nAWS Knowledge ({chunk['url']}):\n{chunk['content'][:500]}"
+                        chunk_content = chunk['content'].lower()
+                        for svc in ['s3', 'ec2', 'lambda', 'rds', 'dynamodb', 'cloudwatch', 'iam', 'vpc', 'cloudfront', 'sns', 'sqs', 'kms', 'cloudtrail', 'config']:
+                            if svc in chunk_content and svc.upper() not in knowledge_topics:
+                                knowledge_topics.append(svc.upper())
+
+                    if knowledge_topics:
+                        knowledge_context += f"\n\n⚡ IMPORTANT: Base your challenge titles on these specific AWS topics found: {', '.join(knowledge_topics[:5])}. Create action-oriented titles like 'Secure the S3 Buckets' or 'Configure CloudWatch Alarms' - NOT generic titles like 'Understanding X'."
+                else:
+                    yield f"data: {json.dumps({'type': 'status', 'message': '📖 No specific knowledge chunks found, using general AWS knowledge'})}\n\n"
+            except Exception as kb_err:
+                logger.warning(f"Knowledge base search failed: {kb_err}")
+                yield f"data: {json.dumps({'type': 'status', 'message': '⚠️ Knowledge base search skipped'})}\n\n"
+
+            # Step 4: Building persona
+            persona_context = None
+            if request.cert_code and request.cert_code in CERTIFICATION_PERSONAS:
+                persona = CERTIFICATION_PERSONAS[request.cert_code]
+                persona_context = {
+                    "cert_code": request.cert_code,
+                    "cert_name": persona["cert"],
+                    "level": persona["level"],
+                    "focus_areas": ", ".join(persona["focus"]),
+                    "style": persona["style"],
+                }
+                cert_name = persona["cert"]
+                yield f"data: {json.dumps({'type': 'status', 'message': f'🎯 Applying {cert_name} certification focus...', 'step': 4, 'total_steps': 5})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'status', 'message': '🎯 Building general cloud scenario...', 'step': 4, 'total_steps': 5})}\n\n"
+
+            await asyncio.sleep(0.1)
+
+            # Step 5: Generating scenario
+            yield f"data: {json.dumps({'type': 'status', 'message': '⚡ Generating challenges and learning objectives...', 'step': 5, 'total_steps': 5})}\n\n"
+
+            company_info = GenCompanyInfo(
+                name=research.company_info.name,
+                industry=research.company_info.industry,
+                description=research.company_info.description,
+                key_services=research.company_info.key_services,
+                technology_stack=research.company_info.technology_stack,
+                compliance_requirements=research.company_info.compliance_requirements,
+                data_types=research.company_info.data_types,
+                employee_count=research.company_info.employee_count,
+            )
+
+            scenario = await gen_scenario(
+                company_info=company_info,
+                user_level=request.user_level,
+                persona_context=persona_context,
+                knowledge_context=knowledge_context if knowledge_context else None,
+            )
+
+            # Save to database if place_id provided
+            if request.place_id:
+                try:
+                    await db.save_scenario(
+                        location_id=request.place_id,
+                        scenario_data=scenario.model_dump(),
+                        company_info=research.company_info.model_dump(),
+                    )
+                except Exception as db_err:
+                    logger.warning(f"Failed to save scenario to DB: {db_err}")
+
+            # Final result
+            yield f"data: {json.dumps({'type': 'complete', 'scenario': scenario.model_dump(), 'company_info': research.company_info.model_dump(), 'cert_code': request.cert_code, 'cert_name': persona_context['cert_name'] if persona_context else None})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Stream generation error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        finally:
+            set_request_api_key(None)
+            set_request_model(None)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
 @app.post("/api/learning/generate-scenario", response_model=ScenarioResponse)
 async def generate_scenario_endpoint(request: LocationRequest):
     """Generate a training scenario."""
@@ -1369,39 +1546,71 @@ _cli_sessions: Dict[str, Any] = {}
 
 @app.post("/api/learning/cli-simulate")
 async def cli_simulate_endpoint(request: CLISimulatorRequest):
-    """Simulate an AWS CLI command"""
-    from generators.cli_simulator import CLISession
+    """
+    Simulate an AWS CLI command in a sandboxed environment.
+    Returns realistic AWS CLI output with teaching content.
+    """
+    from generators.cli_simulator import simulate_cli_command, create_cli_session, CLISession
     
     try:
+        # Set request-scoped API key and model if provided (BYOK)
         from utils import set_request_api_key, set_request_model
         if request.openai_api_key:
             set_request_api_key(request.openai_api_key)
         if request.preferred_model:
             set_request_model(request.preferred_model)
         
+        # Get or create session
         session_id = request.session_id
         if session_id and session_id in _cli_sessions:
-            session = CLISession(**_cli_sessions[session_id])
+            session_data = _cli_sessions[session_id]
+            session = CLISession(**session_data)
         else:
-            session = create_cli_session(challenge_id=request.challenge_context.get("id") if request.challenge_context else None)
+            session = create_cli_session(
+                challenge_id=request.challenge_context.get("id") if request.challenge_context else None
+            )
             session_id = session.session_id
         
+        # Simulate the command
         result = await simulate_cli_command(
-            command=request.command, session=session, challenge_context=request.challenge_context,
-            company_name=request.company_name, industry=request.industry,
+            command=request.command,
+            session=session,
+            challenge_context=request.challenge_context,
+            company_name=request.company_name,
+            industry=request.industry,
             business_context=request.business_context,
+            api_key=request.openai_api_key,
+            model=request.preferred_model,
         )
         
+        # Save session state
         _cli_sessions[session_id] = session.model_dump()
         
         return {
-            "success": True, "session_id": session_id, "command": result.command,
-            "output": result.output, "exit_code": result.exit_code,
-            "explanation": result.explanation, "next_steps": result.next_steps,
-            "is_dangerous": result.is_dangerous, "warning": result.warning,
+            "success": True,
+            "session_id": session_id,
+            "command": result.command,
+            "output": result.output,
+            "exit_code": result.exit_code,
+            "explanation": result.explanation,
+            "next_steps": result.next_steps,
+            "is_dangerous": result.is_dangerous,
+            "warning": result.warning,
+            # Validation and progress fields
             "is_correct_for_challenge": result.is_correct_for_challenge,
             "objective_completed": result.objective_completed,
             "points_earned": result.points_earned,
+            "aws_service": result.aws_service,
+            "command_type": result.command_type,
+            # Session progress
+            "session_progress": {
+                "total_commands": session.total_commands,
+                "correct_commands": session.correct_commands,
+                "current_streak": session.current_streak,
+                "best_streak": session.best_streak,
+                "objectives_completed": session.objectives_completed,
+                "total_points": session.points_earned,
+            }
         }
     except Exception as e:
         logger.error(f"CLI simulate error: {e}")
@@ -1414,7 +1623,9 @@ async def cli_simulate_endpoint(request: CLISimulatorRequest):
 
 @app.post("/api/learning/cli-help")
 async def cli_help_endpoint(request: CLIHelpRequest):
-    """Get CLI help"""
+    """Get contextual CLI help for a topic."""
+    from generators.cli_simulator import get_cli_help
+    
     try:
         from utils import set_request_api_key, set_request_model
         if request.openai_api_key:
@@ -1422,9 +1633,17 @@ async def cli_help_endpoint(request: CLIHelpRequest):
         if request.preferred_model:
             set_request_model(request.preferred_model)
         
-        result = await get_cli_help(topic=request.topic, challenge_context=request.challenge_context, user_level=request.user_level)
+        result = await get_cli_help(
+            topic=request.topic,
+            challenge_context=request.challenge_context,
+            user_level=request.user_level,
+            api_key=request.openai_api_key,
+            model=request.preferred_model,
+        )
+        
         return {"success": True, **result}
     except Exception as e:
+        logger.error(f"CLI help error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         from utils import set_request_api_key, set_request_model
