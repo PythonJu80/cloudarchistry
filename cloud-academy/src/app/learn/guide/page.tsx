@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, ChangeEvent } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Loader2, RefreshCw, Target, CalendarDays, Save, Clock } from "lucide-react";
+import { Loader2, RefreshCw, Target, CalendarDays, Clock } from "lucide-react";
+
+type WeeklyPlanEntry = {
+  week_number: number;
+  date_range: string;
+  hours_target?: number;
+  theme: string;
+  key_focus: string;
+  deliverables: string[] | string;
+};
+
+type MilestoneEntry = {
+  label: string;
+  due_by: string;
+  success_metric: string;
+  rationale: string;
+};
+
+type ActionItemEntry = {
+  category: string;
+  description: string;
+  metric: string;
+  target_value: string;
+  deadline: string;
+  source_reference?: string;
+};
+
+type AccountabilityEntry = {
+  reminder: string;
+  trigger?: string;
+};
+
+type PlanOutput = {
+  summary?: string;
+  timeline_weeks?: number;
+  weekly_plan?: WeeklyPlanEntry[];
+  milestones?: MilestoneEntry[];
+  action_items?: ActionItemEntry[];
+  accountability?: AccountabilityEntry[];
+};
 
 type PlanRecord = {
   id: string;
@@ -18,8 +57,8 @@ type PlanRecord = {
   examDate: string | null;
   studyHoursPerWeek: number | null;
   confidenceLevel: string | null;
-  planInputs: Record<string, any>;
-  planOutput: Record<string, any> | null;
+  planInputs: { timeHorizon?: string } & Record<string, unknown>;
+  planOutput: PlanOutput | null;
   generatedAt: string;
 };
 
@@ -46,8 +85,6 @@ const confidenceOptions = [
   { value: "advanced", label: "Advanced" },
   { value: "expert", label: "Expert" },
 ];
-
-const formatDate = (date: string | null) => (date ? format(new Date(date), "PPP") : "Not set");
 
 export default function GuidePage() {
   const [loading, setLoading] = useState(true);
@@ -186,7 +223,9 @@ export default function GuidePage() {
               <Input
                 value={form.targetExam}
                 placeholder={hints?.targetCertification || "e.g. SAA-C03"}
-                onChange={(e) => setForm((prev) => ({ ...prev, targetExam: e.target.value }))}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, targetExam: e.target.value }))
+                }
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -195,7 +234,9 @@ export default function GuidePage() {
                 <Input
                   type="date"
                   value={form.examDate}
-                  onChange={(e) => setForm((prev) => ({ ...prev, examDate: e.target.value }))}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setForm((prev) => ({ ...prev, examDate: e.target.value }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -205,7 +246,7 @@ export default function GuidePage() {
                   min={2}
                   max={40}
                   value={form.studyHoursPerWeek}
-                  onChange={(e) =>
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     setForm((prev) => ({ ...prev, studyHoursPerWeek: Number(e.target.value) || 0 }))
                   }
                 />
@@ -258,7 +299,9 @@ export default function GuidePage() {
               <Textarea
                 placeholder="Let the coach know about upcoming deadlines, blockers, or learning preferences."
                 value={form.learnerNotes}
-                onChange={(e) => setForm((prev) => ({ ...prev, learnerNotes: e.target.value }))}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                  setForm((prev) => ({ ...prev, learnerNotes: e.target.value }))
+                }
               />
             </div>
 
