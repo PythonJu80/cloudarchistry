@@ -111,6 +111,7 @@ export interface StoredTip {
 interface DiagramCanvasProps {
   // Initial diagram data (for loading saved progress)
   initialData?: DiagramData;
+  initialScore?: DiagramScore;
   // Challenge context for the agent
   challengeContext?: {
     challengeId: string;
@@ -126,7 +127,8 @@ interface DiagramCanvasProps {
   apiKey?: string;
   preferredModel?: string;
   // Callbacks
-  onSave?: (data: DiagramData) => void | Promise<void>;
+  onSave?: (data: DiagramData, score: DiagramScore) => void | Promise<void>;
+  onScoreChange?: (score: DiagramScore) => void;
   onAuditComplete?: (result: AuditResult) => void;
 }
 
@@ -165,12 +167,14 @@ function sortNodesForReactFlow(nodes: DiagramNode[]): DiagramNode[] {
 
 function DiagramCanvasInner({
   initialData,
+  initialScore,
   challengeContext,
   challengeProgressId,
   sessionId,
   apiKey,
   preferredModel,
   onSave,
+  onScoreChange,
   onAuditComplete,
 }: DiagramCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -198,10 +202,16 @@ function DiagramCanvasInner({
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 🎮 GAMIFICATION STATE
-  const [diagramScore, setDiagramScore] = useState<DiagramScore>(createInitialScore());
+  const [diagramScore, setDiagramScore] = useState<DiagramScore>(initialScore || createInitialScore());
   const [proTip, setProTip] = useState<{ message: string; isError: boolean } | null>(null);
   const [showScoreAnimation, setShowScoreAnimation] = useState<{ points: number; isPositive: boolean } | null>(null);
   const proTipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (initialScore) {
+      setDiagramScore(initialScore);
+    }
+  }, [initialScore]);
 
   // 📦 TIP JAR STATE
   const [tipJarOpen, setTipJarOpen] = useState(false);
@@ -241,7 +251,7 @@ function DiagramCanvasInner({
     
     try {
       // Call the onSave callback and wait for it if it's a promise
-      await onSave?.(data);
+      await onSave?.(data, diagramScore);
       
       setIsDirty(false);
       setLastSaved(new Date());
@@ -250,7 +260,12 @@ function DiagramCanvasInner({
     } finally {
       setIsSaving(false);
     }
-  }, [nodes, edges, onSave]);
+  }, [nodes, edges, onSave, diagramScore]);
+
+  // Notify parent whenever score changes
+  useEffect(() => {
+    onScoreChange?.(diagramScore);
+  }, [diagramScore, onScoreChange]);
 
   // Mark as dirty and trigger auto-save when nodes/edges change
   useEffect(() => {

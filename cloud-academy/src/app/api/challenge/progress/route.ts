@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import type { DiagramScore } from "@/lib/aws-placement-rules";
 
 interface QuestionAnswer {
   questionId: string;
@@ -31,6 +32,7 @@ interface ProgressUpdate {
     estimatedTimeMinutes: number;
   };
   diagramData?: DiagramData;
+  diagramScore?: DiagramScore;
 }
 
 /**
@@ -59,6 +61,7 @@ export async function POST(request: NextRequest) {
       isComplete,
       questionsData,
       diagramData,
+      diagramScore,
     } = body;
 
     if (!attemptId || !challengeId) {
@@ -88,6 +91,7 @@ export async function POST(request: NextRequest) {
       answers,
       questionsData,
       diagramData,  // Include diagram data in solution
+      diagramScore,
       lastUpdated: new Date().toISOString(),
     }));
 
@@ -268,7 +272,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract diagramData from solution if present
-    const solution = progress.solution as { diagramData?: DiagramData; answers?: QuestionAnswer[] } | null;
+    const solution = progress.solution as { diagramData?: DiagramData; diagramScore?: DiagramScore; answers?: QuestionAnswer[] } | null;
     
     return NextResponse.json({
       exists: true,
@@ -280,6 +284,7 @@ export async function GET(request: NextRequest) {
         attemptsCount: progress.attemptsCount,
         solution: progress.solution,
         diagramData: solution?.diagramData || null,  // Extract for easy access
+        diagramScore: solution?.diagramScore || null,
         startedAt: progress.startedAt,
         completedAt: progress.completedAt,
       },

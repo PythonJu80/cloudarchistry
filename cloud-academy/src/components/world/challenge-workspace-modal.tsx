@@ -21,11 +21,13 @@ import {
   Clock,
   RotateCcw,
   PenTool,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import type { DiagramData, AuditResult } from "@/components/diagram";
 import { Terminal } from "lucide-react";
+import { createInitialScore, type DiagramScore } from "@/lib/aws-placement-rules";
 
 // Dynamically import CLISimulator (AI-powered sandbox terminal)
 const CLISimulator = dynamic(
@@ -175,6 +177,7 @@ export function ChallengeWorkspaceModal({
   const [diagramSessionId, setDiagramSessionId] = useState<string | undefined>();
   const [lastAuditResult, setLastAuditResult] = useState<AuditResult | null>(null);
   const [challengeProgressId, setChallengeProgressId] = useState<string | null>(null);
+  const [diagramScore, setDiagramScore] = useState<DiagramScore>(createInitialScore());
   
   // Right panel state (chat or terminal)
   const [rightPanelTab, setRightPanelTab] = useState<"chat" | "terminal">("chat");
@@ -193,12 +196,25 @@ export function ChallengeWorkspaceModal({
       if (response.ok) {
         const data = await response.json();
         if (data.exists && data.progress) {
+          const progress = data.progress;
           // Store the progress ID for tip jar functionality
-          if (data.progress.id) {
-            setChallengeProgressId(data.progress.id);
+          if (progress.id) {
+            setChallengeProgressId(progress.id);
           }
-          if (data.progress.solution) {
-            return data.progress;
+          
+          const solutionData = progress.solution;
+          const savedDiagramScore = solutionData?.diagramScore || progress.diagramScore || null;
+          const savedDiagramData = solutionData?.diagramData || progress.diagramData || null;
+
+          if (savedDiagramScore) {
+            setDiagramScore(savedDiagramScore);
+          }
+          if (savedDiagramData) {
+            setDiagramData(savedDiagramData);
+          }
+
+          if (solutionData) {
+            return progress;
           }
         }
       }
@@ -252,9 +268,12 @@ export function ChallengeWorkspaceModal({
         });
         setRevealedQuestionHints(hintsSet);
         
-        // Restore diagram data if present
-        if (saved.diagramData) {
-          setDiagramData(saved.diagramData);
+        // Restore diagram data/score if present
+        if (saved.diagramData || existingProgress.diagramData) {
+          setDiagramData(saved.diagramData || existingProgress.diagramData);
+        }
+        if (saved.diagramScore || existingProgress.diagramScore) {
+          setDiagramScore(saved.diagramScore || existingProgress.diagramScore);
         }
         
         setIsLoadingQuestions(false);
@@ -361,6 +380,8 @@ export function ChallengeWorkspaceModal({
       setRevealedQuestionHints(new Set());
       setMessages([]);
       setChallengeProgressId(null);
+      setDiagramData(null);
+      setDiagramScore(createInitialScore());
       fetchQuestions();
     }
   }, [isOpen, challenge?.id, fetchQuestions]);
@@ -583,6 +604,22 @@ export function ChallengeWorkspaceModal({
               <span className="text-sm font-medium text-cyan-400">{earnedPoints}</span>
               <span className="text-xs text-slate-500">/ {questionsData?.total_points || challenge.points} pts</span>
             </div>
+            {lastAuditResult && (
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-medium shrink-0",
+                  lastAuditResult.score >= 80
+                    ? "border-green-500/50 bg-green-500/10 text-green-300"
+                    : lastAuditResult.score >= 50
+                      ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
+                      : "border-red-500/50 bg-red-500/10 text-red-300"
+                )}
+                title="Latest diagram audit score"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {lastAuditResult.score}/100
+              </div>
+            )}
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon-sm" onClick={onPrevChallenge} disabled={challengeIndex === 0}>
                 <ChevronLeft className="w-4 h-4" />
@@ -889,6 +926,7 @@ export function ChallengeWorkspaceModal({
                   <div className="flex-1 overflow-hidden">
                     <DiagramCanvas
                       initialData={diagramData || undefined}
+                      initialScore={diagramScore}
                       challengeContext={{
                         challengeId: challenge.id,
                         challengeTitle: challenge.title,
@@ -899,8 +937,9 @@ export function ChallengeWorkspaceModal({
                       sessionId={diagramSessionId}
                       apiKey={apiKey || undefined}
                       preferredModel={preferredModel || undefined}
-                      onSave={async (data) => {
+                      onSave={async (data, score) => {
                         setDiagramData(data);
+                        setDiagramScore(score);
                         // Also save to challenge progress
                         if (attemptId && challenge.id) {
                           // Build answers array from current state
@@ -926,6 +965,7 @@ export function ChallengeWorkspaceModal({
                               hintsUsed: revealedQuestionHints.size,
                               isComplete: false,
                               diagramData: data,
+                              diagramScore: score,
                               questionsData: questionsData ? {
                                 brief: questionsData.brief,
                                 questions: questionsData.questions,
@@ -944,6 +984,7 @@ export function ChallengeWorkspaceModal({
                           }
                         }
                       }}
+                      onScoreChange={(score) => setDiagramScore(score)}
                       onAuditComplete={(result) => {
                         setLastAuditResult(result);
                         // Update session ID for continuity
