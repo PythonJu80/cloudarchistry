@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  Globe,
   Trophy,
   Target,
   Clock,
@@ -25,13 +24,14 @@ import {
   Users,
   XCircle,
   Loader2,
-  GraduationCap,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { JourneyTimeline } from "@/components/dashboard/journey-timeline";
+import { Navbar } from "@/components/navbar";
 
 interface DashboardData {
   profile: {
@@ -220,7 +220,6 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [avatar, setAvatar] = useState<string | null>(null);
   const [versusData, setVersusData] = useState<VersusData | null>(null);
   const [versusLoading, setVersusLoading] = useState(true);
   const [myUserId, setMyUserId] = useState<string | null>(null);
@@ -234,11 +233,6 @@ export default function DashboardPage() {
     if (status === "authenticated") {
       fetchDashboardData();
       fetchVersusData();
-      // Load avatar from localStorage
-      const localAvatar = localStorage.getItem("academy-avatar");
-      if (localAvatar) {
-        setAvatar(localAvatar);
-      }
     }
   }, [status, router]);
 
@@ -250,10 +244,6 @@ export default function DashboardPage() {
       }
       const dashboardData = await response.json();
       setData(dashboardData);
-      // Set avatar from profile if no local avatar
-      if (!localStorage.getItem("academy-avatar") && dashboardData.profile?.avatarUrl) {
-        setAvatar(dashboardData.profile.avatarUrl);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -332,75 +322,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            {avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatar}
-                alt="Profile"
-                className="w-10 h-10 rounded-xl object-cover"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-                <Globe className="w-6 h-6 text-white" />
-              </div>
-            )}
-            <span className="text-xl font-bold">CloudAcademy</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8">
-            <Link
-              href="/world"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              World Map
-            </Link>
-            <Link
-              href="/challenges"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Challenges
-            </Link>
-            <Link
-              href="/exams"
-              className="text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1"
-            >
-              <GraduationCap className="w-4 h-4" />
-              Practice Exams
-            </Link>
-            <Link
-              href="/game"
-              className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
-            >
-              <Swords className="w-4 h-4" />
-              Game Zone
-            </Link>
-            <Link
-              href="/leaderboard"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Leaderboard
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard/settings">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Settings className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">
-                @{session?.user?.username || "user"}
-              </span>
-              <Badge variant="outline" className="text-xs capitalize">
-                {profile.subscriptionTier}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar activePath="/dashboard" />
 
       {/* Main Content */}
       <main className="pt-24 pb-12 px-6">

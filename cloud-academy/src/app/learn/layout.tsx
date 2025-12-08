@@ -10,6 +10,7 @@ import {
   BookOpen,
   ListTodo,
   GraduationCap,
+  Trophy,
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 
@@ -22,6 +23,7 @@ const tabs = [
   { href: "/learn/sources", label: "Sources", icon: Layers },
   { href: "/learn/chat", label: "Chat", icon: MessageSquare },
   { href: "/learn/flashcards", label: "Flashcards", icon: GraduationCap },
+  { href: "/learn/exams", label: "Practice Exams", icon: Trophy },
   { href: "/learn/quiz", label: "Quizzes", icon: ListTodo },
   { href: "/learn/notes", label: "Notes", icon: FileText },
   { href: "/learn/studio", label: "Studio", icon: Headphones },
