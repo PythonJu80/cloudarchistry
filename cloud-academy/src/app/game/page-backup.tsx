@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -17,9 +17,10 @@ import {
   Timer,
   Volume2,
   VolumeX,
+  ChevronRight,
+  ChevronLeft,
   Sparkles,
   X,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -311,16 +312,7 @@ const GameModeCard = ({
               {players}
             </span>
             {!comingSoon && (
-              <button 
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all duration-300 ${
-                  isHovered 
-                    ? 'bg-white text-black scale-105' 
-                    : 'bg-white/10 text-white/70 hover:bg-white/20'
-                }`}
-              >
-                <Play className="w-3 h-3 fill-current" />
-                Play
-              </button>
+              <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform duration-300 ${isHovered ? 'translate-x-1 text-white' : ''}`} />
             )}
           </div>
         </div>
@@ -381,7 +373,6 @@ export default function GameModePage() {
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [gameProfile, setGameProfile] = useState<GameProfile | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [showChallengeModal, setShowChallengeModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -588,91 +579,7 @@ export default function GameModePage() {
           )}
 
           {/* Featured Game Hero */}
-          <FeaturedGameHero onPlay={() => setShowChallengeModal(true)} />
-
-          {/* Challenge Modal */}
-          {showChallengeModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              {/* Backdrop */}
-              <div 
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                onClick={() => setShowChallengeModal(false)}
-              />
-              
-              {/* Modal */}
-              <div className="relative bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
-                {/* Close button */}
-                <button 
-                  onClick={() => setShowChallengeModal(false)}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-
-                {/* Header */}
-                <div className="text-center mb-6">
-                  <div className="text-5xl mb-3">⚔️</div>
-                  <h3 className="text-2xl font-black bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-                    QUIZ BATTLE
-                  </h3>
-                  <p className="text-gray-400 text-sm mt-1">Choose your opponent</p>
-                </div>
-
-                {/* Team members list */}
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {opponents.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>No team members found</p>
-                      <p className="text-xs mt-1">Invite people to your team first!</p>
-                    </div>
-                  ) : (
-                    opponents.map((opponent) => (
-                      <div 
-                        key={opponent.id}
-                        className="flex items-center justify-between p-3 rounded-xl bg-gray-800/50 border border-gray-700 hover:border-red-500/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold">
-                            {(opponent.name || opponent.username || "?")[0].toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-white">
-                              {opponent.name || opponent.username || "Unknown"}
-                            </p>
-                            <p className="text-xs text-gray-500">{opponent.teamName}</p>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            handleChallenge(opponent.id);
-                            setShowChallengeModal(false);
-                          }}
-                          disabled={challenging === opponent.id}
-                          className="bg-red-500 hover:bg-red-400 text-white font-bold gap-2"
-                        >
-                          {challenging === opponent.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Swords className="w-4 h-4" />
-                          )}
-                          Fight!
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div className="mt-6 pt-4 border-t border-gray-800 text-center">
-                  <p className="text-xs text-gray-500">
-                    Your opponent will receive a challenge notification
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          <FeaturedGameHero onPlay={() => {/* TODO: matchmaking */}} />
 
           {/* Other Game Modes */}
           <div className="mb-6">

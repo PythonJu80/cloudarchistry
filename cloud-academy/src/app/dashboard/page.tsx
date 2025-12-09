@@ -291,6 +291,18 @@ export default function DashboardPage() {
     }
   }, [status, router, fetchDashboardData, fetchVersusData]);
 
+  // Poll for versus data updates (challenges, match completions)
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    
+    // Poll every 10 seconds for new challenges or match updates
+    const interval = setInterval(() => {
+      fetchVersusData();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [status, fetchVersusData]);
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -810,41 +822,99 @@ export default function DashboardPage() {
                             const isChallenger = match.player1.id === myUserId;
                             const opponent = isChallenger ? match.player2 : match.player1;
                             const needsResponse = !isChallenger && match.status === "pending";
+                            const canCancel = isChallenger && match.status === "pending";
                             
                             return (
-                              <Link key={match.id} href={`/game/${match.matchCode}`}>
-                                <div className={`p-3 rounded-lg border transition-colors ${
-                                  needsResponse 
-                                    ? "bg-red-500/10 border-red-500/30 hover:bg-red-500/20" 
-                                    : "bg-background/50 border-border/50 hover:bg-muted/50"
-                                }`}>
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                        needsResponse ? "bg-red-500/20" : "bg-primary/20"
-                                      }`}>
-                                        {needsResponse ? (
-                                          <Swords className="w-4 h-4 text-red-500" />
-                                        ) : (
-                                          <Users className="w-4 h-4 text-primary" />
-                                        )}
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium">
-                                          vs {opponent.name || opponent.username}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {needsResponse ? "Respond now!" : 
-                                           match.status === "pending" ? "Waiting..." : "In progress"}
-                                        </p>
-                                      </div>
+                              <div key={match.id} className={`p-3 rounded-lg border transition-colors ${
+                                needsResponse 
+                                  ? "bg-red-500/10 border-red-500/30" 
+                                  : "bg-background/50 border-border/50"
+                              }`}>
+                                <div className="flex items-center justify-between">
+                                  <Link href={`/game/${match.matchCode}`} className="flex items-center gap-2 flex-1 hover:opacity-80">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      needsResponse ? "bg-red-500/20" : "bg-primary/20"
+                                    }`}>
+                                      {needsResponse ? (
+                                        <Swords className="w-4 h-4 text-red-500" />
+                                      ) : (
+                                        <Users className="w-4 h-4 text-primary" />
+                                      )}
                                     </div>
-                                    <Badge variant={needsResponse ? "destructive" : "secondary"} className="text-xs">
-                                      {needsResponse ? "!" : match.status}
-                                    </Badge>
+                                    <div>
+                                      <p className="text-sm font-medium">
+                                        vs {opponent.name || opponent.username}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {needsResponse ? "Respond now!" : 
+                                         canCancel ? "Awaiting response..." :
+                                         match.status === "completed" ? "View results" : "In progress"}
+                                      </p>
+                                    </div>
+                                  </Link>
+                                  <div className="flex items-center gap-2">
+                                    {needsResponse && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          className="h-7 text-xs"
+                                          onClick={async (e) => {
+                                            e.preventDefault();
+                                            await fetch(`/api/versus/${match.matchCode}`, {
+                                              method: "PATCH",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ action: "accept" }),
+                                            });
+                                            fetchVersusData();
+                                          }}
+                                        >
+                                          Accept
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 text-xs text-muted-foreground hover:text-red-500"
+                                          onClick={async (e) => {
+                                            e.preventDefault();
+                                            await fetch(`/api/versus/${match.matchCode}`, {
+                                              method: "PATCH",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ action: "decline" }),
+                                            });
+                                            fetchVersusData();
+                                          }}
+                                        >
+                                          <XCircle className="w-4 h-4" />
+                                        </Button>
+                                      </>
+                                    )}
+                                    {canCancel && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 text-xs text-muted-foreground hover:text-red-500"
+                                        onClick={async (e) => {
+                                          e.preventDefault();
+                                          await fetch(`/api/versus/${match.matchCode}`, {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ action: "decline" }),
+                                          });
+                                          fetchVersusData();
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    )}
+                                    {!needsResponse && !canCancel && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {match.status}
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
-                              </Link>
+                              </div>
                             );
                           })}
                         </div>

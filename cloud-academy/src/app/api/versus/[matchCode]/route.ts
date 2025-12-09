@@ -18,7 +18,7 @@ export async function GET(
 
     const { matchCode } = params;
 
-    const match = await prisma.versusMatch.findUnique({
+    let match = await prisma.versusMatch.findUnique({
       where: { matchCode },
       include: {
         player1: {
@@ -63,6 +63,79 @@ export async function GET(
     const myPlayerId = academyUser.id;
     const isPlayer1 = match.player1Id === myPlayerId;
 
+    // Auto-fix: If match is "active" but all questions answered, mark as completed
+    if (match.status === "active" && match.currentQuestion >= match.totalQuestions) {
+      // Determine winner
+      let winnerId = null;
+      if (match.player1Score > match.player2Score) {
+        winnerId = match.player1Id;
+      } else if (match.player2Score > match.player1Score) {
+        winnerId = match.player2Id;
+      }
+      
+      // Update the match status
+      const updatedMatch = await prisma.versusMatch.update({
+        where: { matchCode },
+        data: {
+          status: "completed",
+          completedAt: new Date(),
+          winnerId,
+        },
+        include: {
+          player1: { select: { id: true, name: true, username: true, email: true } },
+          player2: { select: { id: true, name: true, username: true, email: true } },
+          challenge: { select: { id: true, title: true, description: true, difficulty: true, points: true } },
+        },
+      });
+      
+      // Use the updated match
+      match = updatedMatch;
+    }
+
+    // If match is completed, include full recap data
+    const matchState = match.matchState as {
+      questions?: Array<{
+        question: string;
+        options: string[];
+        correctIndex: number;
+        topic?: string;
+        explanation?: string;
+      }>;
+      questionHistory?: Array<{
+        questionIndex: number;
+        player1Answer: number | null;
+        player2Answer: number | null;
+        buzzedBy: string | null;
+        passedTo: string | null;
+        answeredCorrectly: string | null;
+        pointsAwarded: number;
+      }>;
+      passedTo?: string;
+      firstAnswer?: number;
+    } || {};
+
+    let recap = null;
+    if (match.status === "completed" && matchState.questions && matchState.questionHistory) {
+      recap = matchState.questions.map((q, idx) => {
+        const history = matchState.questionHistory?.[idx];
+        return {
+          questionNumber: idx + 1,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctIndex,
+          correctAnswerText: q.options[q.correctIndex],
+          topic: q.topic || "AWS",
+          explanation: q.explanation || null,
+          player1Answer: history?.player1Answer ?? null,
+          player2Answer: history?.player2Answer ?? null,
+          buzzedBy: history?.buzzedBy || null,
+          passedTo: history?.passedTo || null,
+          answeredCorrectly: history?.answeredCorrectly || null,
+          pointsAwarded: history?.pointsAwarded || 0,
+        };
+      });
+    }
+
     return NextResponse.json({
       match: {
         ...match,
@@ -71,7 +144,11 @@ export async function GET(
         myScore: isPlayer1 ? match.player1Score : match.player2Score,
         opponentScore: isPlayer1 ? match.player2Score : match.player1Score,
         opponent: isPlayer1 ? match.player2 : match.player1,
+        // Include pass-back state for UI
+        passedTo: matchState.passedTo || null,
+        opponentAnswer: matchState.firstAnswer ?? null,
       },
+      recap, // Full question recap for completed matches
     });
   } catch (error) {
     console.error("Error fetching match:", error);
@@ -139,9 +216,14 @@ export async function PATCH(
       }
 
       case "decline": {
-        // Player 2 declines
-        if (!isPlayer2) {
-          return NextResponse.json({ error: "Only the challenged player can decline" }, { status: 403 });
+        // Player 2 declines OR Player 1 cancels their own pending challenge
+        if (!isPlayer2 && !isPlayer1) {
+          return NextResponse.json({ error: "You are not part of this match" }, { status: 403 });
+        }
+        
+        // Player 1 can only cancel if match is still pending
+        if (isPlayer1 && match.status !== "pending") {
+          return NextResponse.json({ error: "Can only cancel pending challenges" }, { status: 400 });
         }
 
         const updated = await prisma.versusMatch.update({
@@ -149,7 +231,10 @@ export async function PATCH(
           data: { status: "cancelled" },
         });
 
-        return NextResponse.json({ match: updated, message: "Match declined" });
+        return NextResponse.json({ 
+          match: updated, 
+          message: isPlayer1 ? "Challenge cancelled" : "Match declined" 
+        });
       }
 
       case "chat": {
@@ -227,7 +312,7 @@ export async function PATCH(
       }
 
       case "answer": {
-        // Submit answer after buzzing
+        // Submit answer after buzzing (or after pass-back)
         if (match.status !== "active") {
           return NextResponse.json({ error: "Match is not active" }, { status: 400 });
         }
@@ -242,13 +327,30 @@ export async function PATCH(
             question: string;
             options: string[];
             correctIndex: number;
+            topic?: string;
+            explanation?: string;
           }>;
           currentQuestionBuzz?: string;
-          answers?: Record<string, { questionIndex: number; answer: number; correct: boolean; points: number }[]>;
+          passedTo?: string; // Player who gets the pass-back
+          firstAnswerBy?: string; // Who answered first (for display)
+          firstAnswer?: number; // What they answered (for display)
+          questionHistory?: Array<{
+            questionIndex: number;
+            player1Answer: number | null;
+            player2Answer: number | null;
+            buzzedBy: string | null;
+            passedTo: string | null;
+            answeredCorrectly: string | null; // playerId who got it right
+            pointsAwarded: number;
+          }>;
         } || {};
 
-        // Verify this player buzzed
-        if (matchState.currentQuestionBuzz !== academyUser.id) {
+        // Check if this is a pass-back situation or original buzz
+        const isPassBack = matchState.passedTo === academyUser.id;
+        const originalBuzzer = matchState.currentQuestionBuzz;
+        
+        // Verify this player can answer (either buzzed or got pass-back)
+        if (!isPassBack && originalBuzzer !== academyUser.id) {
           return NextResponse.json({ error: "You didn't buzz first!" }, { status: 400 });
         }
 
@@ -260,28 +362,89 @@ export async function PATCH(
         }
 
         const isCorrect = answerIndex === currentQ.correctIndex;
-        const points = isCorrect ? 100 : -50; // Penalty for wrong answer after buzz
+        
+        // Points: +100 for correct, -50 for wrong on buzz, 0 for wrong on pass-back
+        let points = 0;
+        if (isCorrect) {
+          points = isPassBack ? 50 : 100; // Less points for pass-back steal
+        } else if (!isPassBack) {
+          points = -50; // Penalty only for original buzzer
+        }
 
         // Update scores
-        const newPlayer1Score = isPlayer1 
-          ? match.player1Score + points 
-          : match.player1Score;
-        const newPlayer2Score = isPlayer2 
-          ? match.player2Score + points 
-          : match.player2Score;
+        let newPlayer1Score = match.player1Score;
+        let newPlayer2Score = match.player2Score;
+        if (isPlayer1) {
+          newPlayer1Score += points;
+        } else {
+          newPlayer2Score += points;
+        }
 
-        // Track answer
-        const answers = matchState.answers || {};
-        const playerAnswers = answers[academyUser.id] || [];
-        playerAnswers.push({
+        // Update question history for recap
+        const questionHistory = matchState.questionHistory || [];
+        const currentHistory = questionHistory[match.currentQuestion] || {
           questionIndex: match.currentQuestion,
-          answer: answerIndex,
-          correct: isCorrect,
-          points,
-        });
-        answers[academyUser.id] = playerAnswers;
+          player1Answer: null,
+          player2Answer: null,
+          buzzedBy: null,
+          passedTo: null,
+          answeredCorrectly: null,
+          pointsAwarded: 0,
+        };
 
-        // Move to next question
+        // Record this player's answer
+        if (isPlayer1) {
+          currentHistory.player1Answer = answerIndex;
+        } else {
+          currentHistory.player2Answer = answerIndex;
+        }
+
+        if (!currentHistory.buzzedBy) {
+          currentHistory.buzzedBy = originalBuzzer || null;
+        }
+
+        // Handle wrong answer - pass to opponent
+        if (!isCorrect && !isPassBack) {
+          // First player got it wrong - pass to opponent
+          const opponentId = isPlayer1 ? match.player2Id : match.player1Id;
+          
+          currentHistory.passedTo = opponentId;
+          questionHistory[match.currentQuestion] = currentHistory;
+
+          const updated = await prisma.versusMatch.update({
+            where: { matchCode },
+            data: {
+              player1Score: newPlayer1Score,
+              player2Score: newPlayer2Score,
+              matchState: {
+                ...matchState,
+                passedTo: opponentId,
+                firstAnswerBy: academyUser.id,
+                firstAnswer: answerIndex,
+                questionHistory,
+              },
+            },
+          });
+
+          return NextResponse.json({
+            match: updated,
+            result: {
+              correct: false,
+              points,
+              passedTo: opponentId,
+              yourAnswer: answerIndex,
+              // Don't reveal correct answer yet - opponent gets a chance
+            },
+          });
+        }
+
+        // Either correct answer OR wrong on pass-back - move to next question
+        if (isCorrect) {
+          currentHistory.answeredCorrectly = academyUser.id;
+          currentHistory.pointsAwarded = points;
+        }
+        questionHistory[match.currentQuestion] = currentHistory;
+
         const nextQuestion = match.currentQuestion + 1;
         const isComplete = nextQuestion >= match.totalQuestions;
 
@@ -293,7 +456,6 @@ export async function PATCH(
           } else if (newPlayer2Score > newPlayer1Score) {
             winnerId = match.player2Id;
           }
-          // null = draw
         }
 
         const updated = await prisma.versusMatch.update({
@@ -307,8 +469,11 @@ export async function PATCH(
             winnerId,
             matchState: {
               ...matchState,
-              currentQuestionBuzz: null, // Reset buzz for next question
-              answers,
+              currentQuestionBuzz: null,
+              passedTo: null,
+              firstAnswerBy: null,
+              firstAnswer: null,
+              questionHistory,
             },
           },
         });
@@ -319,6 +484,99 @@ export async function PATCH(
             correct: isCorrect,
             points,
             correctAnswer: currentQ.correctIndex,
+            explanation: currentQ.explanation || null,
+            yourAnswer: answerIndex,
+            opponentAnswer: isPassBack ? matchState.firstAnswer : null,
+          },
+        });
+      }
+
+      case "pass": {
+        // Player passes/skips their turn (only valid on pass-back)
+        if (match.status !== "active") {
+          return NextResponse.json({ error: "Match is not active" }, { status: 400 });
+        }
+
+        const passMatchState = match.matchState as {
+          questions?: Array<{
+            question: string;
+            options: string[];
+            correctIndex: number;
+            explanation?: string;
+          }>;
+          passedTo?: string;
+          firstAnswerBy?: string;
+          firstAnswer?: number;
+          questionHistory?: Array<{
+            questionIndex: number;
+            player1Answer: number | null;
+            player2Answer: number | null;
+            buzzedBy: string | null;
+            passedTo: string | null;
+            answeredCorrectly: string | null;
+            pointsAwarded: number;
+          }>;
+        } || {};
+
+        // Can only pass if it was passed to you
+        if (passMatchState.passedTo !== academyUser.id) {
+          return NextResponse.json({ error: "You can only pass on a pass-back" }, { status: 400 });
+        }
+
+        const passQuestions = passMatchState.questions || [];
+        const passCurrentQ = passQuestions[match.currentQuestion];
+
+        // Update history - nobody got it right
+        const passHistory = passMatchState.questionHistory || [];
+        const passCurrentHistory = passHistory[match.currentQuestion] || {
+          questionIndex: match.currentQuestion,
+          player1Answer: null,
+          player2Answer: null,
+          buzzedBy: null,
+          passedTo: null,
+          answeredCorrectly: null,
+          pointsAwarded: 0,
+        };
+        passCurrentHistory.answeredCorrectly = null; // Nobody got it
+        passHistory[match.currentQuestion] = passCurrentHistory;
+
+        const passNextQuestion = match.currentQuestion + 1;
+        const passIsComplete = passNextQuestion >= match.totalQuestions;
+
+        let passWinnerId = null;
+        if (passIsComplete) {
+          if (match.player1Score > match.player2Score) {
+            passWinnerId = match.player1Id;
+          } else if (match.player2Score > match.player1Score) {
+            passWinnerId = match.player2Id;
+          }
+        }
+
+        const passUpdated = await prisma.versusMatch.update({
+          where: { matchCode },
+          data: {
+            currentQuestion: passNextQuestion,
+            status: passIsComplete ? "completed" : "active",
+            completedAt: passIsComplete ? new Date() : null,
+            winnerId: passWinnerId,
+            matchState: {
+              ...passMatchState,
+              currentQuestionBuzz: null,
+              passedTo: null,
+              firstAnswerBy: null,
+              firstAnswer: null,
+              questionHistory: passHistory,
+            },
+          },
+        });
+
+        return NextResponse.json({
+          match: passUpdated,
+          result: {
+            passed: true,
+            correctAnswer: passCurrentQ?.correctIndex,
+            explanation: passCurrentQ?.explanation || null,
+            opponentAnswer: passMatchState.firstAnswer,
           },
         });
       }

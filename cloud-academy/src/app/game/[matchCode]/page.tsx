@@ -7,14 +7,16 @@ import Link from "next/link";
 import { useSocket } from "@/hooks/use-socket";
 import {
   Loader2,
+  ArrowLeft,
+  XCircle,
+  Wifi,
+  WifiOff,
   Trophy,
   Zap,
   MessageCircle,
   Send,
-  ArrowLeft,
   Clock,
   CheckCircle,
-  XCircle,
   Crown,
   Users,
   Play,
@@ -24,69 +26,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wifi, WifiOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-interface Player {
-  id: string;
-  name: string | null;
-  username: string | null;
-  email: string;
-}
-
-interface ChatMessage {
-  id: string;
-  playerId: string;
-  playerName: string;
-  message: string;
-  timestamp: string;
-}
-
-interface MatchData {
-  id: string;
-  matchCode: string;
-  player1: Player;
-  player2: Player;
-  player1Score: number;
-  player2Score: number;
-  status: string;
-  matchType: string;
-  currentQuestion: number;
-  totalQuestions: number;
-  chatMessages: ChatMessage[];
-  myPlayerId: string;
-  isPlayer1: boolean;
-  myScore: number;
-  opponentScore: number;
-  opponent: Player;
-  winnerId: string | null;
-  matchState: {
-    currentQuestionBuzz?: string;
-    questions?: unknown[];
-  };
-}
-
-interface QuestionData {
-  questionNumber: number;
-  totalQuestions: number;
-  question: string;
-  options: string[];
-  topic: string;
-  buzzedBy: string | null;
-  canBuzz: boolean;
-  complete?: boolean;
-}
-
-interface AnswerResult {
-  correct: boolean;
-  points: number;
-  correctAnswer: number;
-}
+// Import types from shared types file
+import type { MatchData, QuestionData, ChatMessage, AnswerResult, QuestionRecap } from "../types";
 
 export default function GameMatchPage() {
   const params = useParams();
   const router = useRouter();
   const matchCode = params.matchCode as string;
   const { status: authStatus } = useSession();
+  const { toast } = useToast();
 
   const [match, setMatch] = useState<MatchData | null>(null);
   const [question, setQuestion] = useState<QuestionData | null>(null);
@@ -103,6 +53,8 @@ export default function GameMatchPage() {
   const [answering, setAnswering] = useState(false);
   const [lastResult, setLastResult] = useState<AnswerResult | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [recap, setRecap] = useState<QuestionRecap[] | null>(null);
+  const [showRecap, setShowRecap] = useState(false);
   
   // Connection status
   const [opponentOnline, setOpponentOnline] = useState(false);
@@ -122,6 +74,10 @@ export default function GameMatchPage() {
       // Initialize chat messages from match data
       if (data.match.chatMessages) {
         setChatMessages(data.match.chatMessages);
+      }
+      // Get recap data for completed matches
+      if (data.recap) {
+        setRecap(data.recap);
       }
       setError(null);
     } catch {
@@ -246,27 +202,51 @@ export default function GameMatchPage() {
     }
   }, [authStatus, matchCode, router, fetchMatch]);
 
-  // Fallback polling (less frequent since we have WebSockets)
+  // Polling - more frequent for pending matches, less for active
   useEffect(() => {
-    if (!match || !isConnected) return;
+    if (!match) return;
     
-    // Only poll every 10 seconds as a fallback when connected via WebSocket
+    // Poll every 3 seconds for pending (waiting for accept), 10 seconds for active
+    const pollInterval = match.status === "pending" ? 3000 : 10000;
+    
     const interval = setInterval(() => {
       fetchMatch();
       if (match.status === "active") {
         fetchQuestion();
       }
-    }, 10000);
+    }, pollInterval);
     
     return () => clearInterval(interval);
-  }, [match?.status, matchCode, isConnected, fetchMatch, fetchQuestion]);
+  }, [match?.status, matchCode, fetchMatch, fetchQuestion]);
 
-  // Fetch question when match becomes active
+  // Fetch question when match becomes active and show notification
+  const [prevStatus, setPrevStatus] = useState<string | null>(null);
   useEffect(() => {
     if (match?.status === "active") {
       fetchQuestion();
+      // Show toast when transitioning from pending to active
+      if (prevStatus === "pending") {
+        toast({
+          title: "⚔️ Battle Started!",
+          description: "Your opponent accepted. Let's go!",
+        });
+      }
     }
-  }, [match?.status, fetchQuestion]);
+    if (match?.status) {
+      setPrevStatus(match.status);
+    }
+  }, [match?.status, fetchQuestion, prevStatus, toast]);
+
+  // Auto-refresh when question says complete but match status hasn't updated
+  useEffect(() => {
+    if (question?.complete && match?.status === "active") {
+      // Match should be completed, refresh to get updated status
+      const timeout = setTimeout(() => {
+        fetchMatch();
+      }, 1000);
+      return () => clearTimeout(timeout);
+    }
+  }, [question?.complete, match?.status, fetchMatch]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -420,6 +400,47 @@ export default function GameMatchPage() {
     }
   };
   
+  // Handle pass (skip on pass-back)
+  const handlePass = async () => {
+    if (answering) return;
+    
+    setAnswering(true);
+    try {
+      const res = await fetch(`/api/versus/${matchCode}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "pass" }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        // Show result with correct answer
+        setLastResult({
+          correct: false,
+          points: 0,
+          correctAnswer: data.result.correctAnswer,
+          explanation: data.result.explanation,
+          passed: true,
+          opponentAnswer: data.result.opponentAnswer,
+        });
+        setShowResult(true);
+        
+        // Hide result after 3 seconds (longer to read explanation)
+        setTimeout(() => {
+          setShowResult(false);
+          setLastResult(null);
+          fetchMatch();
+          fetchQuestion();
+        }, 3000);
+      }
+    } catch (err) {
+      console.error("Failed to pass:", err);
+    } finally {
+      setAnswering(false);
+    }
+  };
+  
   // Suppress unused variable warnings - these are used in socket callbacks
   void updateScores;
   void sendNextQuestion;
@@ -455,7 +476,6 @@ export default function GameMatchPage() {
   }
 
   const isMyTurn = question?.buzzedBy === match.myPlayerId;
-  const opponentBuzzed = question?.buzzedBy && question.buzzedBy !== match.myPlayerId;
 
   return (
     <div className="min-h-screen bg-background">
@@ -622,20 +642,50 @@ export default function GameMatchPage() {
                     {/* Result Overlay */}
                     {showResult && lastResult && (
                       <div className={`absolute inset-0 z-10 flex items-center justify-center ${
-                        lastResult.correct ? "bg-green-500/90" : "bg-red-500/90"
+                        lastResult.correct ? "bg-green-500/90" : 
+                        lastResult.passedTo ? "bg-yellow-500/90" : "bg-red-500/90"
                       }`}>
-                        <div className="text-center text-white">
+                        <div className="text-center text-white p-6">
                           {lastResult.correct ? (
                             <>
                               <CheckCircle className="w-16 h-16 mx-auto mb-2" />
                               <p className="text-2xl font-bold">Correct!</p>
                               <p className="text-xl">+{lastResult.points} points</p>
+                              {lastResult.explanation && (
+                                <p className="text-sm mt-3 opacity-90 max-w-md">{lastResult.explanation}</p>
+                              )}
+                            </>
+                          ) : lastResult.passedTo ? (
+                            <>
+                              <XCircle className="w-16 h-16 mx-auto mb-2" />
+                              <p className="text-2xl font-bold">Wrong! Passed to opponent</p>
+                              <p className="text-lg">{lastResult.points} points</p>
+                              <p className="text-sm mt-2 opacity-80">They get a chance to steal!</p>
+                            </>
+                          ) : lastResult.passed ? (
+                            <>
+                              <X className="w-16 h-16 mx-auto mb-2" />
+                              <p className="text-2xl font-bold">Passed</p>
+                              <p className="text-lg mt-2">
+                                Correct answer: {question?.options[lastResult.correctAnswer || 0]}
+                              </p>
+                              {lastResult.explanation && (
+                                <p className="text-sm mt-3 opacity-90 max-w-md">{lastResult.explanation}</p>
+                              )}
                             </>
                           ) : (
                             <>
                               <XCircle className="w-16 h-16 mx-auto mb-2" />
                               <p className="text-2xl font-bold">Wrong!</p>
                               <p className="text-xl">{lastResult.points} points</p>
+                              {lastResult.correctAnswer !== undefined && (
+                                <p className="text-lg mt-2">
+                                  Correct: {question?.options[lastResult.correctAnswer]}
+                                </p>
+                              )}
+                              {lastResult.explanation && (
+                                <p className="text-sm mt-3 opacity-90 max-w-md">{lastResult.explanation}</p>
+                              )}
                             </>
                           )}
                         </div>
@@ -670,8 +720,74 @@ export default function GameMatchPage() {
                         </div>
                       )}
 
-                      {/* Someone buzzed */}
-                      {question.buzzedBy && (
+                      {/* Pass-back: Question passed to me - show opponent's wrong answer */}
+                      {question.passedToMe && (
+                        <div className="space-y-4">
+                          <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4 text-center">
+                            <p className="text-lg font-semibold text-yellow-500">
+                              🎯 Steal opportunity!
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {match.opponent.name || match.opponent.username} got it wrong. 
+                              {question.opponentAnswer !== null && question.opponentAnswer !== undefined && (
+                                <span className="block mt-1">
+                                  They picked: <span className="font-semibold text-red-400">
+                                    {String.fromCharCode(65 + question.opponentAnswer)}. {question.options[question.opponentAnswer]}
+                                  </span>
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 gap-3">
+                            {question.options.map((option, idx) => (
+                              <Button
+                                key={idx}
+                                variant="outline"
+                                className={`text-left justify-start h-auto py-3 px-4 ${
+                                  idx === question.opponentAnswer ? "border-red-500/50 bg-red-500/10 line-through opacity-60" : ""
+                                }`}
+                                onClick={() => handleAnswer(idx)}
+                                disabled={answering || idx === question.opponentAnswer}
+                              >
+                                <span className="font-bold mr-3">{String.fromCharCode(65 + idx)}.</span>
+                                {option}
+                                {idx === question.opponentAnswer && (
+                                  <span className="ml-auto text-red-400 text-xs">Their wrong answer</span>
+                                )}
+                              </Button>
+                            ))}
+                          </div>
+                          
+                          <div className="flex gap-3 justify-center">
+                            <Button 
+                              variant="outline" 
+                              onClick={handlePass}
+                              disabled={answering}
+                              className="gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Pass (Skip)
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Waiting for opponent on pass-back */}
+                      {question.passedToOpponent && (
+                        <div className="py-8 text-center">
+                          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-yellow-500" />
+                          <p className="text-lg font-semibold text-yellow-500">
+                            You got it wrong! 😬
+                          </p>
+                          <p className="text-muted-foreground">
+                            {match.opponent.name || match.opponent.username} gets a chance to steal...
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Someone buzzed (original flow) */}
+                      {question.buzzedBy && !question.passedToMe && !question.passedToOpponent && (
                         <div className="text-center">
                           {isMyTurn ? (
                             <div className="space-y-4">
@@ -708,13 +824,19 @@ export default function GameMatchPage() {
                   </Card>
                 )}
 
-                {/* Quiz Complete */}
+                {/* Quiz Complete - refresh to get final results */}
                 {question?.complete && (
                   <Card>
                     <CardContent className="pt-6 text-center">
                       <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
                       <h3 className="text-2xl font-bold mb-2">Quiz Complete!</h3>
-                      <p className="text-muted-foreground">Calculating final scores...</p>
+                      <p className="text-muted-foreground mb-4">Calculating final scores...</p>
+                      <Button 
+                        variant="default" 
+                        onClick={() => fetchMatch()}
+                      >
+                        View Results
+                      </Button>
                     </CardContent>
                   </Card>
                 )}
@@ -723,27 +845,108 @@ export default function GameMatchPage() {
 
             {/* Completed State */}
             {match.status === "completed" && (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">
-                    {match.winnerId === match.myPlayerId ? "🎉 Victory!" : 
-                     match.winnerId ? "Better luck next time!" : "It's a Draw!"}
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    Final Score: {match.player1Score} - {match.player2Score}
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <Link href="/dashboard">
-                      <Button variant="outline">Back to Dashboard</Button>
-                    </Link>
-                    <Button className="gap-2">
-                      <Zap className="w-4 h-4" />
-                      Rematch
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <Card>
+                  <CardContent className="pt-6 text-center">
+                    <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold mb-2">
+                      {match.winnerId === match.myPlayerId ? "🎉 Victory!" : 
+                       match.winnerId ? "Better luck next time!" : "It's a Draw!"}
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      Final Score: {match.player1Score} - {match.player2Score}
+                    </p>
+                    <div className="flex gap-3 justify-center mb-4">
+                      <Link href="/game">
+                        <Button variant="outline">Back to Arena</Button>
+                      </Link>
+                      <Button className="gap-2">
+                        <Zap className="w-4 h-4" />
+                        Rematch
+                      </Button>
+                    </div>
+                    {recap && recap.length > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => setShowRecap(!showRecap)}
+                        className="text-sm"
+                      >
+                        {showRecap ? "Hide" : "Show"} Question Recap ({recap.length} questions)
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Question Recap */}
+                {showRecap && recap && recap.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">📝 Question Recap</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {recap.map((q, idx) => {
+                        const myAnswer = match.isPlayer1 ? q.player1Answer : q.player2Answer;
+                        const opponentAnswer = match.isPlayer1 ? q.player2Answer : q.player1Answer;
+                        const iGotItRight = q.answeredCorrectly === match.myPlayerId;
+                        const opponentGotItRight = q.answeredCorrectly && q.answeredCorrectly !== match.myPlayerId;
+                        
+                        return (
+                          <div key={idx} className="border-b border-border pb-4 last:border-0">
+                            <div className="flex items-start justify-between mb-2">
+                              <Badge variant="outline" className="text-xs">{q.topic}</Badge>
+                              <span className="text-xs text-muted-foreground">Q{q.questionNumber}</span>
+                            </div>
+                            
+                            <p className="font-medium mb-3">{q.question}</p>
+                            
+                            <div className="grid grid-cols-1 gap-2 mb-3">
+                              {q.options.map((opt, optIdx) => {
+                                const isCorrect = optIdx === q.correctAnswer;
+                                const isMyAnswer = optIdx === myAnswer;
+                                const isOpponentAnswer = optIdx === opponentAnswer;
+                                
+                                return (
+                                  <div 
+                                    key={optIdx}
+                                    className={`p-2 rounded text-sm flex items-center justify-between ${
+                                      isCorrect ? "bg-green-500/20 border border-green-500/50" :
+                                      isMyAnswer && !isCorrect ? "bg-red-500/20 border border-red-500/50" :
+                                      "bg-muted/50"
+                                    }`}
+                                  >
+                                    <span>
+                                      <span className="font-bold mr-2">{String.fromCharCode(65 + optIdx)}.</span>
+                                      {opt}
+                                    </span>
+                                    <span className="flex gap-2 text-xs">
+                                      {isCorrect && <span className="text-green-500">✓ Correct</span>}
+                                      {isMyAnswer && <span className={isCorrect ? "text-green-500" : "text-red-500"}>You</span>}
+                                      {isOpponentAnswer && <span className={isCorrect ? "text-green-500" : "text-red-500"}>Them</span>}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            
+                            {q.explanation && (
+                              <p className="text-sm text-muted-foreground bg-muted/30 p-2 rounded">
+                                💡 {q.explanation}
+                              </p>
+                            )}
+                            
+                            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                              {iGotItRight && <span className="text-green-500">You got this right! +{q.pointsAwarded}</span>}
+                              {opponentGotItRight && <span className="text-yellow-500">Opponent got this one</span>}
+                              {!q.answeredCorrectly && <span className="text-gray-500">Nobody got this one</span>}
+                              {q.passedTo && <span>• Passed after wrong answer</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             )}
           </div>
 

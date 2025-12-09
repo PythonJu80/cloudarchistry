@@ -51,9 +51,36 @@ export async function GET() {
       take: 20,
     });
 
-    // Separate active and completed
-    const activeMatches = matches.filter((m: { status: string }) => ["pending", "active"].includes(m.status));
-    const recentMatches = matches.filter((m: { status: string }) => m.status === "completed").slice(0, 10);
+    // Auto-fix any matches that are stuck as "active" but actually finished
+    const stuckMatches = matches.filter((m: { status: string; currentQuestion: number; totalQuestions: number }) => 
+      m.status === "active" && m.currentQuestion >= m.totalQuestions
+    );
+    
+    // Fix stuck matches in background (don't await to keep response fast)
+    if (stuckMatches.length > 0) {
+      Promise.all(stuckMatches.map(async (m: { id: string; player1Id: string; player2Id: string; player1Score: number; player2Score: number }) => {
+        let winnerId = null;
+        if (m.player1Score > m.player2Score) winnerId = m.player1Id;
+        else if (m.player2Score > m.player1Score) winnerId = m.player2Id;
+        
+        await prisma.versusMatch.update({
+          where: { id: m.id },
+          data: { status: "completed", completedAt: new Date(), winnerId },
+        });
+      })).catch(err => console.error("Failed to fix stuck matches:", err));
+    }
+
+    // Separate active and completed - only truly active/pending matches
+    const activeMatches = matches.filter((m: { status: string; currentQuestion: number; totalQuestions: number }) => 
+      ["pending", "active"].includes(m.status) && 
+      // Exclude "active" matches that are actually finished (all questions answered)
+      !(m.status === "active" && m.currentQuestion >= m.totalQuestions)
+    );
+    const recentMatches = matches.filter((m: { status: string; currentQuestion: number; totalQuestions: number }) => 
+      m.status === "completed" || 
+      // Include "active" matches that are actually finished
+      (m.status === "active" && m.currentQuestion >= m.totalQuestions)
+    ).slice(0, 10);
 
     return NextResponse.json({ activeMatches, recentMatches });
   } catch (error) {
