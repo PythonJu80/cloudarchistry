@@ -699,7 +699,12 @@ export default function GameModePage() {
                   comingSoon={mode.comingSoon}
                   gradient={mode.gradient}
                   index={index}
-                  onClick={mode.isLive ? () => {} : undefined}
+                  onClick={mode.isLive ? () => {
+                    if (mode.slug === "sniper_quiz") {
+                      router.push("/game/modes/sniper-quiz");
+                    }
+                    // Add other game mode routes here as they're built
+                  } : undefined}
                 />
               ))}
             </div>
