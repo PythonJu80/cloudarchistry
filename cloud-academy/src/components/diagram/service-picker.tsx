@@ -56,10 +56,13 @@ import {
   Maximize,
   MousePointer2,
   RotateCcw,
+  Loader2,
   // New icons for sidebar tabs
   LayoutGrid,
   Shapes,
   Palette,
+  FileText,
+  ScrollText,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -70,9 +73,9 @@ type SidebarTab = "services" | "shapes" | "style" | "controls";
 // Local storage key for custom services
 const CUSTOM_SERVICES_KEY = "cloud-academy-custom-services";
 
-// Icon mapping for all 47 core services + custom
+// Icon mapping for all 95+ core services + custom
 const iconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
-  // Networking (14)
+  // Networking (19)
   "vpc": Network,
   "subnet-public": Layers,
   "subnet-private": Layers,
@@ -87,29 +90,42 @@ const iconMap: Record<string, React.ComponentType<{ className?: string; style?: 
   "nlb": Boxes,
   "route53": Globe,
   "cloudfront": Cloud,
-  // Compute (5)
+  "global-accelerator": Globe,
+  "vpn-gateway": Network,
+  "direct-connect": Network,
+  "privatelink": Network,
+  "elastic-ip": Network,
+  // Compute (7)
   "ec2": Server,
   "auto-scaling": Boxes,
   "lambda": Zap,
   "ebs": HardDrive,
   "efs": HardDrive,
+  "batch": Server,
+  "lightsail": Server,
   // Containers (4)
   "ecs": Container,
   "eks": Container,
   "fargate": Container,
   "ecr": Box,
-  // Database (6)
+  // Database (9)
   "rds": Database,
   "aurora": Database,
   "dynamodb": Database,
   "elasticache": Database,
   "redshift": Database,
   "neptune": Database,
-  // Storage (3)
+  "documentdb": Database,
+  "memorydb": Database,
+  "rds-replica": Database,
+  // Storage (6)
   "s3": HardDrive,
   "glacier": HardDrive,
   "backup": HardDrive,
-  // Security (7)
+  "fsx": HardDrive,
+  "storage-gateway": HardDrive,
+  "datasync": HardDrive,
+  // Security (21)
   "iam": Users,
   "kms": Key,
   "secrets-manager": Key,
@@ -117,16 +133,79 @@ const iconMap: Record<string, React.ComponentType<{ className?: string; style?: 
   "waf": Shield,
   "shield": Shield,
   "guardduty": Shield,
-  // Integration (4)
+  "iam-role": Users,
+  "iam-policy": Shield,
+  "permission-boundary": Shield,
+  "acm": Key,
+  "inspector": Shield,
+  "macie": Shield,
+  "security-hub": Shield,
+  "detective": Shield,
+  "iam-user": Users,
+  "iam-group": Users,
+  "resource-policy": Shield,
+  "trust-policy": Shield,
+  "identity-provider": Users,
+  "iam-identity-center": Users,
+  // Integration (8)
   "api-gateway": Workflow,
   "eventbridge": Activity,
   "sns": Bell,
   "sqs": Box,
-  // Management (4)
+  "step-functions": Workflow,
+  "appsync": Workflow,
+  "mq": Box,
+  "ses": Bell,
+  // Management (10)
   "cloudwatch": BarChart3,
   "cloudtrail": Activity,
   "systems-manager": Settings,
   "config": Settings,
+  "xray": Activity,
+  "cloudwatch-logs": BarChart3,
+  "cloudwatch-alarms": Bell,
+  "cloudformation": Settings,
+  "health-dashboard": Activity,
+  "trusted-advisor": Settings,
+  // DevOps & CI/CD (6)
+  "codecommit": Box,
+  "codepipeline": Workflow,
+  "codebuild": Server,
+  "codedeploy": Boxes,
+  "codeartifact": Box,
+  "cloud9": Server,
+  // Analytics & Streaming (8)
+  "kinesis-streams": Activity,
+  "kinesis-firehose": Activity,
+  "kinesis-analytics": BarChart3,
+  "msk": Activity,
+  "athena": Database,
+  "glue": Settings,
+  "quicksight": BarChart3,
+  "opensearch": Database,
+  // Governance (6)
+  "organizations": Users,
+  "scp": Shield,
+  "control-tower": Settings,
+  "service-catalog": Box,
+  "license-manager": Key,
+  "resource-groups": Boxes,
+  // Policies & Rules (15)
+  "s3-lifecycle-policy": ScrollText,
+  "s3-bucket-policy": FileText,
+  "iam-identity-policy": FileText,
+  "iam-trust-policy": FileText,
+  "resource-based-policy": FileText,
+  "vpc-endpoint-policy": FileText,
+  "backup-policy": ScrollText,
+  "scaling-policy": ScrollText,
+  "dlm-policy": ScrollText,
+  "ecr-lifecycle-policy": ScrollText,
+  "scp-policy": Shield,
+  "permission-boundary-policy": Shield,
+  "rds-parameter-group": Settings,
+  "elasticache-parameter-group": Settings,
+  "waf-rules": Shield,
   // Category icons
   "Network": Network,
   "Server": Server,
@@ -137,6 +216,9 @@ const iconMap: Record<string, React.ComponentType<{ className?: string; style?: 
   "BarChart3": BarChart3,
   "Workflow": Workflow,
   "Settings": Settings,
+  "GitBranch": Workflow,
+  "Building": Users,
+  "FileText": FileText,
   // Default for custom services
   "custom": Box,
 };
@@ -161,6 +243,23 @@ interface TextStyleUpdate {
   fontStyle?: "normal" | "italic";
   textDecoration?: "none" | "underline" | "line-through";
   textColor?: string;
+}
+
+// Node style type for styling any selected node
+export interface NodeStyleUpdate {
+  backgroundColor?: string;
+  borderColor?: string;
+  borderStyle?: "solid" | "dashed" | "dotted";
+  opacity?: number;
+}
+
+// Selected node info passed from diagram canvas
+export interface SelectedNodeInfo {
+  id: string;
+  type?: string;
+  serviceId?: string;
+  label?: string;
+  currentStyle?: NodeStyleUpdate;
 }
 
 interface ServicePickerProps {
@@ -189,6 +288,9 @@ interface ServicePickerProps {
   onUpdateTextStyle?: (style: TextStyleUpdate) => void;
   isTextNodeSelected?: boolean;
   selectedTextStyle?: TextStyleUpdate;
+  // Node style controls
+  selectedNode?: SelectedNodeInfo | null;
+  onUpdateNodeStyle?: (nodeId: string, style: NodeStyleUpdate) => void;
 }
 
 export function ServicePicker({ 
@@ -214,6 +316,8 @@ export function ServicePicker({
   onUpdateTextStyle,
   isTextNodeSelected = false,
   selectedTextStyle,
+  selectedNode,
+  onUpdateNodeStyle,
 }: ServicePickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<AWSCategory>>(
@@ -242,6 +346,14 @@ export function ServicePicker({
     description: "",
     iconPath: "" as string,
   });
+
+  // Local opacity state for smooth slider updates
+  const [localOpacity, setLocalOpacity] = useState(100);
+  
+  // Sync local opacity when selected node changes
+  useEffect(() => {
+    setLocalOpacity(selectedNode?.currentStyle?.opacity ?? 100);
+  }, [selectedNode?.id, selectedNode?.currentStyle?.opacity]);
 
   // Load custom services from localStorage on mount
   useEffect(() => {
@@ -295,14 +407,23 @@ export function ServicePicker({
     return () => clearTimeout(timer);
   }, [iconSearchQuery, searchIcons]);
 
-  // Add a new custom service
-  const handleAddService = () => {
+  // State for saving status
+  const [isSavingService, setIsSavingService] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+
+  // Add a new custom service - saves to aws-services.ts file via API
+  const handleAddService = async () => {
     if (!newService.name.trim() || !newService.shortName.trim() || !selectedIcon) return;
     
-    const id = `custom-${newService.shortName.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
+    setIsSavingService(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+    
+    const id = newService.shortName.toLowerCase().replace(/\s+/g, "-");
     const color = AWS_CATEGORY_COLORS[newService.category] || "#666666";
     
-    const service: AWSService & { iconPath?: string } = {
+    const serviceData = {
       id,
       name: newService.name,
       shortName: newService.shortName,
@@ -312,12 +433,37 @@ export function ServicePicker({
       iconPath: selectedIcon.iconPath,
     };
     
-    saveCustomServices([...customServices, service as AWSService]);
-    setSidebarView("services");
-    setSelectedIcon(null);
-    setIconSearchQuery("");
-    setIconSearchResults([]);
-    setNewService({ name: "", shortName: "", category: "compute", description: "", iconPath: "" });
+    try {
+      const response = await fetch("/api/services/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(serviceData),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        setSaveError(result.error || "Failed to save service");
+        return;
+      }
+      
+      setSaveSuccess(`${newService.name} added! Refresh to see in picker.`);
+      
+      // Reset form after short delay
+      setTimeout(() => {
+        setSidebarView("services");
+        setSelectedIcon(null);
+        setIconSearchQuery("");
+        setIconSearchResults([]);
+        setNewService({ name: "", shortName: "", category: "compute", description: "", iconPath: "" });
+        setSaveSuccess(null);
+      }, 2000);
+      
+    } catch (error) {
+      setSaveError("Network error: " + (error as Error).message);
+    } finally {
+      setIsSavingService(false);
+    }
   };
 
   // Remove a custom service
@@ -466,30 +612,37 @@ export function ServicePicker({
           )}
         </div>
         
-        <div className="space-y-1.5">
-          <label className="text-[10px] text-slate-500 uppercase tracking-wider">Description</label>
-          <Input
-            value={newService.description}
-            onChange={(e) => setNewService(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Brief description..."
-            className="h-8 text-xs bg-slate-800 border-slate-700 text-slate-200"
-          />
-        </div>
       </div>
 
-      {/* Save Button */}
-      <div className="p-3 border-t border-slate-800">
+      {/* Save Button & Status */}
+      <div className="p-3 border-t border-slate-800 space-y-2">
+        {saveError && (
+          <p className="text-[10px] text-red-400 text-center bg-red-500/10 rounded p-1.5">{saveError}</p>
+        )}
+        {saveSuccess && (
+          <p className="text-[10px] text-green-400 text-center bg-green-500/10 rounded p-1.5">{saveSuccess}</p>
+        )}
         <Button
           onClick={handleAddService}
-          disabled={!newService.name.trim() || !newService.shortName.trim() || !selectedIcon}
+          disabled={!newService.name.trim() || !newService.shortName.trim() || !selectedIcon || isSavingService}
           className="w-full h-8 text-xs bg-cyan-600 hover:bg-cyan-700 gap-1.5"
         >
-          <Save className="w-3.5 h-3.5" />
-          Save Service
+          {isSavingService ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Saving to file...
+            </>
+          ) : (
+            <>
+              <Save className="w-3.5 h-3.5" />
+              Save Service (Permanent)
+            </>
+          )}
         </Button>
         {!selectedIcon && newService.name.trim() && (
-          <p className="text-[10px] text-amber-400 text-center mt-2">Search and select an icon above</p>
+          <p className="text-[10px] text-amber-400 text-center">Search and select an icon above</p>
         )}
+        <p className="text-[9px] text-slate-600 text-center">Saves directly to aws-services.ts</p>
       </div>
     </div>
   );
@@ -611,6 +764,79 @@ export function ServicePicker({
             ))}
           </div>
         </div>
+
+        {/* Architecture Annotations */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Architecture Annotations</p>
+          <p className="text-[9px] text-slate-600 -mt-1">Document policies, flows, and metadata</p>
+          <div className="space-y-1.5">
+            {[
+              { label: "Legend", icon: "📋", type: "legendNode", description: "Color key & ownership" },
+              { label: "Lifecycle Policy", icon: "📜", type: "lifecycleNode", description: "S3/backup rules" },
+              { label: "CI/CD Pipeline", icon: "🔧", type: "pipelineNode", description: "Pipeline stages" },
+              { label: "Scaling Policy", icon: "📈", type: "scalingPolicyNode", description: "Auto scaling config" },
+              { label: "Backup Plan", icon: "💾", type: "backupPlanNode", description: "Backup schedule" },
+              { label: "Data Flow", icon: "↕️", type: "dataFlowNode", description: "Traffic annotation" },
+              { label: "IAM Policy", icon: "🔐", type: "policyDocumentNode", description: "IAM policy document" },
+            ].map(({ label, icon, type, description }) => (
+              <div
+                key={type}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/diagram-shape", JSON.stringify({
+                    type: "annotation",
+                    nodeType: type,
+                    label,
+                    icon,
+                  }));
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                className="w-full h-12 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center gap-2 px-3 text-slate-300 hover:text-slate-100 transition-colors cursor-grab active:cursor-grabbing"
+                title={description}
+              >
+                <span className="text-base">{icon}</span>
+                <div className="flex-1 text-left">
+                  <span className="text-xs block">{label}</span>
+                  <span className="text-[9px] text-slate-500">{description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Multi-Account Structures */}
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Multi-Account</p>
+          <p className="text-[9px] text-slate-600 -mt-1">AWS Organizations & Accounts</p>
+          <div className="space-y-1.5">
+            {[
+              { label: "AWS Organization", icon: "🏛️", type: "orgNode", description: "Multi-account boundary" },
+              { label: "AWS Account", icon: "🏢", type: "accountNode", description: "Account boundary" },
+            ].map(({ label, icon, type, description }) => (
+              <div
+                key={type}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/diagram-shape", JSON.stringify({
+                    type: "container",
+                    nodeType: type,
+                    label,
+                    icon,
+                  }));
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                className="w-full h-12 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center gap-2 px-3 text-slate-300 hover:text-slate-100 transition-colors cursor-grab active:cursor-grabbing"
+                title={description}
+              >
+                <span className="text-base">{icon}</span>
+                <div className="flex-1 text-left">
+                  <span className="text-xs block">{label}</span>
+                  <span className="text-[9px] text-slate-500">{description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -618,28 +844,53 @@ export function ServicePicker({
   // ========================================
   // RENDER STYLE PANEL
   // ========================================
-  const renderStylePanel = () => (
+  const renderStylePanel = () => {
+    const hasNodeSelected = !!selectedNode;
+    const currentBg = selectedNode?.currentStyle?.backgroundColor;
+    const currentBorder = selectedNode?.currentStyle?.borderColor;
+    const currentBorderStyle = selectedNode?.currentStyle?.borderStyle || "solid";
+    
+    return (
     <div className="flex-1 flex flex-col h-full bg-slate-900">
       <div className="p-3 border-b border-slate-800">
         <h3 className="text-sm font-medium text-slate-200">Style & Colors</h3>
-        <p className="text-[10px] text-slate-500 mt-1">Customize appearance</p>
+        <p className="text-[10px] text-slate-500 mt-1">
+          {hasNodeSelected 
+            ? `Styling: ${selectedNode?.label || selectedNode?.serviceId || "Node"}`
+            : "Select a node to customize"
+          }
+        </p>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        {/* Background Colors */}
+      {/* No Selection Banner */}
+      {!hasNodeSelected && (
+        <div className="mx-3 mt-3 p-2 bg-slate-800/50 border border-slate-700 rounded-lg">
+          <p className="text-[10px] text-slate-400 text-center">
+            👆 Click on a node in the canvas to style it
+          </p>
+        </div>
+      )}
+      <div className={cn("flex-1 overflow-y-auto p-3 space-y-4", !hasNodeSelected && "opacity-50 pointer-events-none")}>
+        {/* Background Colors - AWS Category Colors */}
         <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Background</p>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Background (AWS Colors)</p>
           <div className="grid grid-cols-6 gap-1.5">
             {[
-              "#0f172a", "#1e293b", "#334155", "#475569",
-              "#ffffff", "#f1f5f9", "#e2e8f0", "#cbd5e1",
-              "#fef3c7", "#fde68a", "#fcd34d", "#fbbf24",
-              "#dcfce7", "#bbf7d0", "#86efac", "#4ade80",
-              "#dbeafe", "#bfdbfe", "#93c5fd", "#60a5fa",
-              "#f3e8ff", "#e9d5ff", "#d8b4fe", "#c084fc",
+              // Row 1: AWS Category colors (light versions for backgrounds)
+              "#ED710020", "#3B48CC20", "#3F862420", "#8C4FFF20", "#DD344C20", "#E7157B20",
+              // Row 2: AWS Category colors (medium)
+              "#ED710040", "#3B48CC40", "#3F862440", "#8C4FFF40", "#DD344C40", "#E7157B40",
+              // Row 3: Neutrals
+              "#ffffff", "#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8",
+              // Row 4: AWS Dark theme compatible
+              "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#232F3E",
             ].map((color) => (
               <button
                 key={color}
-                className="aspect-square rounded-md border border-slate-700 hover:scale-110 transition-transform"
+                onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { backgroundColor: color })}
+                className={cn(
+                  "aspect-square rounded-md border hover:scale-110 transition-transform",
+                  currentBg === color ? "ring-2 ring-cyan-400 border-cyan-400" : "border-slate-700"
+                )}
                 style={{ backgroundColor: color }}
                 title={color}
               />
@@ -647,23 +898,42 @@ export function ServicePicker({
           </div>
         </div>
         
-        {/* Border Colors */}
+        {/* Border Colors - Official AWS Category Colors */}
         <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Border Color</p>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Border (AWS Official)</p>
           <div className="grid grid-cols-6 gap-1.5">
             {[
-              "#22d3ee", "#06b6d4", "#0891b2", "#0e7490",
-              "#a855f7", "#9333ea", "#7c3aed", "#6d28d9",
-              "#f97316", "#ea580c", "#dc2626", "#b91c1c",
-              "#22c55e", "#16a34a", "#15803d", "#166534",
-              "#64748b", "#475569", "#334155", "#1e293b",
-              "#fbbf24", "#f59e0b", "#d97706", "#b45309",
-            ].map((color) => (
+              // Row 1: AWS Official Category Colors
+              { color: "#ED7100", name: "Compute (Orange)" },
+              { color: "#3B48CC", name: "Database (Blue)" },
+              { color: "#3F8624", name: "Storage (Green)" },
+              { color: "#8C4FFF", name: "Networking (Purple)" },
+              { color: "#DD344C", name: "Security (Red)" },
+              { color: "#E7157B", name: "Integration (Pink)" },
+              // Row 2: More AWS Colors
+              { color: "#C925D1", name: "ML/AI (Magenta)" },
+              { color: "#01A88D", name: "IoT (Teal)" },
+              { color: "#7D8998", name: "Management (Gray)" },
+              { color: "#FF9900", name: "AWS Orange" },
+              { color: "#232F3E", name: "AWS Squid Ink" },
+              { color: "#146EB4", name: "AWS Blue" },
+              // Row 3: Subnet/VPC colors
+              { color: "#7AA116", name: "Public Subnet" },
+              { color: "#527FFF", name: "Private Subnet" },
+              { color: "#6B7280", name: "Neutral Gray" },
+              { color: "#22d3ee", name: "Cyan (Selection)" },
+              { color: "#ffffff", name: "White" },
+              { color: "#000000", name: "Black" },
+            ].map(({ color, name }) => (
               <button
                 key={color}
-                className="aspect-square rounded-md border-2 hover:scale-110 transition-transform"
+                onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { borderColor: color })}
+                className={cn(
+                  "aspect-square rounded-md border-2 hover:scale-110 transition-transform",
+                  currentBorder === color ? "ring-2 ring-cyan-400" : ""
+                )}
                 style={{ borderColor: color, backgroundColor: "transparent" }}
-                title={color}
+                title={name}
               />
             ))}
           </div>
@@ -673,28 +943,88 @@ export function ServicePicker({
         <div className="space-y-2">
           <p className="text-[10px] text-slate-500 uppercase tracking-wider">Border Style</p>
           <div className="grid grid-cols-3 gap-2">
-            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
-              <div className="w-8 h-0 border-t-2 border-slate-400" />
+            <button 
+              onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { borderStyle: "solid" })}
+              className={cn(
+                "h-10 rounded-lg flex items-center justify-center transition-colors",
+                currentBorderStyle === "solid" 
+                  ? "bg-cyan-500/20 ring-1 ring-cyan-500 text-cyan-400" 
+                  : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+              )}
+            >
+              <div className="w-8 h-0 border-t-2 border-current" />
             </button>
-            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
-              <div className="w-8 h-0 border-t-2 border-dashed border-slate-400" />
+            <button 
+              onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { borderStyle: "dashed" })}
+              className={cn(
+                "h-10 rounded-lg flex items-center justify-center transition-colors",
+                currentBorderStyle === "dashed" 
+                  ? "bg-cyan-500/20 ring-1 ring-cyan-500 text-cyan-400" 
+                  : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+              )}
+            >
+              <div className="w-8 h-0 border-t-2 border-dashed border-current" />
             </button>
-            <button className="h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
-              <div className="w-8 h-0 border-t-2 border-dotted border-slate-400" />
+            <button 
+              onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { borderStyle: "dotted" })}
+              className={cn(
+                "h-10 rounded-lg flex items-center justify-center transition-colors",
+                currentBorderStyle === "dotted" 
+                  ? "bg-cyan-500/20 ring-1 ring-cyan-500 text-cyan-400" 
+                  : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+              )}
+            >
+              <div className="w-8 h-0 border-t-2 border-dotted border-current" />
             </button>
           </div>
         </div>
         
-        {/* Opacity */}
+        {/* Opacity - Custom Slider */}
         <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Opacity</p>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            defaultValue="100"
-            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-          />
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Opacity</p>
+            <span className="text-[10px] text-slate-400">{localOpacity}%</span>
+          </div>
+          {/* Custom clickable slider */}
+          <div 
+            className="relative h-6 flex items-center cursor-pointer group"
+            onClick={(e) => {
+              if (!selectedNode) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const percent = Math.max(10, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 90 + 10)));
+              setLocalOpacity(percent); // Update local state immediately
+              onUpdateNodeStyle?.(selectedNode.id, { opacity: percent });
+            }}
+            onMouseDown={(e) => {
+              if (!selectedNode) return;
+              const slider = e.currentTarget;
+              const handleMove = (moveEvent: MouseEvent) => {
+                const rect = slider.getBoundingClientRect();
+                const percent = Math.max(10, Math.min(100, Math.round(((moveEvent.clientX - rect.left) / rect.width) * 90 + 10)));
+                setLocalOpacity(percent); // Update local state immediately
+                onUpdateNodeStyle?.(selectedNode.id, { opacity: percent });
+              };
+              const handleUp = () => {
+                document.removeEventListener('mousemove', handleMove);
+                document.removeEventListener('mouseup', handleUp);
+              };
+              document.addEventListener('mousemove', handleMove);
+              document.addEventListener('mouseup', handleUp);
+            }}
+          >
+            {/* Track background */}
+            <div className="absolute inset-y-2 left-0 right-0 bg-slate-700 rounded-full" />
+            {/* Filled track */}
+            <div 
+              className="absolute inset-y-2 left-0 bg-cyan-500 rounded-full"
+              style={{ width: `${(localOpacity - 10) / 90 * 100}%` }}
+            />
+            {/* Thumb */}
+            <div 
+              className="absolute w-4 h-4 bg-cyan-400 rounded-full border-2 border-white shadow-lg transform -translate-x-1/2 group-hover:scale-110 transition-transform"
+              style={{ left: `${(localOpacity - 10) / 90 * 100}%` }}
+            />
+          </div>
         </div>
         
         {/* Text Styling (for Text Box elements) */}
@@ -868,6 +1198,7 @@ export function ServicePicker({
       </div>
     </div>
   );
+  };
 
   // ========================================
   // RENDER CONTROLS PANEL

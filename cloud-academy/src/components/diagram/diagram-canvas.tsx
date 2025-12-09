@@ -24,8 +24,8 @@ import {
   useViewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { nodeTypes } from "./aws-nodes";
-import { ServicePicker } from "./service-picker";
+import { nodeTypes, SERVICE_FULL_NAMES } from "./aws-nodes";
+import { ServicePicker, type NodeStyleUpdate, type SelectedNodeInfo } from "./service-picker";
 import { type AWSService } from "@/lib/aws-services";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,10 +49,15 @@ import {
 import { cn } from "@/lib/utils";
 import {
   validatePlacement,
+  validateConnection,
   updateScore,
   createInitialScore,
+  detectHAPattern,
+  detectSecurityPattern,
   type DiagramScore,
+  type ConnectionValidation,
 } from "@/lib/aws-placement-rules";
+import { getServiceById } from "@/lib/aws-services";
 
 // Types for diagram data
 export interface DiagramNode extends Node {
@@ -206,6 +211,7 @@ function DiagramCanvasInner({
   const [proTip, setProTip] = useState<{ message: string; isError: boolean } | null>(null);
   const [showScoreAnimation, setShowScoreAnimation] = useState<{ points: number; isPositive: boolean } | null>(null);
   const proTipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [awardedBonuses, setAwardedBonuses] = useState<Set<string>>(new Set()); // Track which bonuses have been awarded
 
   useEffect(() => {
     if (initialScore) {
@@ -292,25 +298,6 @@ function DiagramCanvasInner({
     };
   }, [nodes, edges, saveData]);
 
-  // Handle new connections
-  const onConnect = useCallback(
-    (params: Connection) => {
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...params,
-            type: "smoothstep",
-            animated: true,
-            style: { stroke: "#22d3ee", strokeWidth: 2 },
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#22d3ee" },
-          },
-          eds
-        )
-      );
-    },
-    [setEdges]
-  );
-
   // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
@@ -340,6 +327,102 @@ function DiagramCanvasInner({
     setShowScoreAnimation({ points, isPositive: points > 0 });
     setTimeout(() => setShowScoreAnimation(null), 1500);
   }, []);
+
+  // 🎮 Check for architecture pattern bonuses
+  const checkPatternBonuses = useCallback(() => {
+    // Check HA pattern
+    if (!awardedBonuses.has("ha")) {
+      const haResult = detectHAPattern(nodes as { id: string; type?: string; data?: { serviceId?: string; subnetType?: "public" | "private"; label?: string }; parentId?: string }[]);
+      if (haResult.detected) {
+        setAwardedBonuses(prev => new Set([...prev, "ha"]));
+        setDiagramScore(prev => ({
+          ...prev,
+          totalPoints: prev.totalPoints + haResult.bonus,
+        }));
+        animateScore(haResult.bonus);
+        showProTip(haResult.message, false);
+      }
+    }
+    
+    // Check security pattern
+    if (!awardedBonuses.has("security")) {
+      const secResult = detectSecurityPattern(nodes as { id: string; type?: string; data?: { serviceId?: string; subnetType?: "public" | "private"; label?: string }; parentId?: string }[]);
+      if (secResult.detected) {
+        setAwardedBonuses(prev => new Set([...prev, "security"]));
+        setDiagramScore(prev => ({
+          ...prev,
+          totalPoints: prev.totalPoints + secResult.bonus,
+        }));
+        animateScore(secResult.bonus);
+        showProTip(secResult.message, false);
+      }
+    }
+  }, [nodes, awardedBonuses, animateScore, showProTip]);
+
+  // Check for bonuses when nodes change (debounced via auto-save timing)
+  useEffect(() => {
+    if (nodes.length >= 3) { // Only check when there are enough nodes
+      const timer = setTimeout(checkPatternBonuses, 2000); // Check 2 seconds after changes settle
+      return () => clearTimeout(timer);
+    }
+  }, [nodes, checkPatternBonuses]);
+
+  // Handle new connections with validation
+  const onConnect = useCallback(
+    (params: Connection) => {
+      if (!params.source || !params.target) return;
+      
+      // Find source and target nodes to get their service IDs
+      const sourceNode = nodes.find(n => n.id === params.source);
+      const targetNode = nodes.find(n => n.id === params.target);
+      
+      if (sourceNode && targetNode) {
+        const sourceServiceId = sourceNode.data?.serviceId;
+        const targetServiceId = targetNode.data?.serviceId;
+        
+        // Get the source service's connection rules
+        const sourceService = getServiceById(sourceServiceId);
+        
+        // Validate the connection
+        const validation: ConnectionValidation = validateConnection(
+          sourceServiceId,
+          targetServiceId,
+          sourceService?.canConnectTo
+        );
+        
+        // Award/deduct points for connection
+        if (validation.pointsAwarded !== 0) {
+          animateScore(validation.pointsAwarded);
+          setDiagramScore(prev => ({
+            ...prev,
+            totalPoints: Math.max(0, prev.totalPoints + validation.pointsAwarded),
+          }));
+        }
+        
+        // Show feedback for invalid connections (but still allow them)
+        if (!validation.isValid && validation.proTip) {
+          showProTip(validation.proTip, true);
+        } else if (validation.isValid && validation.pointsAwarded > 0) {
+          showProTip(`✅ +${validation.pointsAwarded} pts for valid connection!`, false);
+        }
+      }
+      
+      // Always add the edge (we don't block connections, just score them)
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...params,
+            type: "smoothstep",
+            animated: true,
+            style: { stroke: "#22d3ee", strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#22d3ee" },
+          },
+          eds
+        )
+      );
+    },
+    [setEdges, nodes, animateScore, showProTip]
+  );
 
   // 📦 TIP JAR FUNCTIONS
   // Load tips from the database
@@ -570,6 +653,103 @@ function DiagramCanvasInner({
           };
           
           setNodes((nds) => nds.concat(newNode));
+        } else if (shape.type === "annotation") {
+          // Architecture annotations (Legend, Lifecycle, Pipeline, etc.)
+          const annotationDefaults: Record<string, Record<string, unknown>> = {
+            legendNode: { 
+              label: "Legend",
+              owner: "Platform Team",
+              environment: "Production",
+              costCenter: "PROD-001",
+            },
+            lifecycleNode: {
+              label: "S3 Lifecycle Policy",
+              rules: [
+                { days: 30, action: "Transition", storageClass: "IA" },
+                { days: 90, action: "Transition", storageClass: "Glacier" },
+                { days: 365, action: "Delete" },
+              ],
+              versioningEnabled: true,
+            },
+            pipelineNode: {
+              label: "CI/CD Pipeline",
+              stages: [
+                { name: "Source", status: "success" },
+                { name: "Build", status: "success" },
+                { name: "Test", status: "running" },
+                { name: "Deploy", status: "pending" },
+              ],
+            },
+            scalingPolicyNode: {
+              label: "Auto Scaling Policy",
+              policyType: "target-tracking",
+              metric: "CPU Utilization",
+              targetValue: 70,
+              minCapacity: 2,
+              maxCapacity: 10,
+            },
+            backupPlanNode: {
+              label: "Backup Plan",
+              schedule: "Daily at 2:00 AM",
+              retentionDays: 30,
+              copyToRegion: "us-west-2",
+            },
+            dataFlowNode: {
+              label: "HTTPS Traffic",
+              protocol: "HTTPS",
+              port: 443,
+              direction: "inbound",
+              encrypted: true,
+            },
+            policyDocumentNode: {
+              label: "S3 Read Policy",
+              policyType: "identity",
+              effect: "Allow",
+              actions: ["s3:GetObject", "s3:ListBucket"],
+              resources: ["arn:aws:s3:::my-bucket/*"],
+              conditions: [],
+            },
+          };
+          
+          const newNode: DiagramNode = {
+            id: `${shape.nodeType}-${Date.now()}`,
+            type: shape.nodeType,
+            position,
+            data: {
+              serviceId: shape.nodeType,
+              label: shape.label,
+              color: "#64748b",
+              ...annotationDefaults[shape.nodeType],
+            },
+            zIndex: 20, // Annotations on top
+          };
+          
+          setNodes((nds) => nds.concat(newNode));
+        } else if (shape.type === "container") {
+          // Multi-account containers (Organization, Account)
+          const containerConfig: Record<string, { width: number; height: number; zIndex: number; extraData?: Record<string, unknown> }> = {
+            orgNode: { width: 500, height: 400, zIndex: -4, extraData: { orgId: "o-abc123" } },
+            accountNode: { width: 400, height: 300, zIndex: -3, extraData: { accountId: "123456789012", environment: "Production" } },
+          };
+          
+          const config = containerConfig[shape.nodeType];
+          if (!config) return;
+          
+          const newNode: DiagramNode = {
+            id: `${shape.nodeType}-${Date.now()}`,
+            type: shape.nodeType,
+            position,
+            style: { width: config.width, height: config.height },
+            data: {
+              serviceId: shape.nodeType,
+              label: shape.label,
+              color: shape.nodeType === "orgNode" ? "#232F3E" : "#f59e0b",
+              config: config.extraData || {},
+            },
+            zIndex: config.zIndex,
+          };
+          
+          setNodes((nds) => nds.concat(newNode));
         }
         return;
       }
@@ -681,7 +861,7 @@ function DiagramCanvasInner({
         data: {
           serviceId: service.id,
           label: service.shortName,
-          sublabel: service.description,
+          sublabel: SERVICE_FULL_NAMES[service.id] || service.name,
           color: service.color,
           config: service.defaultConfig || {},
           subnetType: service.id === "subnet-public" ? "public" : service.id === "subnet-private" ? "private" : undefined,
@@ -778,6 +958,40 @@ function DiagramCanvasInner({
         : n
     ));
   }, [selectedNode, setNodes]);
+
+  // 🎨 NODE STYLE FUNCTIONS
+  const handleUpdateNodeStyle = useCallback((nodeId: string, styleUpdate: NodeStyleUpdate) => {
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      
+      // Merge style update into node data
+      const currentStyle = (n.data as Record<string, unknown>)?.nodeStyle as NodeStyleUpdate || {};
+      const newStyle = { ...currentStyle, ...styleUpdate };
+      
+      return {
+        ...n,
+        data: { 
+          ...n.data, 
+          nodeStyle: newStyle,
+        },
+      } as DiagramNode;
+    }));
+  }, [setNodes]);
+
+  // Helper to get selected node info for style panel
+  const getSelectedNodeInfo = useCallback((): SelectedNodeInfo | null => {
+    if (!selectedNode) return null;
+    
+    const nodeStyle = (selectedNode.data as Record<string, unknown>)?.nodeStyle as NodeStyleUpdate | undefined;
+    
+    return {
+      id: selectedNode.id,
+      type: selectedNode.type,
+      serviceId: selectedNode.data?.serviceId as string | undefined,
+      label: selectedNode.data?.label as string | undefined,
+      currentStyle: nodeStyle,
+    };
+  }, [selectedNode]);
 
   // 📋 COPY/PASTE FUNCTIONS
   const handleCopy = useCallback(() => {
@@ -1002,6 +1216,9 @@ function DiagramCanvasInner({
           textDecoration: selectedNode.data?.textDecoration as "none" | "underline" | "line-through" | undefined,
           textColor: selectedNode.data?.textColor as string | undefined,
         } : undefined}
+        // Node style controls
+        selectedNode={getSelectedNodeInfo()}
+        onUpdateNodeStyle={handleUpdateNodeStyle}
       />
 
       {/* Main Canvas Area */}
