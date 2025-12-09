@@ -488,31 +488,31 @@ function JourneyCard({
           className="p-4 cursor-pointer hover:bg-background/30 transition-colors"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-3">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3 min-w-0">
               <motion.div
                 animate={{ 
                   scale: journey.status === "in_progress" ? [1, 1.1, 1] : 1,
                 }}
                 transition={{ repeat: Infinity, duration: 2 }}
-                className="text-3xl"
+                className="text-3xl shrink-0"
               >
                 {journey.location.icon}
               </motion.div>
-              <div>
-                <h4 className="font-bold text-base leading-tight">{journey.scenario.title}</h4>
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {journey.location.company} • {journey.location.name}
+              <div className="min-w-0">
+                <h4 className="font-bold text-base leading-tight truncate">{journey.scenario.title}</h4>
+                <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
+                  <MapPin className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{journey.location.company} • {journey.location.name}</span>
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Badge 
                 variant="outline" 
                 className={cn(
-                  "text-xs",
+                  "text-xs whitespace-nowrap",
                   journey.status === "in_progress" 
                     ? "text-amber-400 border-amber-400/30 bg-amber-500/10" 
                     : "text-green-400 border-green-400/30 bg-green-500/10"

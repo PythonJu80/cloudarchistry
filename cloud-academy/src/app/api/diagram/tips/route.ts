@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching diagram tips:", error);
     return NextResponse.json(
-      { error: "Failed to fetch tips" },
+      { error: "Failed to fetch tips", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

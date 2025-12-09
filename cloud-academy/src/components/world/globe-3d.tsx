@@ -117,7 +117,7 @@ export default function Globe3D({
   const [GlobeModule, setGlobeModule] = useState<React.ComponentType<any> | null>(null);
   const [hoveredContinent, setHoveredContinent] = useState<string | null>(null);
   const [selectedContinent, setSelectedContinent] = useState<string | null>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   // Load Globe.gl dynamically (client-side only)
   useEffect(() => {
@@ -269,15 +269,12 @@ export default function Globe3D({
     }
   }, [selectedLocation]);
 
-  if (!isClient || !GlobeModule) {
+  if (!isClient || !GlobeModule || !dimensions) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-950">
-        <div className="text-center">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/40 to-blue-500/40 animate-spin" style={{ animationDuration: "3s" }} />
-          </div>
-          <p className="text-muted-foreground">Initializing 3D Globe...</p>
-        </div>
+      <div ref={globeRef} className="w-full h-full bg-slate-950 relative">
+        <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground">
+          Initializing 3D Globe...
+        </p>
       </div>
     );
   }

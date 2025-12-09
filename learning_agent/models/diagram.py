@@ -9,39 +9,46 @@ class DiagramNode(BaseModel):
     """A node in the architecture diagram"""
     id: str
     type: str  # 'vpc', 'subnet', 'securityGroup', 'autoScaling', 'awsResource'
-    service: Optional[str] = None  # AWS service name for awsResource nodes
     label: Optional[str] = None
-    position: Dict[str, float]  # {x, y}
-    parentId: Optional[str] = None
-    data: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None
+    parent_id: Optional[str] = None  # For hierarchy analysis
+    position: Optional[Dict[str, float]] = None  # {x, y}
+    
+    class Config:
+        populate_by_name = True
 
 
 class DiagramConnection(BaseModel):
     """A connection between nodes"""
-    id: str
-    source: str
-    target: str
-    label: Optional[str] = None
-    animated: Optional[bool] = False
+    from_node: str  # 'from' is reserved in Python
+    to_node: str    # 'to' for consistency
+    
+    class Config:
+        populate_by_name = True
+        fields = {
+            'from_node': {'alias': 'from'},
+            'to_node': {'alias': 'to'}
+        }
 
 
 class AuditDiagramRequest(BaseModel):
     """Request to audit an architecture diagram"""
-    session_id: str
-    scenario_id: str
-    challenge_id: str
     nodes: List[DiagramNode]
     connections: List[DiagramConnection]
+    challenge_id: Optional[str] = None
+    challenge_title: Optional[str] = None
+    challenge_brief: Optional[str] = None
+    expected_services: Optional[List[str]] = None
+    session_id: Optional[str] = None
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
 
 
 class AuditDiagramResponse(BaseModel):
-    """Response from diagram audit"""
+    """Structured response from diagram audit"""
     score: int
-    max_score: int
-    feedback: str
-    issues: List[Dict[str, Any]] = []
+    correct: List[str] = []
+    missing: List[str] = []
     suggestions: List[str] = []
-    services_used: List[str] = []
-    missing_services: List[str] = []
+    feedback: str = ""
+    session_id: Optional[str] = None

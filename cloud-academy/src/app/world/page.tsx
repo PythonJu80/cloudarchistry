@@ -895,7 +895,7 @@ export default function WorldPage() {
                                     {challenge.location.company}
                                   </span>
                                   <span className={cn(
-                                    "text-[10px] px-1.5 py-0.5 rounded",
+                                    "text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap",
                                     challenge.status === "completed" 
                                       ? "bg-green-500/20 text-green-400"
                                       : "bg-cyan-500/20 text-cyan-400"

@@ -1547,6 +1547,9 @@ model ChallengeProgress {
   // CLI practice progress
   cliProgress   CLIProgress?
   
+  // Diagram audit tips
+  diagramAuditTips DiagramAuditTip[]
+  
   @@unique([attemptId, challengeId])
   @@index([challengeId])
   @@index([status])
@@ -3537,4 +3540,36 @@ model DiagnosticQuestionSet {
   @@index([certificationId])
   @@index([isActive])
   @@index([isPrimary])
+}
+
+// Diagram Audit Tips - "Tip Jar" for storing AI feedback on architecture diagrams
+model DiagramAuditTip {
+  id                  String @id @default(cuid())
+  challengeProgressId String
+  profileId           String
+
+  // Audit result data
+  auditScore Int    // Score from 0-100
+  category   String // "correct", "missing", "suggestion", "feedback"
+  content    String // The actual tip/feedback text
+
+  // Context
+  diagramSnapshot     Json? // Optional: snapshot of diagram state when tip was given
+  awsServicesInvolved Json  @default("[]") // AWS services related to this tip
+
+  // User interaction
+  isDismissed Boolean   @default(false)
+  dismissedAt DateTime?
+  isHelpful   Boolean?  // User can mark tips as helpful or not
+  userNotes   String?   // User can add notes to tips
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  challengeProgress ChallengeProgress @relation(fields: [challengeProgressId], references: [id], onDelete: Cascade)
+
+  @@index([challengeProgressId])
+  @@index([profileId])
+  @@index([isDismissed])
+  @@index([category])
 }

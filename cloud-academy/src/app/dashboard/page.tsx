@@ -223,6 +223,8 @@ export default function DashboardPage() {
   const [versusData, setVersusData] = useState<VersusData | null>(null);
   const [versusLoading, setVersusLoading] = useState(true);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [userApiKey, setUserApiKey] = useState<string | null>(null);
+  const [userPreferredModel, setUserPreferredModel] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -278,6 +280,14 @@ export default function DashboardPage() {
     if (status === "authenticated") {
       fetchDashboardData();
       fetchVersusData();
+      // Fetch actual decrypted API key for challenge workspace
+      fetch("/api/settings/apikey")
+        .then(res => res.json())
+        .then(data => {
+          if (data.apiKey) setUserApiKey(data.apiKey);
+          if (data.preferredModel) setUserPreferredModel(data.preferredModel);
+        })
+        .catch(console.error);
     }
   }, [status, router, fetchDashboardData, fetchVersusData]);
 
@@ -448,7 +458,8 @@ export default function DashboardPage() {
                 <CardContent className="pt-2">
                   <JourneyTimeline 
                     journeys={userJourneys} 
-                    apiKey={profile.hasOpenAiKey && profile.openaiKeyLastFour ? profile.openaiKeyLastFour : undefined}
+                    apiKey={userApiKey || undefined}
+                    preferredModel={userPreferredModel || undefined}
                     onRefresh={fetchDashboardData}
                   />
                 </CardContent>
