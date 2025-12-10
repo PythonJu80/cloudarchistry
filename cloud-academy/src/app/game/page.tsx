@@ -507,7 +507,7 @@ export default function GameModePage() {
       {/* Header */}
       <header className="relative z-20 border-b border-white/5 bg-black/50 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors group">
+          <Link href="/dashboard" className="flex items-center gap-2 text-white hover:text-gray-400 transition-colors group">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm">Exit Arena</span>
           </Link>

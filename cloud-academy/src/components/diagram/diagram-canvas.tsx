@@ -205,6 +205,9 @@ function DiagramCanvasInner({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Autosave toggle - can be disabled for slow connections
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
   // 🎮 GAMIFICATION STATE
   const [diagramScore, setDiagramScore] = useState<DiagramScore>(initialScore || createInitialScore());
@@ -280,6 +283,9 @@ function DiagramCanvasInner({
     
     setIsDirty(true);
     
+    // Skip autosave if disabled (for slow connections)
+    if (!autoSaveEnabled) return;
+    
     // Clear existing timeout
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
@@ -296,7 +302,7 @@ function DiagramCanvasInner({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [nodes, edges, saveData]);
+  }, [nodes, edges, saveData, autoSaveEnabled]);
 
   // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -360,12 +366,14 @@ function DiagramCanvasInner({
   }, [nodes, awardedBonuses, animateScore, showProTip]);
 
   // Check for bonuses when nodes change (debounced via auto-save timing)
+  // Skip if autosave is disabled (performance mode for slow connections)
   useEffect(() => {
+    if (!autoSaveEnabled) return; // Skip pattern checks in performance mode
     if (nodes.length >= 3) { // Only check when there are enough nodes
       const timer = setTimeout(checkPatternBonuses, 2000); // Check 2 seconds after changes settle
       return () => clearTimeout(timer);
     }
-  }, [nodes, checkPatternBonuses]);
+  }, [nodes, checkPatternBonuses, autoSaveEnabled]);
 
   // Handle new connections with validation
   const onConnect = useCallback(
@@ -597,10 +605,12 @@ function DiagramCanvasInner({
         if (shape.type === "boundary") {
           // AWS boundary containers - ONLY the ones not in Services
           // VPC, Subnet, Security Group come from Services > Networking
+          // Z-index hierarchy: Higher = more in front (selectable/movable)
+          // Boundaries should be ABOVE service containers so users can interact with them
           const boundaryConfig: Record<string, { width: number; height: number; nodeType: string; zIndex: number }> = {
-            "AWS Cloud": { width: 500, height: 350, nodeType: "awsCloud", zIndex: -3 },
-            "Region": { width: 400, height: 280, nodeType: "region", zIndex: -2 },
-            "Availability Zone": { width: 220, height: 160, nodeType: "availabilityZone", zIndex: -1 },
+            "AWS Cloud": { width: 500, height: 350, nodeType: "awsCloud", zIndex: 5 },
+            "Region": { width: 400, height: 280, nodeType: "region", zIndex: 6 },
+            "Availability Zone": { width: 220, height: 160, nodeType: "availabilityZone", zIndex: 7 },
           };
           
           const config = boundaryConfig[shape.label];
@@ -728,8 +738,8 @@ function DiagramCanvasInner({
         } else if (shape.type === "container") {
           // Multi-account containers (Organization, Account)
           const containerConfig: Record<string, { width: number; height: number; zIndex: number; extraData?: Record<string, unknown> }> = {
-            orgNode: { width: 500, height: 400, zIndex: -4, extraData: { orgId: "o-abc123" } },
-            accountNode: { width: 400, height: 300, zIndex: -3, extraData: { accountId: "123456789012", environment: "Production" } },
+            orgNode: { width: 500, height: 400, zIndex: 3, extraData: { orgId: "o-abc123" } },
+            accountNode: { width: 400, height: 300, zIndex: 4, extraData: { accountId: "123456789012", environment: "Production" } },
           };
           
           const config = containerConfig[shape.nodeType];
@@ -778,6 +788,17 @@ function DiagramCanvasInner({
         subnet: { width: 250, height: 180 },
         securityGroup: { width: 180, height: 120 },
         autoScaling: { width: 150, height: 100 },
+      };
+      
+      // Z-index hierarchy for proper layering (lower = further back)
+      // Shapes & Elements: Org(-4) < Account(-3) < AWS Cloud(-3) < Region(-2) < AZ(-1)
+      // Services containers: VPC(1) < Subnet(2) < Security Group(3) < Auto Scaling(4)
+      // Regular services: 10
+      const containerZIndex: Record<string, number> = {
+        vpc: 1,
+        subnet: 2,
+        securityGroup: 3,
+        autoScaling: 4,
       };
 
       // Check if dropping inside a container
@@ -867,7 +888,7 @@ function DiagramCanvasInner({
           subnetType: service.id === "subnet-public" ? "public" : service.id === "subnet-private" ? "private" : undefined,
           iconPath: serviceWithIcon.iconPath, // Pass custom icon path if available
         },
-        zIndex: service.isContainer ? 0 : 10,
+        zIndex: containerZIndex[nodeType] ?? (service.isContainer ? 0 : 10),
       };
 
       setNodes((nds) => nds.concat(newNode));
@@ -1181,7 +1202,10 @@ function DiagramCanvasInner({
   }, [nodes, edges, challengeContext, sessionId, apiKey, preferredModel, onAuditComplete, saveTipsFromAudit]);
 
   return (
-    <div className="flex h-full">
+    <div className={cn(
+      "flex h-full",
+      isFullscreen && "fixed inset-0 z-50 bg-slate-950"
+    )}>
       {/* Service Picker Sidebar */}
       <ServicePicker
         onDragStart={onServiceDragStart}
@@ -1222,10 +1246,7 @@ function DiagramCanvasInner({
       />
 
       {/* Main Canvas Area */}
-      <div className={cn(
-        "flex flex-col",
-        isFullscreen ? "fixed inset-0 z-50 bg-slate-950" : "flex-1"
-      )}>
+      <div className="flex flex-col flex-1">
         {/* Toolbar */}
         <div className="h-10 flex items-center justify-between px-3 border-b border-slate-800 bg-slate-900/80">
           {/* Left side - Fullscreen toggle */}
@@ -1308,6 +1329,23 @@ function DiagramCanvasInner({
                 <span className="text-xs text-amber-400">Unsaved changes</span>
               )}
             </div>
+
+            {/* Autosave Toggle - also acts as performance mode */}
+            <button
+              onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded border text-xs transition-colors h-8",
+                autoSaveEnabled
+                  ? "border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                  : "border-amber-500/50 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+              )}
+              title={autoSaveEnabled 
+                ? "Normal mode: Autosave every 5s, pattern detection enabled" 
+                : "Performance mode: Autosave & pattern detection disabled (for slow connections)"}
+            >
+              <Save className="w-3.5 h-3.5" />
+              {autoSaveEnabled ? "Auto" : "Perf"}
+            </button>
 
             <Button
               variant="outline"

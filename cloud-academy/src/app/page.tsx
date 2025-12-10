@@ -309,7 +309,7 @@ export default function Home() {
         {/* Stats bar at bottom */}
         <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent pt-24 pb-8">
           <div className="max-w-5xl mx-auto px-6">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100px, 100%), 1fr))' }}>
               {[
                 { value: "500+", label: "Missions", color: "text-white" },
                 { value: "50+", label: "AWS Services", color: "text-cyan-400" },

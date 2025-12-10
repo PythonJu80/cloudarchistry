@@ -328,7 +328,7 @@ export function PlayerStatsSidebar({
   onChallenge,
 }: PlayerStatsSidebarProps) {
   return (
-    <aside className="w-80 xl:w-96 border-l border-white/5 bg-black/50 backdrop-blur-xl overflow-y-auto max-h-[calc(100vh-120px)]">
+    <aside className="border-l border-white/5 bg-black/50 backdrop-blur-xl overflow-y-auto max-h-[calc(100dvh-120px)]" style={{ width: 'clamp(256px, 22vw, 384px)' }}>
       <div className="p-4 space-y-4">
         {/* Rank Display */}
         {gameProfile && <RankDisplay profile={gameProfile} />}

@@ -571,7 +571,7 @@ export function ChallengeWorkspaceModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="!grid-cols-1 max-w-[95vw] w-[1400px] h-[90vh] p-0 gap-0 bg-slate-950 border border-slate-800 overflow-hidden !flex !flex-col z-[100] [&>button]:hidden"
+        className="!grid-cols-1 !max-w-none !w-[calc(100vw-2rem)] !h-[calc(100vh-2rem)] !top-4 !left-4 !translate-x-0 !translate-y-0 p-0 gap-0 bg-slate-950 border border-slate-800 overflow-hidden !flex !flex-col z-[100] [&>button]:hidden"
         aria-describedby={undefined}
       >
         <VisuallyHidden>
@@ -744,7 +744,7 @@ export function ChallengeWorkspaceModal({
 
                 {/* Current Question */}
                 {currentQuestion && (
-                  <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex-1 overflow-y-auto p-3">
                     <div className="max-w-2xl mx-auto">
                       {/* Question Header */}
                       <div className="flex items-start justify-between mb-4">
@@ -766,13 +766,13 @@ export function ChallengeWorkspaceModal({
                       </div>
 
                       {/* Question Text */}
-                      <p className="text-lg text-slate-200 mb-6 leading-relaxed">
+                      <p className="text-base text-slate-200 mb-4 leading-relaxed">
                         {currentQuestion.question}
                       </p>
 
                       {/* Options */}
                       {currentQuestion.options && (
-                        <div className="space-y-3 mb-6">
+                        <div className="space-y-2 mb-4">
                           {currentQuestion.options.map((option) => {
                             const isSelected = currentAnswer?.selectedOptionId === option.id;
                             const isSubmitted = currentAnswer?.isSubmitted;
@@ -785,7 +785,7 @@ export function ChallengeWorkspaceModal({
                                 onClick={() => selectOption(currentQuestion.id, option.id)}
                                 disabled={isSubmitted}
                                 className={cn(
-                                  "w-full text-left p-4 rounded-lg border transition-all",
+                                  "w-full text-left px-3 py-2.5 rounded-lg border transition-all",
                                   !isSubmitted && isSelected && "border-cyan-500 bg-cyan-500/10",
                                   !isSubmitted && !isSelected && "border-slate-700 bg-slate-800/50 hover:border-slate-600",
                                   showCorrect && "border-green-500 bg-green-500/10",
@@ -857,10 +857,10 @@ export function ChallengeWorkspaceModal({
                           Submit Answer
                         </Button>
                       ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           {/* Explanation */}
                           <div className={cn(
-                            "p-4 rounded-lg border",
+                            "p-3 rounded-lg border",
                             currentAnswer.isCorrect
                               ? "bg-green-500/10 border-green-500/30"
                               : "bg-red-500/10 border-red-500/30"

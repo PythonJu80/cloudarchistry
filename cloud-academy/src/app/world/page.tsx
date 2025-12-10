@@ -1252,14 +1252,9 @@ export default function WorldPage() {
 
       {/* Map Container */}
       <div className="flex-1 relative h-full">
-        {/* Map Controls - show current view indicator */}
-        <div className="absolute top-4 right-4 z-[1000]">
-          {mapView === "globe" ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/50 text-cyan-400 text-sm">
-              <Globe className="w-4 h-4" />
-              <span>Globe View</span>
-            </div>
-          ) : !selectedLocation ? (
+        {/* Map Controls - Back to Globe button when zoomed in */}
+        {mapView !== "globe" && !selectedLocation && (
+          <div className="absolute top-4 right-4 z-[1000]">
             <Button
               variant="outline"
               size="sm"
@@ -1273,8 +1268,8 @@ export default function WorldPage() {
               <Globe className="w-4 h-4" />
               Back to Globe
             </Button>
-          ) : null}
-        </div>
+          </div>
+        )}
 
         {/* Back Button when zoomed in */}
         {selectedLocation && (
