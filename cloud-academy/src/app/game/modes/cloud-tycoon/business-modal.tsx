@@ -17,43 +17,75 @@ import {
 import { cn } from "@/lib/utils";
 import { Business, RequiredService } from "./types";
 
-// AWS Services for the picker (simplified list)
+// AWS Services for the picker - MUST match IDs from learning_agent/generators/cloud_tycoon.py
 const AWS_SERVICES = [
+  // COMPUTE
   { id: "ec2", name: "EC2", category: "compute", color: "#ED7100" },
   { id: "lambda", name: "Lambda", category: "compute", color: "#ED7100" },
+  { id: "auto-scaling", name: "Auto Scaling", category: "compute", color: "#ED7100" },
+  // CONTAINERS
   { id: "ecs", name: "ECS", category: "containers", color: "#ED7100" },
   { id: "eks", name: "EKS", category: "containers", color: "#ED7100" },
   { id: "fargate", name: "Fargate", category: "containers", color: "#ED7100" },
+  // DATABASE
   { id: "rds", name: "RDS", category: "database", color: "#3B48CC" },
   { id: "aurora", name: "Aurora", category: "database", color: "#3B48CC" },
   { id: "dynamodb", name: "DynamoDB", category: "database", color: "#3B48CC" },
   { id: "elasticache", name: "ElastiCache", category: "database", color: "#3B48CC" },
   { id: "redshift", name: "Redshift", category: "database", color: "#3B48CC" },
+  { id: "neptune", name: "Neptune", category: "database", color: "#3B48CC" },
+  // STORAGE
   { id: "s3", name: "S3", category: "storage", color: "#3F8624" },
   { id: "efs", name: "EFS", category: "storage", color: "#3F8624" },
+  { id: "ebs", name: "EBS", category: "storage", color: "#3F8624" },
   { id: "glacier", name: "Glacier", category: "storage", color: "#3F8624" },
   { id: "backup", name: "Backup", category: "storage", color: "#3F8624" },
+  // NETWORKING
   { id: "vpc", name: "VPC", category: "networking", color: "#8C4FFF" },
   { id: "alb", name: "ALB", category: "networking", color: "#8C4FFF" },
   { id: "nlb", name: "NLB", category: "networking", color: "#8C4FFF" },
   { id: "cloudfront", name: "CloudFront", category: "networking", color: "#8C4FFF" },
   { id: "route53", name: "Route 53", category: "networking", color: "#8C4FFF" },
   { id: "api-gateway", name: "API Gateway", category: "networking", color: "#8C4FFF" },
+  // SECURITY
   { id: "iam", name: "IAM", category: "security", color: "#DD344C" },
   { id: "kms", name: "KMS", category: "security", color: "#DD344C" },
   { id: "secrets-manager", name: "Secrets Mgr", category: "security", color: "#DD344C" },
   { id: "waf", name: "WAF", category: "security", color: "#DD344C" },
+  { id: "shield", name: "Shield", category: "security", color: "#DD344C" },
   { id: "cognito", name: "Cognito", category: "security", color: "#DD344C" },
   { id: "guardduty", name: "GuardDuty", category: "security", color: "#DD344C" },
+  // INTEGRATION
   { id: "sqs", name: "SQS", category: "integration", color: "#E7157B" },
   { id: "sns", name: "SNS", category: "integration", color: "#E7157B" },
   { id: "eventbridge", name: "EventBridge", category: "integration", color: "#E7157B" },
   { id: "step-functions", name: "Step Functions", category: "integration", color: "#E7157B" },
+  // ANALYTICS
   { id: "kinesis", name: "Kinesis", category: "analytics", color: "#8C4FFF" },
   { id: "athena", name: "Athena", category: "analytics", color: "#8C4FFF" },
   { id: "glue", name: "Glue", category: "analytics", color: "#8C4FFF" },
+  { id: "quicksight", name: "QuickSight", category: "analytics", color: "#8C4FFF" },
+  // MANAGEMENT
   { id: "cloudwatch", name: "CloudWatch", category: "management", color: "#E7157B" },
   { id: "cloudtrail", name: "CloudTrail", category: "management", color: "#E7157B" },
+  { id: "cloudformation", name: "CloudFormation", category: "management", color: "#E7157B" },
+  // DISTRACTORS - Common services that make the game harder
+  { id: "elastic-beanstalk", name: "Elastic Beanstalk", category: "compute", color: "#ED7100" },
+  { id: "lightsail", name: "Lightsail", category: "compute", color: "#ED7100" },
+  { id: "documentdb", name: "DocumentDB", category: "database", color: "#3B48CC" },
+  { id: "memorydb", name: "MemoryDB", category: "database", color: "#3B48CC" },
+  { id: "fsx", name: "FSx", category: "storage", color: "#3F8624" },
+  { id: "transfer-family", name: "Transfer Family", category: "storage", color: "#3F8624" },
+  { id: "direct-connect", name: "Direct Connect", category: "networking", color: "#8C4FFF" },
+  { id: "global-accelerator", name: "Global Accelerator", category: "networking", color: "#8C4FFF" },
+  { id: "inspector", name: "Inspector", category: "security", color: "#DD344C" },
+  { id: "macie", name: "Macie", category: "security", color: "#DD344C" },
+  { id: "mq", name: "Amazon MQ", category: "integration", color: "#E7157B" },
+  { id: "appsync", name: "AppSync", category: "integration", color: "#E7157B" },
+  { id: "msk", name: "MSK (Kafka)", category: "analytics", color: "#8C4FFF" },
+  { id: "opensearch", name: "OpenSearch", category: "analytics", color: "#8C4FFF" },
+  { id: "xray", name: "X-Ray", category: "management", color: "#E7157B" },
+  { id: "config", name: "Config", category: "management", color: "#E7157B" },
 ];
 
 type AWSServiceType = typeof AWS_SERVICES[0];
