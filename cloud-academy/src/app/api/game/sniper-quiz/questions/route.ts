@@ -3,8 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-// Fallback questions for Sniper Quiz
-const SNIPER_QUESTIONS = [
+// Learning Agent URL
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://localhost:8000";
+
+// Fallback questions if AI generation fails
+const FALLBACK_QUESTIONS = [
   {
     question: "What is the maximum size of an S3 object?",
     options: ["5 GB", "5 TB", "50 TB", "Unlimited"],
@@ -124,6 +127,9 @@ const SNIPER_QUESTIONS = [
 
 /**
  * POST /api/game/sniper-quiz/questions - Generate questions for Sniper Quiz
+ * 
+ * Tries to use AI-generated questions from the Learning Agent.
+ * Falls back to hardcoded questions if AI is unavailable.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -138,25 +144,79 @@ export async function POST(req: NextRequest) {
     // Get user's profile for personalization
     const academyUser = await prisma.academyUser.findFirst({
       where: { email: session.user.email! },
-      select: { id: true },
+      select: { 
+        id: true, 
+        skillLevel: true,
+        targetCertification: true,
+      },
     });
 
     if (!academyUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Shuffle and select questions
-    const shuffled = [...SNIPER_QUESTIONS].sort(() => Math.random() - 0.5);
+    // Try to get AI-generated questions from Learning Agent
+    try {
+      const agentResponse = await fetch(`${LEARNING_AGENT_URL}/api/game/sniper-quiz/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_level: academyUser.skillLevel || "intermediate",
+          cert_code: academyUser.targetCertification || null,
+          weak_topics: body.weakTopics || null,
+          recent_topics: body.recentTopics || null,
+          question_count: count,
+        }),
+      });
+
+      if (agentResponse.ok) {
+        const aiQuestions = await agentResponse.json();
+        
+        // Transform AI response to match frontend format
+        const questions = aiQuestions.questions.map((q: {
+          id: string;
+          question: string;
+          options: string[];
+          correct_index: number;
+          topic: string;
+          difficulty: string;
+          explanation: string;
+          points: number;
+        }) => ({
+          id: q.id,
+          question: q.question,
+          options: q.options,
+          correctIndex: q.correct_index,
+          topic: q.topic,
+          difficulty: q.difficulty,
+          explanation: q.explanation,
+          points: q.points,
+        }));
+
+        return NextResponse.json({ 
+          questions,
+          source: "ai",
+          topics_covered: aiQuestions.topics_covered,
+        });
+      }
+    } catch (agentError) {
+      console.warn("Learning Agent unavailable, using fallback questions:", agentError);
+    }
+
+    // Fallback: Use hardcoded questions
+    const shuffled = [...FALLBACK_QUESTIONS].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, count);
 
-    // Add IDs and point values
     const questions = selected.map((q, idx) => ({
       id: `sniper_q_${Date.now()}_${idx}`,
       ...q,
-      points: (idx + 1) * 10, // 10, 20, 30... up to 100
+      points: (idx + 1) * 10,
     }));
 
-    return NextResponse.json({ questions });
+    return NextResponse.json({ 
+      questions,
+      source: "fallback",
+    });
   } catch (error) {
     console.error("Error generating sniper quiz questions:", error);
     return NextResponse.json({ error: "Failed to generate questions" }, { status: 500 });

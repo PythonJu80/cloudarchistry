@@ -2093,6 +2093,135 @@ async def get_user_persona(user_id: str):
 
 
 # ============================================
+# CLOUD TYCOON GAME ENDPOINTS
+# ============================================
+
+from pydantic import BaseModel as PydanticBaseModel
+from generators.cloud_tycoon import (
+    generate_tycoon_journey,
+    validate_service_match,
+    TycoonJourney,
+    BusinessUseCase,
+    RequiredService,
+    JOURNEY_THEMES,
+)
+
+class TycoonJourneyRequest(PydanticBaseModel):
+    user_level: str = "intermediate"
+    cert_code: Optional[str] = None
+    theme: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+class TycoonValidateRequest(PydanticBaseModel):
+    use_case_id: str
+    business_name: str
+    use_case_title: str
+    use_case_description: str
+    required_services: List[Dict[str, Any]]
+    contract_value: int
+    difficulty: str
+    submitted_services: List[str]
+
+
+@app.post("/api/tycoon/journey/generate")
+async def generate_tycoon_journey_endpoint(request: TycoonJourneyRequest):
+    """Generate a Cloud Tycoon journey with 10 business use cases."""
+    try:
+        from utils import set_request_api_key, set_request_model
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        journey = await generate_tycoon_journey(
+            user_level=request.user_level,
+            cert_code=request.cert_code,
+            theme=request.theme,
+            api_key=request.openai_api_key,
+        )
+        
+        return {
+            "id": journey.id,
+            "journey_name": journey.journey_name,
+            "theme": journey.theme,
+            "businesses": [
+                {
+                    "id": biz.id,
+                    "business_name": biz.business_name,
+                    "industry": biz.industry,
+                    "icon": biz.icon,
+                    "use_case_title": biz.use_case_title,
+                    "use_case_description": biz.use_case_description,
+                    "required_services": [
+                        {
+                            "service_id": svc.service_id,
+                            "service_name": svc.service_name,
+                            "category": svc.category,
+                            "reason": svc.reason,
+                        }
+                        for svc in biz.required_services
+                    ],
+                    "contract_value": biz.contract_value,
+                    "difficulty": biz.difficulty,
+                    "hints": biz.hints,
+                    "compliance_requirements": biz.compliance_requirements,
+                }
+                for biz in journey.businesses
+            ],
+            "total_contract_value": journey.total_contract_value,
+            "difficulty_distribution": journey.difficulty_distribution,
+        }
+    except ApiKeyRequiredError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Tycoon journey generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate journey: {str(e)}")
+
+
+@app.post("/api/tycoon/validate")
+async def validate_tycoon_services(request: TycoonValidateRequest):
+    """Validate if submitted services match the use case requirements."""
+    try:
+        use_case = BusinessUseCase(
+            id=request.use_case_id,
+            business_name=request.business_name,
+            industry="",
+            icon="",
+            use_case_title=request.use_case_title,
+            use_case_description=request.use_case_description,
+            required_services=[
+                RequiredService(
+                    service_id=svc.get("service_id", ""),
+                    service_name=svc.get("service_name", ""),
+                    category=svc.get("category", ""),
+                    reason=svc.get("reason", ""),
+                )
+                for svc in request.required_services
+            ],
+            contract_value=request.contract_value,
+            difficulty=request.difficulty,
+            hints=[],
+        )
+        
+        result = await validate_service_match(
+            use_case=use_case,
+            submitted_services=request.submitted_services,
+        )
+        
+        return result
+    except Exception as e:
+        logger.error(f"Tycoon validation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+
+
+@app.get("/api/tycoon/themes")
+async def get_tycoon_themes():
+    """Get available journey themes."""
+    return {"themes": JOURNEY_THEMES}
+
+
+# ============================================
 # MAIN
 # ============================================
 

@@ -10,6 +10,8 @@ from .learning import router as learning_router
 from .journey import router as journey_router
 from .config import router as config_router
 from .chat import router as chat_router
+from .game import router as game_router
+from .cloud_tycoon import router as cloud_tycoon_router
 
 # Create main router that includes all sub-routers
 def register_routes(app):
@@ -21,3 +23,5 @@ def register_routes(app):
     app.include_router(journey_router, prefix="/api/learning/journey", tags=["Journey"])
     app.include_router(config_router, prefix="/api", tags=["Config"])
     app.include_router(chat_router, prefix="/api", tags=["Chat"])
+    app.include_router(game_router, prefix="/api/game", tags=["Game Modes"])
+    app.include_router(cloud_tycoon_router, prefix="/api/tycoon", tags=["Cloud Tycoon"])

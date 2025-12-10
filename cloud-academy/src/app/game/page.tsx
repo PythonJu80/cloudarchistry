@@ -702,6 +702,8 @@ export default function GameModePage() {
                   onClick={mode.isLive ? () => {
                     if (mode.slug === "sniper_quiz") {
                       router.push("/game/modes/sniper-quiz");
+                    } else if (mode.slug === "cloud_tycoon") {
+                      router.push("/game/modes/cloud-tycoon");
                     }
                     // Add other game mode routes here as they're built
                   } : undefined}

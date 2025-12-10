@@ -234,8 +234,8 @@ export const GAME_MODES: GameMode[] = [
     description: "Build & manage infrastructure. Earn virtual millions.",
     players: "Solo",
     gradient: "linear-gradient(135deg, #22c55e, #16a34a)",
-    isLive: false,
-    comingSoon: true,
+    isLive: true,
+    comingSoon: false,
   },
   {
     slug: "architecture_poker",
