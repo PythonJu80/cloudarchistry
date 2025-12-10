@@ -54,6 +54,29 @@ class TycoonJourney(BaseModel):
 
 
 # =============================================================================
+# VALID SERVICE IDS - Must match frontend picker
+# =============================================================================
+
+VALID_SERVICE_IDS = {
+    # Compute
+    "ec2", "lambda", "auto-scaling", "ecs", "eks", "fargate",
+    # Database
+    "rds", "aurora", "dynamodb", "elasticache", "redshift", "neptune",
+    # Storage
+    "s3", "efs", "ebs", "glacier", "backup",
+    # Networking
+    "vpc", "alb", "nlb", "cloudfront", "route53", "api-gateway",
+    # Security
+    "iam", "kms", "secrets-manager", "waf", "shield", "cognito", "guardduty",
+    # Integration
+    "sqs", "sns", "eventbridge", "step-functions",
+    # Analytics
+    "kinesis", "athena", "glue", "quicksight",
+    # Management
+    "cloudwatch", "cloudtrail", "cloudformation",
+}
+
+# =============================================================================
 # AWS SERVICES REFERENCE (for AI to pick from)
 # =============================================================================
 
@@ -324,6 +347,22 @@ Make the journey feel like a real consulting trip through different companies.""
         contract_value = biz.get("contract_value", 200000)
         total_value += contract_value
         
+        # Filter and validate required services - only keep valid IDs
+        valid_services = []
+        for svc in biz.get("required_services", []):
+            service_id = svc.get("service_id", "").lower().strip()
+            if service_id in VALID_SERVICE_IDS:
+                valid_services.append(RequiredService(
+                    service_id=service_id,
+                    service_name=svc.get("service_name", ""),
+                    category=svc.get("category", ""),
+                    reason=svc.get("reason", ""),
+                ))
+        
+        # Skip businesses with no valid services
+        if not valid_services:
+            continue
+            
         businesses.append(BusinessUseCase(
             id=biz.get("id", f"biz_{uuid.uuid4().hex[:8]}"),
             business_name=biz.get("business_name", "Unknown Corp"),
@@ -331,15 +370,7 @@ Make the journey feel like a real consulting trip through different companies.""
             icon=biz.get("icon", "🏢"),
             use_case_title=biz.get("use_case_title", "Cloud Migration"),
             use_case_description=biz.get("use_case_description", ""),
-            required_services=[
-                RequiredService(
-                    service_id=svc.get("service_id", ""),
-                    service_name=svc.get("service_name", ""),
-                    category=svc.get("category", ""),
-                    reason=svc.get("reason", ""),
-                )
-                for svc in biz.get("required_services", [])
-            ],
+            required_services=valid_services,
             contract_value=contract_value,
             difficulty=difficulty,
             hints=biz.get("hints", []),
