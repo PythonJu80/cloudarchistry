@@ -13,82 +13,44 @@ import {
   Loader2,
   GripVertical,
   Trash2,
+  ChevronRight,
+  ChevronDown,
+  Network,
+  Server,
+  Container,
+  Database,
+  HardDrive,
+  Shield,
+  FileText,
+  BarChart3,
+  Workflow,
+  GitBranch,
+  Settings,
+  Building,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Business, RequiredService } from "./types";
+import { AWS_SERVICES, AWS_CATEGORIES, type AWSService } from "@/lib/aws-services";
 
-// AWS Services for the picker - MUST match IDs from learning_agent/generators/cloud_tycoon.py
-const AWS_SERVICES = [
-  // COMPUTE
-  { id: "ec2", name: "EC2", category: "compute", color: "#ED7100" },
-  { id: "lambda", name: "Lambda", category: "compute", color: "#ED7100" },
-  { id: "auto-scaling", name: "Auto Scaling", category: "compute", color: "#ED7100" },
-  // CONTAINERS
-  { id: "ecs", name: "ECS", category: "containers", color: "#ED7100" },
-  { id: "eks", name: "EKS", category: "containers", color: "#ED7100" },
-  { id: "fargate", name: "Fargate", category: "containers", color: "#ED7100" },
-  // DATABASE
-  { id: "rds", name: "RDS", category: "database", color: "#3B48CC" },
-  { id: "aurora", name: "Aurora", category: "database", color: "#3B48CC" },
-  { id: "dynamodb", name: "DynamoDB", category: "database", color: "#3B48CC" },
-  { id: "elasticache", name: "ElastiCache", category: "database", color: "#3B48CC" },
-  { id: "redshift", name: "Redshift", category: "database", color: "#3B48CC" },
-  { id: "neptune", name: "Neptune", category: "database", color: "#3B48CC" },
-  // STORAGE
-  { id: "s3", name: "S3", category: "storage", color: "#3F8624" },
-  { id: "efs", name: "EFS", category: "storage", color: "#3F8624" },
-  { id: "ebs", name: "EBS", category: "storage", color: "#3F8624" },
-  { id: "glacier", name: "Glacier", category: "storage", color: "#3F8624" },
-  { id: "backup", name: "Backup", category: "storage", color: "#3F8624" },
-  // NETWORKING
-  { id: "vpc", name: "VPC", category: "networking", color: "#8C4FFF" },
-  { id: "alb", name: "ALB", category: "networking", color: "#8C4FFF" },
-  { id: "nlb", name: "NLB", category: "networking", color: "#8C4FFF" },
-  { id: "cloudfront", name: "CloudFront", category: "networking", color: "#8C4FFF" },
-  { id: "route53", name: "Route 53", category: "networking", color: "#8C4FFF" },
-  { id: "api-gateway", name: "API Gateway", category: "networking", color: "#8C4FFF" },
-  // SECURITY
-  { id: "iam", name: "IAM", category: "security", color: "#DD344C" },
-  { id: "kms", name: "KMS", category: "security", color: "#DD344C" },
-  { id: "secrets-manager", name: "Secrets Mgr", category: "security", color: "#DD344C" },
-  { id: "waf", name: "WAF", category: "security", color: "#DD344C" },
-  { id: "shield", name: "Shield", category: "security", color: "#DD344C" },
-  { id: "cognito", name: "Cognito", category: "security", color: "#DD344C" },
-  { id: "guardduty", name: "GuardDuty", category: "security", color: "#DD344C" },
-  // INTEGRATION
-  { id: "sqs", name: "SQS", category: "integration", color: "#E7157B" },
-  { id: "sns", name: "SNS", category: "integration", color: "#E7157B" },
-  { id: "eventbridge", name: "EventBridge", category: "integration", color: "#E7157B" },
-  { id: "step-functions", name: "Step Functions", category: "integration", color: "#E7157B" },
-  // ANALYTICS
-  { id: "kinesis", name: "Kinesis", category: "analytics", color: "#8C4FFF" },
-  { id: "athena", name: "Athena", category: "analytics", color: "#8C4FFF" },
-  { id: "glue", name: "Glue", category: "analytics", color: "#8C4FFF" },
-  { id: "quicksight", name: "QuickSight", category: "analytics", color: "#8C4FFF" },
-  // MANAGEMENT
-  { id: "cloudwatch", name: "CloudWatch", category: "management", color: "#E7157B" },
-  { id: "cloudtrail", name: "CloudTrail", category: "management", color: "#E7157B" },
-  { id: "cloudformation", name: "CloudFormation", category: "management", color: "#E7157B" },
-  // DISTRACTORS - Common services that make the game harder
-  { id: "elastic-beanstalk", name: "Elastic Beanstalk", category: "compute", color: "#ED7100" },
-  { id: "lightsail", name: "Lightsail", category: "compute", color: "#ED7100" },
-  { id: "documentdb", name: "DocumentDB", category: "database", color: "#3B48CC" },
-  { id: "memorydb", name: "MemoryDB", category: "database", color: "#3B48CC" },
-  { id: "fsx", name: "FSx", category: "storage", color: "#3F8624" },
-  { id: "transfer-family", name: "Transfer Family", category: "storage", color: "#3F8624" },
-  { id: "direct-connect", name: "Direct Connect", category: "networking", color: "#8C4FFF" },
-  { id: "global-accelerator", name: "Global Accelerator", category: "networking", color: "#8C4FFF" },
-  { id: "inspector", name: "Inspector", category: "security", color: "#DD344C" },
-  { id: "macie", name: "Macie", category: "security", color: "#DD344C" },
-  { id: "mq", name: "Amazon MQ", category: "integration", color: "#E7157B" },
-  { id: "appsync", name: "AppSync", category: "integration", color: "#E7157B" },
-  { id: "msk", name: "MSK (Kafka)", category: "analytics", color: "#8C4FFF" },
-  { id: "opensearch", name: "OpenSearch", category: "analytics", color: "#8C4FFF" },
-  { id: "xray", name: "X-Ray", category: "management", color: "#E7157B" },
-  { id: "config", name: "Config", category: "management", color: "#E7157B" },
-];
+// Use the full AWS services from the shared registry
+type AWSServiceType = AWSService;
 
-type AWSServiceType = typeof AWS_SERVICES[0];
+// Icon map for categories
+const categoryIconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  Network,
+  Server,
+  Container,
+  Database,
+  HardDrive,
+  Shield,
+  FileText,
+  BarChart3,
+  Workflow,
+  GitBranch,
+  Settings,
+  Building,
+};
 
 interface BusinessModalProps {
   isOpen: boolean;
@@ -117,7 +79,7 @@ function DraggableService({
         className="w-2 h-2 rounded-full" 
         style={{ backgroundColor: service.color }}
       />
-      <span className="text-xs text-slate-300">{service.name}</span>
+      <span className="text-xs text-slate-300">{service.shortName}</span>
     </div>
   );
 }
@@ -155,7 +117,7 @@ function DroppableSlot({
             className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: service.color }}
           />
-          <span className="text-sm text-slate-200">{service.name}</span>
+          <span className="text-sm text-slate-200">{service.shortName}</span>
           <button
             onClick={onRemove}
             className="ml-2 text-slate-500 hover:text-red-400 transition-colors"
@@ -181,6 +143,8 @@ export function BusinessModal({
   const [showHints, setShowHints] = useState(false);
   const [hintsRevealed, setHintsRevealed] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set()); // All collapsed by default
+  const [searchQuery, setSearchQuery] = useState("");
   const [result, setResult] = useState<{
     correct: boolean;
     score: number;
@@ -514,32 +478,103 @@ export function BusinessModal({
           </div>
 
           {/* Right side - Service Picker */}
-          <div className="w-72 border-l border-slate-800 bg-slate-900 p-4 overflow-y-auto">
-            <h3 className="text-sm font-medium text-slate-400 mb-4">AWS Services</h3>
-            <p className="text-xs text-slate-600 mb-4">Drag services to the slots</p>
+          <div className="w-72 border-l border-slate-800 bg-slate-900 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="p-3 border-b border-slate-800">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-slate-300">AWS Services</h3>
+                <span className="text-[10px] text-slate-600">{AWS_SERVICES.length}</span>
+              </div>
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                <input
+                  type="text"
+                  placeholder="Search services..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-7 pr-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-slate-600"
+                />
+              </div>
+            </div>
             
-            {/* Group by category */}
-            {["compute", "containers", "database", "storage", "networking", "security", "integration", "analytics", "management"].map(category => {
-              const services = AWS_SERVICES.filter(s => s.category === category);
-              if (services.length === 0) return null;
-              
-              return (
-                <div key={category} className="mb-4">
-                  <p className="text-xs text-slate-600 uppercase tracking-wider mb-2">
-                    {category}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {services.map(service => (
-                      <DraggableService 
-                        key={service.id} 
-                        service={service} 
-                        onDragStart={handleDragStart}
-                      />
-                    ))}
-                  </div>
+            {/* Categories - Collapsible */}
+            <div className="flex-1 overflow-y-auto p-2">
+              {searchQuery ? (
+                // Search results
+                <div className="space-y-0.5">
+                  {AWS_SERVICES.filter(s => 
+                    s.shortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).map(service => (
+                    <DraggableService 
+                      key={service.id} 
+                      service={service} 
+                      onDragStart={handleDragStart}
+                    />
+                  ))}
                 </div>
-              );
-            })}
+              ) : (
+                // Category view
+                <div className="space-y-1">
+                  {AWS_CATEGORIES.map(cat => {
+                    const CategoryIcon = categoryIconMap[cat.icon] || Network;
+                    const isExpanded = expandedCategories.has(cat.id);
+                    const services = AWS_SERVICES.filter(s => s.category === cat.id);
+                    if (services.length === 0) return null;
+                    
+                    return (
+                      <div key={cat.id}>
+                        {/* Category header */}
+                        <button
+                          onClick={() => {
+                            setExpandedCategories(prev => {
+                              const next = new Set(prev);
+                              if (next.has(cat.id)) {
+                                next.delete(cat.id);
+                              } else {
+                                next.add(cat.id);
+                              }
+                              return next;
+                            });
+                          }}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-800 transition-colors"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                          )}
+                          <CategoryIcon className="w-4 h-4" style={{ color: cat.color }} />
+                          <span className="text-xs font-medium text-slate-300">{cat.name}</span>
+                          <span className="text-[10px] text-slate-600 ml-auto">{services.length}</span>
+                        </button>
+                        
+                        {/* Services in category */}
+                        {isExpanded && (
+                          <div className="ml-5 mt-1 space-y-0.5">
+                            {services.map(service => (
+                              <DraggableService 
+                                key={service.id} 
+                                service={service} 
+                                onDragStart={handleDragStart}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="p-2 border-t border-slate-800">
+              <p className="text-[10px] text-slate-600 text-center">
+                Drag services to the slots
+              </p>
+            </div>
           </div>
         </div>
       </DialogContent>

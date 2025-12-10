@@ -54,26 +54,44 @@ class TycoonJourney(BaseModel):
 
 
 # =============================================================================
-# VALID SERVICE IDS - Must match frontend picker
+# VALID SERVICE IDS - Must match frontend aws-services.ts (95+ services)
 # =============================================================================
 
 VALID_SERVICE_IDS = {
+    # Networking
+    "vpc", "subnet-public", "subnet-private", "route-table", "nacl", "security-group",
+    "internet-gateway", "nat-gateway", "vpc-peering", "transit-gateway", "alb", "nlb",
+    "route53", "cloudfront", "global-accelerator", "vpn-gateway", "direct-connect",
+    "privatelink", "elastic-ip",
     # Compute
-    "ec2", "lambda", "auto-scaling", "ecs", "eks", "fargate",
+    "ec2", "auto-scaling", "lambda", "ebs", "efs", "batch", "lightsail",
+    # Containers
+    "ecs", "eks", "fargate", "ecr",
     # Database
     "rds", "aurora", "dynamodb", "elasticache", "redshift", "neptune",
+    "documentdb", "memorydb", "rds-replica",
     # Storage
-    "s3", "efs", "ebs", "glacier", "backup",
-    # Networking
-    "vpc", "alb", "nlb", "cloudfront", "route53", "api-gateway",
+    "s3", "glacier", "backup", "fsx", "storage-gateway", "datasync",
     # Security
-    "iam", "kms", "secrets-manager", "waf", "shield", "cognito", "guardduty",
+    "iam", "kms", "secrets-manager", "cognito", "waf", "shield", "guardduty",
+    "iam-role", "iam-policy", "permission-boundary", "acm", "inspector", "macie",
+    "security-hub", "detective", "iam-user", "iam-group", "resource-policy",
+    "trust-policy", "identity-provider", "iam-identity-center",
     # Integration
-    "sqs", "sns", "eventbridge", "step-functions",
-    # Analytics
-    "kinesis", "athena", "glue", "quicksight",
+    "api-gateway", "eventbridge", "sns", "sqs", "step-functions", "appsync", "mq", "ses",
     # Management
-    "cloudwatch", "cloudtrail", "cloudformation",
+    "cloudwatch", "cloudtrail", "systems-manager", "config", "xray",
+    "cloudwatch-logs", "cloudwatch-alarms", "cloudformation", "health-dashboard", "trusted-advisor",
+    # Analytics
+    "kinesis-streams", "kinesis-firehose", "kinesis-analytics", "msk", "athena",
+    "glue", "quicksight", "opensearch",
+    # DevOps
+    "codecommit", "codepipeline", "codebuild", "codedeploy", "codeartifact", "cloud9",
+    # Governance
+    "organizations", "scp", "control-tower", "service-catalog", "license-manager", "resource-groups",
+    # Policies
+    "s3-lifecycle-policy", "s3-bucket-policy", "iam-identity-policy", "iam-trust-policy",
+    "resource-based-policy", "vpc-endpoint-policy", "backup-policy", "scaling-policy", "dlm-policy",
 }
 
 # =============================================================================
@@ -81,72 +99,117 @@ VALID_SERVICE_IDS = {
 # =============================================================================
 
 AWS_SERVICES_REFERENCE = """
-Available AWS Services (use these exact IDs) with TYPICAL ANNUAL COSTS for mid-size deployments:
-
-COMPUTE:
-- ec2: Amazon EC2 - Virtual servers (~$15,000-50,000/year for production fleet)
-- lambda: AWS Lambda - Serverless functions (~$2,000-20,000/year based on invocations)
-- auto-scaling: Auto Scaling Group - Scale EC2 automatically (included with EC2)
-- ecs: Amazon ECS - Container orchestration (~$20,000-60,000/year with Fargate)
-- eks: Amazon EKS - Kubernetes (~$30,000-100,000/year including nodes)
-- fargate: AWS Fargate - Serverless containers (~$25,000-80,000/year)
-
-DATABASE:
-- rds: Amazon RDS - Managed relational database (~$12,000-48,000/year)
-- aurora: Amazon Aurora - High-performance MySQL/PostgreSQL (~$24,000-120,000/year)
-- dynamodb: Amazon DynamoDB - NoSQL database (~$5,000-50,000/year based on capacity)
-- elasticache: Amazon ElastiCache - In-memory caching (~$8,000-36,000/year)
-- redshift: Amazon Redshift - Data warehouse (~$50,000-200,000/year)
-- neptune: Amazon Neptune - Graph database (~$20,000-80,000/year)
-
-STORAGE:
-- s3: Amazon S3 - Object storage (~$1,000-30,000/year based on volume)
-- efs: Amazon EFS - Elastic file system (~$3,000-24,000/year)
-- ebs: Amazon EBS - Block storage (~$2,000-15,000/year)
-- glacier: Amazon S3 Glacier - Archive storage (~$500-5,000/year)
-- backup: AWS Backup - Centralized backup (~$2,000-12,000/year)
+Available AWS Services (use these exact IDs). Pick services appropriate for the use case:
 
 NETWORKING:
-- vpc: Amazon VPC - Virtual private cloud (~$1,000-5,000/year for NAT/endpoints)
-- alb: Application Load Balancer - HTTP/HTTPS load balancing (~$2,000-12,000/year)
-- nlb: Network Load Balancer - TCP/UDP load balancing (~$2,000-10,000/year)
-- cloudfront: Amazon CloudFront - CDN (~$5,000-50,000/year based on traffic)
-- route53: Amazon Route 53 - DNS (~$500-2,000/year)
-- api-gateway: Amazon API Gateway - API management (~$3,000-30,000/year)
+- vpc: Amazon VPC - Virtual private cloud
+- subnet-public / subnet-private: Public/Private Subnets
+- alb: Application Load Balancer - HTTP/HTTPS load balancing
+- nlb: Network Load Balancer - TCP/UDP load balancing
+- cloudfront: Amazon CloudFront - CDN
+- route53: Amazon Route 53 - DNS
+- api-gateway: Amazon API Gateway - API management
+- nat-gateway: NAT Gateway - Outbound internet for private subnets
+- internet-gateway: Internet Gateway - VPC internet access
+- transit-gateway: Transit Gateway - Multi-VPC connectivity
+- direct-connect: AWS Direct Connect - Dedicated network connection
+- global-accelerator: AWS Global Accelerator - Global traffic management
+- vpn-gateway: VPN Gateway - Site-to-site VPN
+- privatelink: AWS PrivateLink - Private connectivity to services
+
+COMPUTE:
+- ec2: Amazon EC2 - Virtual servers
+- lambda: AWS Lambda - Serverless functions
+- auto-scaling: Auto Scaling Group - Scale EC2 automatically
+- batch: AWS Batch - Batch computing
+- lightsail: Amazon Lightsail - Simple VPS
+
+CONTAINERS:
+- ecs: Amazon ECS - Container orchestration
+- eks: Amazon EKS - Kubernetes
+- fargate: AWS Fargate - Serverless containers
+- ecr: Amazon ECR - Container registry
+
+DATABASE:
+- rds: Amazon RDS - Managed relational database
+- aurora: Amazon Aurora - High-performance MySQL/PostgreSQL
+- dynamodb: Amazon DynamoDB - NoSQL database
+- elasticache: Amazon ElastiCache - In-memory caching (Redis/Memcached)
+- redshift: Amazon Redshift - Data warehouse
+- neptune: Amazon Neptune - Graph database
+- documentdb: Amazon DocumentDB - MongoDB-compatible
+- memorydb: Amazon MemoryDB - Redis-compatible durable database
+
+STORAGE:
+- s3: Amazon S3 - Object storage
+- efs: Amazon EFS - Elastic file system
+- ebs: Amazon EBS - Block storage
+- glacier: Amazon S3 Glacier - Archive storage
+- backup: AWS Backup - Centralized backup
+- fsx: Amazon FSx - Windows/Lustre file systems
+- storage-gateway: AWS Storage Gateway - Hybrid storage
+- datasync: AWS DataSync - Data transfer
 
 SECURITY:
-- iam: AWS IAM - Identity and access management (free)
-- kms: AWS KMS - Key management (~$1,000-5,000/year)
-- secrets-manager: AWS Secrets Manager - Secrets storage (~$500-3,000/year)
-- waf: AWS WAF - Web application firewall (~$3,000-15,000/year)
-- shield: AWS Shield - DDoS protection (~$36,000/year for Advanced)
-- cognito: Amazon Cognito - User authentication (~$2,000-20,000/year based on MAU)
-- guardduty: Amazon GuardDuty - Threat detection (~$3,000-15,000/year)
+- iam: AWS IAM - Identity and access management
+- iam-role: IAM Role - Service/cross-account access
+- kms: AWS KMS - Key management
+- secrets-manager: AWS Secrets Manager - Secrets storage
+- waf: AWS WAF - Web application firewall
+- shield: AWS Shield - DDoS protection
+- cognito: Amazon Cognito - User authentication
+- guardduty: Amazon GuardDuty - Threat detection
+- inspector: Amazon Inspector - Vulnerability scanning
+- macie: Amazon Macie - S3 data security
+- security-hub: AWS Security Hub - Security posture
+- acm: AWS Certificate Manager - SSL/TLS certificates
+- iam-identity-center: IAM Identity Center - SSO
 
 INTEGRATION:
-- sqs: Amazon SQS - Message queuing (~$500-5,000/year)
-- sns: Amazon SNS - Pub/sub messaging (~$500-3,000/year)
-- eventbridge: Amazon EventBridge - Event bus (~$1,000-10,000/year)
-- step-functions: AWS Step Functions - Workflow orchestration (~$2,000-15,000/year)
+- sqs: Amazon SQS - Message queuing
+- sns: Amazon SNS - Pub/sub messaging
+- eventbridge: Amazon EventBridge - Event bus
+- step-functions: AWS Step Functions - Workflow orchestration
+- appsync: AWS AppSync - GraphQL API
+- mq: Amazon MQ - Message broker (ActiveMQ/RabbitMQ)
+- ses: Amazon SES - Email service
 
 ANALYTICS:
-- kinesis: Amazon Kinesis - Real-time streaming (~$10,000-60,000/year)
-- athena: Amazon Athena - Query S3 with SQL (~$2,000-20,000/year)
-- glue: AWS Glue - ETL service (~$5,000-40,000/year)
-- quicksight: Amazon QuickSight - BI dashboards (~$3,000-30,000/year)
+- kinesis-streams: Amazon Kinesis Data Streams - Real-time streaming
+- kinesis-firehose: Amazon Kinesis Firehose - Data delivery
+- athena: Amazon Athena - Query S3 with SQL
+- glue: AWS Glue - ETL service
+- quicksight: Amazon QuickSight - BI dashboards
+- opensearch: Amazon OpenSearch - Search and analytics
+- msk: Amazon MSK - Managed Kafka
 
 MANAGEMENT:
-- cloudwatch: Amazon CloudWatch - Monitoring (~$2,000-15,000/year)
-- cloudtrail: AWS CloudTrail - Audit logging (~$1,000-5,000/year)
-- cloudformation: AWS CloudFormation - Infrastructure as code (free)
+- cloudwatch: Amazon CloudWatch - Monitoring
+- cloudwatch-logs: CloudWatch Logs - Log management
+- cloudwatch-alarms: CloudWatch Alarms - Alerting
+- cloudtrail: AWS CloudTrail - Audit logging
+- cloudformation: AWS CloudFormation - Infrastructure as code
+- systems-manager: AWS Systems Manager - Operations management
+- config: AWS Config - Resource compliance
+- xray: AWS X-Ray - Distributed tracing
+- trusted-advisor: AWS Trusted Advisor - Best practices
+
+DEVOPS:
+- codepipeline: AWS CodePipeline - CI/CD pipeline
+- codebuild: AWS CodeBuild - Build service
+- codedeploy: AWS CodeDeploy - Deployment automation
+- codecommit: AWS CodeCommit - Git repository
+- codeartifact: AWS CodeArtifact - Artifact repository
+
+GOVERNANCE:
+- organizations: AWS Organizations - Multi-account management
+- scp: Service Control Policy - Organization policies
+- control-tower: AWS Control Tower - Landing zone
+- service-catalog: AWS Service Catalog - Approved products
 
 CONTRACT VALUE CALCULATION:
-The contract_value should represent a realistic 1-YEAR consulting/implementation contract that includes:
-1. Sum of annual AWS infrastructure costs for all required services
-2. Add 30-50% for implementation, migration, and consulting fees
-3. Add 10-20% for ongoing support and optimization
-
-Example: If services cost ~$80,000/year in AWS spend, contract = $80,000 + 40% = $112,000
+The contract_value should represent a realistic 1-YEAR consulting/implementation contract.
+Base it on complexity: Easy ($50K-150K), Medium ($150K-400K), Hard ($400K-800K).
 """
 
 # =============================================================================
@@ -163,7 +226,10 @@ USER PROFILE:
 
 JOURNEY THEME: {theme}
 
-Generate exactly 10 unique business use cases. Each business should:
+CRITICAL: Generate EXACTLY 10 business use cases. Not 9, not 11 - exactly 10.
+The game map has exactly 10 waypoints and will break if you return more or fewer.
+
+Each business should:
 
 1. BE REALISTIC AND SPECIFIC:
    - Real-world business scenarios

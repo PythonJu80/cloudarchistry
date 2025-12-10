@@ -282,10 +282,7 @@ export default function CloudTycoonPage() {
       const response = await fetch("/api/game/tycoon/journey", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_level: "intermediate",
-          cert_code: "SAA-C03",
-        }),
+        body: JSON.stringify({}), // API fetches user's cert and skill level from profile
       });
       
       if (!response.ok) {

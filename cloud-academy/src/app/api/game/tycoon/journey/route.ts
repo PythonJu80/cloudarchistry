@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
+import { prisma } from "@/lib/db";
 
 const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
 
@@ -12,7 +13,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
+    // Body is empty - we get user's cert/level from their profile
+    await request.json();
+
+    // Get user's profile for certification and skill level
+    const profile = await prisma.academyUserProfile.findFirst({
+      where: { academyUserId: session.user.id },
+      select: { 
+        skillLevel: true,
+        targetCertification: true,
+      },
+    });
+
+    if (!profile) {
+      return NextResponse.json({ error: "User profile not found" }, { status: 404 });
+    }
 
     // Get API key and preferred model from user's settings
     const aiConfig = await getAiConfigForRequest(session.user.academyProfileId || session.user.id);
@@ -23,12 +38,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call learning agent
+    // Call learning agent with user's actual cert and skill level
     const response = await fetch(`${LEARNING_AGENT_URL}/api/tycoon/journey/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...body,
+        user_level: profile.skillLevel || "intermediate",
+        cert_code: profile.targetCertification || "SAA-C03",
         openai_api_key: aiConfig.key,
         preferred_model: aiConfig.preferredModel,
       }),
