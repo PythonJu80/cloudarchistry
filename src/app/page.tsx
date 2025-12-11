@@ -70,7 +70,48 @@ const cloudProviders = [
 ];
 
 export default function LandingPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
+  // Render skeleton for auth buttons while session is loading to prevent flash
+  const renderAuthButtons = () => {
+    if (status === "loading") {
+      return (
+        <div className="flex items-center gap-4">
+          <div className="h-9 w-20 bg-muted animate-pulse rounded-md" />
+          <div className="h-9 w-28 bg-muted animate-pulse rounded-md" />
+        </div>
+      );
+    }
+    
+    if (session) {
+      return (
+        <>
+          <span className="text-sm text-muted-foreground hidden md:block">
+            {session.user.email}
+          </span>
+          <Link href="/migrate">
+            <Button className="bg-terminal-cyan hover:bg-terminal-cyan/90 text-black">
+              Dashboard
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+        </>
+      );
+    }
+    
+    return (
+      <>
+        <Link href="/login">
+          <Button variant="ghost">Sign In</Button>
+        </Link>
+        <Link href="/register">
+          <Button className="bg-terminal-cyan hover:bg-terminal-cyan/90 text-black">
+            Get Started
+          </Button>
+        </Link>
+      </>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,30 +130,7 @@ export default function LandingPage() {
           </Link>
           
           <div className="flex items-center gap-4">
-            {session ? (
-              <>
-                <span className="text-sm text-muted-foreground hidden md:block">
-                  {session.user.email}
-                </span>
-                <Link href="/migrate">
-                  <Button className="bg-terminal-cyan hover:bg-terminal-cyan/90 text-black">
-                    Dashboard
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost">Sign In</Button>
-                </Link>
-                <Link href="/register">
-                  <Button className="bg-terminal-cyan hover:bg-terminal-cyan/90 text-black">
-                    Get Started
-                  </Button>
-                </Link>
-              </>
-            )}
+            {renderAuthButtons()}
           </div>
         </div>
       </header>

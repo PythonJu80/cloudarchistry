@@ -16,10 +16,10 @@ services:
       timeout: 5s
       retries: 5
     profiles:
-      - dev
+      - prod
 
-  # # Dev container (main CloudMigrate app) (DISABLED)
-  # dev:
+  # # prod container (main CloudMigrate app) (DISABLED)
+  # prod:
   #   image: node:20-slim
   #   restart: unless-stopped
   #   working_dir: /app
@@ -48,7 +48,7 @@ services:
   #     - .:/app
   #     - node_modules:/app/node_modules
   #     - ${HOME}:/user-home:ro  # Mount user's home directory (read-only)
-  #   command: bash -c "apt-get update && apt-get install -y openssl && npm install && npx prisma generate && npx prisma db push --skip-generate && npm run dev"
+  #   command: bash -c "apt-get update && apt-get install -y openssl && npm install && npx prisma generate && npx prisma db push --skip-generate && npm run prod"
   #   depends_on:
   #     postgres:
   #       condition: service_healthy
@@ -59,7 +59,7 @@ services:
   #     crawl4ai:
   #       condition: service_started
   #   profiles:
-  #     - dev
+  #     - prod
 
   # Redis - Job queues, caching, event bus
   redis:
@@ -76,7 +76,7 @@ services:
       timeout: 5s
       retries: 5
     profiles:
-      - dev
+      - prod
 
   # Neo4j Graph Database - Multi-tenant knowledge graphs
   neo4j:
@@ -94,7 +94,7 @@ services:
       - neo4j_data:/data
       - neo4j_logs:/logs
     profiles:
-      - dev
+      - prod
 
   # # Prometheus - Metrics collection (DISABLED)
   # prometheus:
@@ -110,7 +110,7 @@ services:
   #     - '--storage.tsdb.path=/prometheus'
   #     - '--web.enable-lifecycle'
   #   profiles:
-  #     - dev
+  #     - prod
 
   # # Grafana - Metrics visualization (DISABLED)
   # grafana:
@@ -133,7 +133,7 @@ services:
   #   depends_on:
   #     - prometheus
   #   profiles:
-  #     - dev
+  #     - prod
 
   # # CloudWatch Exporter (YACE) - AWS metrics to Prometheus (DISABLED)
   # yace:
@@ -151,7 +151,7 @@ services:
   #     - '--config.file=/tmp/config.yml'
   #     - '--listen-address=:5000'
   #   profiles:
-  #     - dev
+  #     - prod
 
   # # Documentation site (Nextra) (DISABLED)
   # docs:
@@ -163,9 +163,9 @@ services:
   #   volumes:
   #     - ./docs-site:/app
   #     - docs_node_modules:/app/node_modules
-  #   command: bash -c "npm install && npm run dev"
+  #   command: bash -c "npm install && npm run prod"
   #   profiles:
-  #     - dev
+  #     - prod
 
   # # Crawl4AI RAG API - Web crawling and knowledge base (DISABLED)
   # crawl4ai:
@@ -215,7 +215,7 @@ services:
   #     retries: 3
   #   restart: unless-stopped
   #   profiles:
-  #     - dev
+  #     - prod
 
   # # CloudMigrate prod container (DISABLED)
   # cloudmigrate:
@@ -225,7 +225,7 @@ services:
   #   ports:
   #     - "6080:3000"
   #   environment:
-  #     - DATABASE_URL=file:/app/data/dev.db
+  #     - DATABASE_URL=file:/app/data/prod.db
   #     - NEXTAUTH_URL=http://localhost:6080
   #     - NEXTAUTH_SECRET=your-super-secret-key-change-in-production
   #     - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
@@ -257,28 +257,30 @@ services:
       timeout: 10s
       retries: 3
     profiles:
-      - dev
+      - prod
 
-  # CloudAcademy - Cloud Architecture Training Platform
+  # CloudAcademy - Production Build
   cloud-academy:
-    image: node:20-slim
+    build:
+      context: ./cloud-academy
+      dockerfile: Dockerfile
     restart: unless-stopped
-    working_dir: /app
     ports:
       - "6060:6060"
     env_file:
       - ./cloud-academy/.env
     environment:
+      - NODE_ENV=production
       - PORT=6060
+      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-    volumes:
-      - ./cloud-academy:/app
-      - cloud_academy_node_modules:/app/node_modules
-    command: bash -c "apt-get update && apt-get install -y openssl && npm install && npx prisma generate && npm run dev"
     depends_on:
-      - learning-agent
+      postgres:
+        condition: service_healthy
+      learning-agent:
+        condition: service_healthy
     profiles:
-      - dev
+      - prod
 
 volumes:
   postgres_data:

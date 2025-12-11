@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Loader2,
@@ -48,7 +48,7 @@ const suggestedPrompts = [
   { text: "Explain Lambda cold starts", icon: "⚡" },
 ];
 
-export default function ChatPage() {
+function ChatContent() {
   const searchParams = useSearchParams();
   const initialQuestion = searchParams.get("q");
   
@@ -710,5 +710,17 @@ export default function ChatPage() {
         </button>
       )}
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-[calc(100vh-160px)] items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
   );
 }

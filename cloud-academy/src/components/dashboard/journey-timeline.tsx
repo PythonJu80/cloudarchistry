@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, memo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
@@ -447,7 +447,8 @@ function JourneyPath({
   );
 }
 
-function JourneyCard({ 
+// Memoized to prevent re-renders when parent state changes but journey data hasn't
+const JourneyCard = memo(function JourneyCard({ 
   journey,
   apiKey,
   preferredModel,
@@ -627,7 +628,7 @@ function JourneyCard({
       )}
     </>
   );
-}
+});
 
 export function JourneyTimeline({ journeys, apiKey, preferredModel, onRefresh }: JourneyTimelineProps) {
   const activeJourneys = journeys.filter(j => j.status === "in_progress");

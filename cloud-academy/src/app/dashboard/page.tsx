@@ -32,6 +32,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { JourneyTimeline } from "@/components/dashboard/journey-timeline";
 import { Navbar } from "@/components/navbar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDashboardSocket } from "@/hooks/use-dashboard-socket";
 
 interface DashboardData {
   profile: {
@@ -291,25 +293,125 @@ export default function DashboardPage() {
     }
   }, [status, router, fetchDashboardData, fetchVersusData]);
 
-  // Poll for versus data updates (challenges, match completions)
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    
-    // Poll every 10 seconds for new challenges or match updates
-    const interval = setInterval(() => {
+  // WebSocket for real-time versus updates (replaces polling)
+  const { isConnected: socketConnected } = useDashboardSocket({
+    userId: myUserId || "",
+    onVersusUpdate: () => {
+      // Refetch versus data when we receive real-time updates
       fetchVersusData();
-    }, 10000);
-    
-    return () => clearInterval(interval);
-  }, [status, fetchVersusData]);
+    },
+    onChallengeUpdate: () => {
+      // Refresh dashboard data when a challenge is completed
+      fetchDashboardData();
+    },
+    onJourneyUpdate: () => {
+      // Refresh dashboard data when journey progress changes
+      fetchDashboardData();
+    },
+    onNotification: (message) => {
+      console.log("[Dashboard] Notification:", message);
+    },
+  });
+
+  // Log socket connection status for debugging
+  useEffect(() => {
+    if (socketConnected) {
+      console.log("[Dashboard] WebSocket connected for real-time updates");
+    }
+  }, [socketConnected]);
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading dashboard...</p>
-        </div>
+      <div className="min-h-screen bg-background">
+        <Navbar activePath="/dashboard" />
+        <main className="pt-24 pb-12 px-6">
+          <div className="max-w-7xl mx-auto">
+            {/* Header Skeleton */}
+            <div className="mb-8">
+              <Skeleton className="h-9 w-80 mb-2" />
+              <Skeleton className="h-5 w-96" />
+            </div>
+
+            {/* Stats Overview Skeleton */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="bg-card/50 border-border/50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-lg" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-6 w-16" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Main Grid Skeleton */}
+            <div className="grid lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                {/* Active Journeys Skeleton */}
+                <Card className="bg-card/50 border-border/50">
+                  <CardHeader>
+                    <Skeleton className="h-6 w-40" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {[...Array(2)].map((_, i) => (
+                        <div key={i} className="p-4 rounded-xl bg-slate-900/50 border border-border/50">
+                          <div className="flex items-center gap-3 mb-3">
+                            <Skeleton className="w-10 h-10 rounded-lg" />
+                            <div className="space-y-2 flex-1">
+                              <Skeleton className="h-5 w-48" />
+                              <Skeleton className="h-4 w-32" />
+                            </div>
+                          </div>
+                          <Skeleton className="h-2 w-full rounded-full" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Challenge Progress Skeleton */}
+                <Card className="bg-card/50 border-border/50">
+                  <CardHeader>
+                    <Skeleton className="h-6 w-44" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="text-center p-4 rounded-lg bg-muted/20">
+                          <Skeleton className="w-6 h-6 mx-auto mb-2 rounded-full" />
+                          <Skeleton className="h-8 w-8 mx-auto mb-1" />
+                          <Skeleton className="h-3 w-16 mx-auto" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Sidebar Skeleton */}
+              <div className="space-y-6">
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i} className="bg-card/50 border-border/50">
+                    <CardHeader>
+                      <Skeleton className="h-5 w-28" />
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {[...Array(3)].map((_, j) => (
+                        <Skeleton key={j} className="h-10 w-full rounded-lg" />
+                      ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -335,7 +437,8 @@ export default function DashboardPage() {
   const xpForNextLevel = profile.level * 1000;
   const xpProgress = (profile.xp / xpForNextLevel) * 100;
 
-  // Separate challenges by status
+  // Memoize expensive filter operations to prevent re-computation on every render
+  // Note: These are safe because data is guaranteed to exist at this point (after early returns)
   const completedChallenges = challengeDetails.filter((c) => c.status === "completed");
   const inProgressChallenges = challengeDetails.filter((c) => c.status === "in_progress");
   const pendingChallenges = challengeDetails.filter(

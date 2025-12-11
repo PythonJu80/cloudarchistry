@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   Search, 
@@ -120,13 +120,14 @@ export default function ChallengesPage() {
   const [selectedIndustry, setSelectedIndustry] = useState("All");
   const [selectedDifficulty, setSelectedDifficulty] = useState("All");
 
-  const filteredChallenges = challenges.filter((challenge) => {
+  // Memoize filtered challenges to prevent recalculation on unrelated state changes
+  const filteredChallenges = useMemo(() => challenges.filter((challenge) => {
     const matchesSearch = challenge.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          challenge.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesIndustry = selectedIndustry === "All" || challenge.industry === selectedIndustry;
     const matchesDifficulty = selectedDifficulty === "All" || challenge.difficulty === selectedDifficulty;
     return matchesSearch && matchesIndustry && matchesDifficulty;
-  });
+  }), [searchQuery, selectedIndustry, selectedDifficulty]);
 
   return (
     <div className="min-h-screen bg-background">

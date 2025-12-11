@@ -1,5 +1,5 @@
 /**
- * Socket.io server singleton for real-time versus mode
+ * Socket.io server singleton for real-time versus mode and dashboard updates
  */
 
 import { Server as SocketIOServer } from "socket.io";
@@ -10,6 +10,9 @@ let io: SocketIOServer | null = null;
 
 // Track which users are in which match rooms
 const matchRooms = new Map<string, Set<string>>(); // matchCode -> Set of socket IDs
+
+// Track dashboard connections by userId
+const dashboardUsers = new Map<string, Set<string>>(); // userId -> Set of socket IDs
 
 export function initSocketServer(httpServer: HTTPServer): SocketIOServer {
   if (io) {
@@ -87,6 +90,45 @@ export function initSocketServer(httpServer: HTTPServer): SocketIOServer {
       io?.to(`match:${data.matchCode}`).emit("match-update", data.update);
     });
 
+    // ==========================================
+    // DASHBOARD REAL-TIME EVENTS
+    // ==========================================
+
+    // Join dashboard room for real-time updates
+    socket.on("join-dashboard", (data: { userId: string }) => {
+      const { userId } = data;
+      socket.join(`dashboard:${userId}`);
+      
+      // Track user connection
+      if (!dashboardUsers.has(userId)) {
+        dashboardUsers.set(userId, new Set());
+      }
+      dashboardUsers.get(userId)!.add(socket.id);
+      
+      socket.data.dashboardUserId = userId;
+      console.log(`[Socket] User ${userId} joined dashboard room`);
+    });
+
+    // Leave dashboard room
+    socket.on("leave-dashboard", (data: { userId: string }) => {
+      const { userId } = data;
+      socket.leave(`dashboard:${userId}`);
+      dashboardUsers.get(userId)?.delete(socket.id);
+      console.log(`[Socket] User ${userId} left dashboard room`);
+    });
+
+    // Request versus data refresh (client can request, server will fetch and emit)
+    socket.on("request-versus-update", async (data: { userId: string }) => {
+      // The actual data fetching happens in the API route that calls emitToUser
+      // This is just to acknowledge the request
+      console.log(`[Socket] Versus update requested for user ${data.userId}`);
+    });
+
+    // Request full dashboard refresh
+    socket.on("request-dashboard-update", async (data: { userId: string }) => {
+      console.log(`[Socket] Dashboard update requested for user ${data.userId}`);
+    });
+
     // Handle disconnect
     socket.on("disconnect", () => {
       const matchCode = socket.data.matchCode;
@@ -96,6 +138,13 @@ export function initSocketServer(httpServer: HTTPServer): SocketIOServer {
           userId: socket.data.userId,
         });
       }
+      
+      // Clean up dashboard connection
+      const dashboardUserId = socket.data.dashboardUserId;
+      if (dashboardUserId) {
+        dashboardUsers.get(dashboardUserId)?.delete(socket.id);
+      }
+      
       console.log(`[Socket] Client disconnected: ${socket.id}`);
     });
   });
@@ -113,4 +162,31 @@ export function emitToMatch(matchCode: string, event: string, data: unknown) {
   if (io) {
     io.to(`match:${matchCode}`).emit(event, data);
   }
+}
+
+// Helper to emit to a specific user's dashboard
+export function emitToUser(userId: string, event: string, data: unknown) {
+  if (io) {
+    io.to(`dashboard:${userId}`).emit(event, data);
+  }
+}
+
+// Helper to emit versus updates to a user
+export function emitVersusUpdate(userId: string, matches: unknown[]) {
+  emitToUser(userId, "versus-update", matches);
+}
+
+// Helper to emit challenge completion to a user
+export function emitChallengeUpdate(userId: string, data: unknown) {
+  emitToUser(userId, "challenge-completed", data);
+}
+
+// Helper to emit journey progress to a user
+export function emitJourneyUpdate(userId: string, data: unknown) {
+  emitToUser(userId, "journey-progress", data);
+}
+
+// Helper to send notification to a user
+export function emitNotification(userId: string, message: string) {
+  emitToUser(userId, "notification", message);
 }

@@ -202,22 +202,17 @@ export default function GameMatchPage() {
     }
   }, [authStatus, matchCode, router, fetchMatch]);
 
-  // Polling - more frequent for pending matches, less for active
+  // WebSocket handles real-time updates - no polling needed
+  // Manual refresh available via fetchMatch/fetchQuestion if socket disconnects
   useEffect(() => {
-    if (!match) return;
-    
-    // Poll every 3 seconds for pending (waiting for accept), 10 seconds for active
-    const pollInterval = match.status === "pending" ? 3000 : 10000;
-    
-    const interval = setInterval(() => {
+    // When socket reconnects, refresh data
+    if (isConnected && match) {
       fetchMatch();
       if (match.status === "active") {
         fetchQuestion();
       }
-    }, pollInterval);
-    
-    return () => clearInterval(interval);
-  }, [match?.status, matchCode, fetchMatch, fetchQuestion]);
+    }
+  }, [isConnected, match?.status, fetchMatch, fetchQuestion]);
 
   // Fetch question when match becomes active and show notification
   const [prevStatus, setPrevStatus] = useState<string | null>(null);

@@ -6,8 +6,8 @@ import path from "path";
 
 const SERVICES_FILE_PATH = path.join(process.cwd(), "src/lib/aws-services.ts");
 
-// Template for new service
-export const SERVICE_TEMPLATE = {
+// Template for new service (not exported - Next.js routes can only export HTTP methods)
+const SERVICE_TEMPLATE = {
   id: "my-service",
   name: "My Custom Service",
   shortName: "MyService",

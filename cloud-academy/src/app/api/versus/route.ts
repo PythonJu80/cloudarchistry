@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { Resend } from "resend";
+import { emitVersusUpdate } from "@/lib/socket";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXTAUTH_URL || "http://localhost:6060";
@@ -151,6 +152,10 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    // Emit WebSocket update to both players
+    emitVersusUpdate(academyUser.id, [match]);
+    emitVersusUpdate(opponentId, [match]);
 
     // Send challenge email to opponent
     const gameUrl = `${APP_URL}/game/${matchCode}`;

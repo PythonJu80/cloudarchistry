@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { emitVersusUpdate } from "@/lib/socket";
 
 /**
  * GET /api/versus/[matchCode] - Get match details and state
@@ -212,6 +213,10 @@ export async function PATCH(
           data: { status: "active", startedAt: new Date() },
         });
 
+        // Emit WebSocket update to both players
+        emitVersusUpdate(match.player1Id, [updated]);
+        emitVersusUpdate(match.player2Id, [updated]);
+
         return NextResponse.json({ match: updated, message: "Match started!" });
       }
 
@@ -230,6 +235,10 @@ export async function PATCH(
           where: { matchCode },
           data: { status: "cancelled" },
         });
+
+        // Emit WebSocket update to both players
+        emitVersusUpdate(match.player1Id, [updated]);
+        emitVersusUpdate(match.player2Id, [updated]);
 
         return NextResponse.json({ 
           match: updated, 

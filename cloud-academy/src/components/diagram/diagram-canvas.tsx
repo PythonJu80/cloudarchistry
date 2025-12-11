@@ -204,10 +204,6 @@ function DiagramCanvasInner({
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Autosave toggle - can be disabled for slow connections
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
   // 🎮 GAMIFICATION STATE
   const [diagramScore, setDiagramScore] = useState<DiagramScore>(initialScore || createInitialScore());
@@ -276,33 +272,13 @@ function DiagramCanvasInner({
     onScoreChange?.(diagramScore);
   }, [diagramScore, onScoreChange]);
 
-  // Mark as dirty and trigger auto-save when nodes/edges change
+  // Mark as dirty when nodes/edges change (no auto-save - manual save only)
   useEffect(() => {
     // Skip initial render
     if (nodes.length === 0 && edges.length === 0) return;
     
     setIsDirty(true);
-    
-    // Skip autosave if disabled (for slow connections)
-    if (!autoSaveEnabled) return;
-    
-    // Clear existing timeout
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-    
-    // Set new auto-save timeout (5 seconds)
-    autoSaveTimeoutRef.current = setTimeout(() => {
-      saveData();
-    }, 5000);
-    
-    // Cleanup on unmount
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, [nodes, edges, saveData, autoSaveEnabled]);
+  }, [nodes, edges]);
 
   // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -365,15 +341,13 @@ function DiagramCanvasInner({
     }
   }, [nodes, awardedBonuses, animateScore, showProTip]);
 
-  // Check for bonuses when nodes change (debounced via auto-save timing)
-  // Skip if autosave is disabled (performance mode for slow connections)
+  // Check for bonuses when nodes change (debounced)
   useEffect(() => {
-    if (!autoSaveEnabled) return; // Skip pattern checks in performance mode
     if (nodes.length >= 3) { // Only check when there are enough nodes
       const timer = setTimeout(checkPatternBonuses, 2000); // Check 2 seconds after changes settle
       return () => clearTimeout(timer);
     }
-  }, [nodes, checkPatternBonuses, autoSaveEnabled]);
+  }, [nodes, checkPatternBonuses]);
 
   // Handle new connections with validation
   const onConnect = useCallback(
@@ -421,7 +395,7 @@ function DiagramCanvasInner({
           {
             ...params,
             type: "smoothstep",
-            animated: autoSaveEnabled, // Disable animation in perf mode
+            animated: true,
             style: { stroke: "#22d3ee", strokeWidth: 2 },
             markerEnd: { type: MarkerType.ArrowClosed, color: "#22d3ee" },
           },
@@ -429,7 +403,7 @@ function DiagramCanvasInner({
         )
       );
     },
-    [setEdges, nodes, animateScore, showProTip, autoSaveEnabled]
+    [setEdges, nodes, animateScore, showProTip]
   );
 
   // 📦 TIP JAR FUNCTIONS
@@ -1273,19 +1247,16 @@ function DiagramCanvasInner({
                 <span className="text-xs text-slate-400">pts</span>
               </div>
               
-              {/* Streak - no animation in perf mode */}
+              {/* Streak indicator */}
               {diagramScore.currentStreak >= 2 && (
-                <div className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/20 border border-orange-500/30",
-                  autoSaveEnabled && "animate-pulse" // Only animate in normal mode
-                )}>
+                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 animate-pulse">
                   <Flame className="w-3.5 h-3.5 text-orange-400" />
                   <span className="text-xs font-bold text-orange-400">{diagramScore.currentStreak}x</span>
                 </div>
               )}
               
-              {/* Score Animation - skip in perf mode */}
-              {showScoreAnimation && autoSaveEnabled && (
+              {/* Score Animation */}
+              {showScoreAnimation && (
                 <div
                   className={cn(
                     "absolute top-16 right-48 text-lg font-bold animate-bounce",
@@ -1332,23 +1303,6 @@ function DiagramCanvasInner({
                 <span className="text-xs text-amber-400">Unsaved changes</span>
               )}
             </div>
-
-            {/* Autosave Toggle - also acts as performance mode */}
-            <button
-              onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
-              className={cn(
-                "flex items-center gap-1.5 px-2 py-1 rounded border text-xs transition-colors h-8",
-                autoSaveEnabled
-                  ? "border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                  : "border-amber-500/50 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-              )}
-              title={autoSaveEnabled 
-                ? "Normal mode: Autosave every 5s, pattern detection enabled" 
-                : "Performance mode: Autosave & pattern detection disabled (for slow connections)"}
-            >
-              <Save className="w-3.5 h-3.5" />
-              {autoSaveEnabled ? "Auto" : "Perf"}
-            </button>
 
             <Button
               variant="outline"
@@ -1423,7 +1377,7 @@ function DiagramCanvasInner({
             zoomOnDoubleClick={false}
             defaultEdgeOptions={{
               type: "smoothstep",
-              animated: autoSaveEnabled, // Disable edge animations in performance mode
+              animated: true,
               style: { stroke: "#22d3ee", strokeWidth: 2 },
               markerEnd: { type: MarkerType.ArrowClosed, color: "#22d3ee" },
             }}

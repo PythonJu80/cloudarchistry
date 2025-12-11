@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -36,6 +36,7 @@ import { type SubscriptionTier, getTierFeatures, getUpgradeMessage } from "@/lib
 import { ScenarioGenerationModal } from "@/components/world/scenario-generation-modal";
 import { ChallengeWorkspaceModal } from "@/components/world/challenge-workspace-modal";
 import { NavbarAvatar } from "@/components/navbar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Dynamically import map components to avoid SSR issues
 const Globe3D = dynamic(() => import("@/components/world/globe-3d"), {
@@ -564,14 +565,13 @@ export default function WorldPage() {
   // TODO: Fetch from AcademyTeam -> TeamChallengeAttempt
   const cohortChallenges: { id: string; name: string; memberCount: number; activeChallenges: number }[] = [];
 
-  // All locations (no search filter anymore)
-  const filteredLocations = LOCATIONS;
-  
-  // Group system locations by difficulty
-  const beginnerLocations = filteredLocations.filter(loc => loc.difficulty === "beginner");
-  const intermediateLocations = filteredLocations.filter(loc => loc.difficulty === "intermediate");
-  const advancedLocations = filteredLocations.filter(loc => loc.difficulty === "advanced");
-  const expertLocations = filteredLocations.filter(loc => loc.difficulty === "expert");
+  // Memoize location groupings to prevent recalculation on every render
+  const { beginnerLocations, intermediateLocations, advancedLocations, expertLocations } = useMemo(() => ({
+    beginnerLocations: LOCATIONS.filter(loc => loc.difficulty === "beginner"),
+    intermediateLocations: LOCATIONS.filter(loc => loc.difficulty === "intermediate"),
+    advancedLocations: LOCATIONS.filter(loc => loc.difficulty === "advanced"),
+    expertLocations: LOCATIONS.filter(loc => loc.difficulty === "expert"),
+  }), []);
 
   // Handle location selection
   const handleLocationSelect = useCallback((location: Location) => {
@@ -865,8 +865,17 @@ export default function WorldPage() {
                     <div className="p-2">
                       {userChallenges.length === 0 ? (
                         isLoadingUserChallenges ? (
-                          <div className="text-center py-4 text-sm text-muted-foreground">
-                            Loading...
+                          <div className="space-y-2 py-2">
+                            {[...Array(3)].map((_, i) => (
+                              <div key={i} className="p-2 rounded-lg bg-slate-800/50">
+                                <div className="flex items-center justify-between mb-2">
+                                  <Skeleton className="h-4 w-32" />
+                                  <Skeleton className="h-4 w-16" />
+                                </div>
+                                <Skeleton className="h-3 w-24 mb-2" />
+                                <Skeleton className="h-1.5 w-full rounded-full" />
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <div className="text-center py-4 text-sm text-muted-foreground">
@@ -1024,7 +1033,7 @@ export default function WorldPage() {
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-amber-400" />
                       <span className="font-medium text-sm">System Challenges</span>
-                      <span className="text-xs text-muted-foreground">({filteredLocations.length})</span>
+                      <span className="text-xs text-muted-foreground">({LOCATIONS.length})</span>
                     </div>
                     <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", systemChallengesOpen && "rotate-90")} />
                   </button>

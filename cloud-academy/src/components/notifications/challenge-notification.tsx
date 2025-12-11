@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { Swords, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useDashboardSocket } from "@/hooks/use-dashboard-socket";
 
 interface PendingChallenge {
   id: string;
@@ -18,13 +19,14 @@ interface PendingChallenge {
 }
 
 export function ChallengeNotificationProvider({ children }: { children: React.ReactNode }) {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const [challenges, setChallenges] = useState<PendingChallenge[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [responding, setResponding] = useState<string | null>(null);
   const seenChallengeIds = useRef<Set<string>>(new Set());
+  const [myUserId, setMyUserId] = useState<string>("");
   
   // Don't show notifications if already on a game page
   const isOnGamePage = pathname?.startsWith("/game/");
@@ -44,17 +46,40 @@ export function ChallengeNotificationProvider({ children }: { children: React.Re
     }
   }, [status]);
 
-  // Poll for new challenges
+  // Get user ID for WebSocket connection
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user?.email) return;
+    
+    fetch("/api/team")
+      .then(res => res.json())
+      .then(data => {
+        for (const team of data.teams || []) {
+          const myMember = team.members.find(
+            (m: { academyUser?: { email?: string; id?: string } }) => 
+              m.academyUser?.email === session.user?.email
+          );
+          if (myMember?.academyUser?.id) {
+            setMyUserId(myMember.academyUser.id);
+            break;
+          }
+        }
+      })
+      .catch(console.error);
+  }, [status, session?.user?.email]);
+
+  // WebSocket for real-time challenge notifications (replaces polling)
+  useDashboardSocket({
+    userId: myUserId,
+    onVersusUpdate: () => {
+      // Refetch challenges when we get a versus update
+      fetchChallenges();
+    },
+  });
+
+  // Initial fetch only (no more polling)
   useEffect(() => {
     if (status !== "authenticated") return;
-    
-    // Initial fetch
     fetchChallenges();
-    
-    // Poll every 5 seconds
-    const interval = setInterval(fetchChallenges, 5000);
-    
-    return () => clearInterval(interval);
   }, [status, fetchChallenges]);
 
   // Handle accept
