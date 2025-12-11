@@ -14,7 +14,13 @@ from .cli_simulator import (
     CLIResponse,
     CLIValidationResult,
 )
-from .study_plan import generate_study_plan, StudyPlanContext
+from .study_plan import (
+    generate_study_plan,
+    StudyPlanContext,
+    generate_study_guide,
+    StudyGuideContext,
+    format_study_guide,
+)
 from .game_modes import (
     generate_sniper_quiz_questions,
     generate_speed_round_questions,

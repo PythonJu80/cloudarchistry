@@ -1831,6 +1831,43 @@ async def detect_skill_endpoint(message: str):
     return {"skill_level": level}
 
 
+@app.post("/api/learning/format-study-guide")
+async def format_study_guide_endpoint(request: dict):
+    """FORMAT a study guide from pre-selected content.
+    
+    The tool has already decided what content goes in the plan.
+    The AI just formats it nicely with themes, descriptions, and accountability tips.
+    """
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.study_plan import format_study_guide
+
+        if request.get("openai_api_key"):
+            set_request_api_key(request["openai_api_key"])
+        if request.get("preferred_model"):
+            set_request_model(request["preferred_model"])
+
+        plan = await format_study_guide(
+            target_certification=request.get("target_certification", ""),
+            skill_level=request.get("skill_level", "intermediate"),
+            time_horizon_weeks=request.get("time_horizon_weeks", 6),
+            hours_per_week=request.get("hours_per_week", 6),
+            learning_styles=request.get("learning_styles", ["hands_on"]),
+            coach_notes=request.get("coach_notes"),
+            structured_content=request.get("structured_content", {}),
+        )
+        return {"success": True, "plan": plan}
+    except ApiKeyRequiredError as key_err:
+        raise HTTPException(status_code=402, detail=str(key_err)) from key_err
+    except Exception as exc:
+        logger.error("Study guide formatting failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Study guide formatting failed: {str(exc)}") from exc
+    finally:
+        from utils import set_request_api_key, set_request_model
+        set_request_api_key(None)
+        set_request_model(None)
+
+
 # ============================================
 # LEARNING JOURNEY ENDPOINTS
 # ============================================

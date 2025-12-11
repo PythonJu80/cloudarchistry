@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, ChangeEvent } from "react";
-import { format } from "date-fns";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,148 +11,195 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Loader2, RefreshCw, Target, CalendarDays, Clock } from "lucide-react";
+import {
+  Loader2,
+  Target,
+  CalendarDays,
+  BookOpen,
+  Gamepad2,
+  GraduationCap,
+  Layers,
+  CheckCircle2,
+  Circle,
+  ChevronRight,
+  Sparkles,
+  Clock,
+  TrendingUp,
+  Brain,
+  Zap,
+  FileQuestion,
+  ExternalLink,
+} from "lucide-react";
 
-type WeeklyPlanEntry = {
-  week_number: number;
-  date_range: string;
-  hours_target?: number;
-  theme: string;
-  key_focus: string;
-  deliverables: string[] | string;
+// Certification display names
+const CERT_NAMES: Record<string, string> = {
+  SAA: "Solutions Architect Associate",
+  SAP: "Solutions Architect Professional",
+  DVA: "Developer Associate",
+  SOA: "SysOps Administrator Associate",
+  DOP: "DevOps Engineer Professional",
+  ANS: "Advanced Networking Specialty",
+  SCS: "Security Specialty",
+  DBS: "Database Specialty",
+  MLS: "Machine Learning Specialty",
+  PAS: "Data Analytics Specialty",
+  CLF: "Cloud Practitioner",
 };
 
-type MilestoneEntry = {
-  label: string;
-  due_by: string;
-  success_metric: string;
-  rationale: string;
+// Skill level display
+const SKILL_LEVELS: Record<string, { label: string; color: string }> = {
+  beginner: { label: "Beginner", color: "text-green-500" },
+  intermediate: { label: "Intermediate", color: "text-blue-500" },
+  advanced: { label: "Advanced", color: "text-purple-500" },
+  expert: { label: "Expert", color: "text-amber-500" },
 };
 
-type ActionItemEntry = {
-  category: string;
-  description: string;
-  metric: string;
-  target_value: string;
-  deadline: string;
-  source_reference?: string;
-};
-
-type AccountabilityEntry = {
-  reminder: string;
-  trigger?: string;
-};
-
-type PlanOutput = {
-  summary?: string;
-  timeline_weeks?: number;
-  weekly_plan?: WeeklyPlanEntry[];
-  milestones?: MilestoneEntry[];
-  action_items?: ActionItemEntry[];
-  accountability?: AccountabilityEntry[];
-};
-
-type PlanRecord = {
-  id: string;
-  targetExam: string | null;
-  examDate: string | null;
-  studyHoursPerWeek: number | null;
-  confidenceLevel: string | null;
-  planInputs: { timeHorizon?: string } & Record<string, unknown>;
-  planOutput: PlanOutput | null;
-  generatedAt: string;
-};
-
-type PlanHints = {
-  skillLevel: string | null;
-  targetCertification: string | null;
-  challengeHighlights: { title: string | null; difficulty: string | null; completedAt: string | null }[];
-  examInsights: { certification?: string | null; score?: number | null; passed?: boolean | null }[];
-  flashcardHighlights: { deck?: string | null; cardsMastered: number; totalReviews: number }[];
-  recommendedWeakAreas: string[];
-  recommendedFocusDomains: string[];
-  recommendedFormats: string[];
-};
-
-type StudyPlanResponse = {
-  latestPlan: PlanRecord | null;
-  history: PlanRecord[];
-  hints: PlanHints;
-};
-
-const confidenceOptions = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-  { value: "expert", label: "Expert" },
+// Learning style options
+const LEARNING_STYLES = [
+  { value: "visual", label: "Visual", description: "Videos, diagrams, charts", icon: "🎬" },
+  { value: "auditory", label: "Auditory", description: "Podcasts, discussions", icon: "🎧" },
+  { value: "reading", label: "Reading/Writing", description: "Docs, notes, articles", icon: "📖" },
+  { value: "hands_on", label: "Hands-on", description: "Labs, challenges, building", icon: "🛠️" },
 ];
 
-export default function GuidePage() {
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [plan, setPlan] = useState<PlanRecord | null>(null);
-  const [history, setHistory] = useState<PlanRecord[]>([]);
-  const [hints, setHints] = useState<PlanHints | null>(null);
-  const [error, setError] = useState<string | null>(null);
+// Action type icons and colors
+const ACTION_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
+  game: { icon: <Gamepad2 className="h-4 w-4" />, color: "text-red-500", bg: "bg-red-500/10" },
+  exam: { icon: <GraduationCap className="h-4 w-4" />, color: "text-amber-500", bg: "bg-amber-500/10" },
+  quiz: { icon: <FileQuestion className="h-4 w-4" />, color: "text-purple-500", bg: "bg-purple-500/10" },
+  challenge: { icon: <Target className="h-4 w-4" />, color: "text-cyan-500", bg: "bg-cyan-500/10" },
+  flashcard: { icon: <Layers className="h-4 w-4" />, color: "text-green-500", bg: "bg-green-500/10" },
+  resource: { icon: <BookOpen className="h-4 w-4" />, color: "text-blue-500", bg: "bg-blue-500/10" },
+};
 
+// Types
+interface UserProfile {
+  skillLevel: string;
+  targetCertification: string | null;
+  challengesCompleted: number;
+  totalPoints: number;
+  currentStreak: number;
+}
+
+interface PlanAction {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  target?: string;
+  link?: string;
+  completed: boolean;
+}
+
+interface WeekPlan {
+  weekNumber: number;
+  theme: string;
+  focus: string;
+  actions: PlanAction[];
+}
+
+interface Milestone {
+  label: string;
+  weekNumber: number;
+  metric: string;
+  completed: boolean;
+}
+
+interface StudyPlanData {
+  id: string;
+  summary: string;
+  totalWeeks: number;
+  hoursPerWeek: number;
+  learningStyle?: string;  // Legacy single
+  learningStyles?: string[];  // New multiple
+  weeks: WeekPlan[];
+  milestones: Milestone[];
+  accountability: string[];
+  resources: { title: string; url: string; type: string }[];
+  generatedAt: string;
+}
+
+interface GuideData {
+  profile: UserProfile;
+  currentPlan: StudyPlanData | null;
+  history: { id: string; generatedAt: string; summary: string }[];
+}
+
+export default function GuidePage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Profile data (auto-fetched)
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  
+  // Current plan
+  const [plan, setPlan] = useState<StudyPlanData | null>(null);
+  const [history, setHistory] = useState<{ id: string; generatedAt: string; summary: string }[]>([]);
+  
+  // Form inputs (only what user needs to provide)
   const [form, setForm] = useState({
-    targetExam: "",
     examDate: "",
-    studyHoursPerWeek: 6,
-    confidenceLevel: "intermediate",
-    weakAreas: [] as string[],
-    focusDomains: [] as string[],
-    preferredFormats: [] as string[],
-    learnerNotes: "",
+    hoursPerWeek: 6,
+    learningStyles: ["hands_on"] as string[],  // Multiple selection
+    coachNotes: "",
   });
 
-  const loadPlan = useCallback(async () => {
+  // Fetch profile and existing plan on mount
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/learn/study-plan");
+      
+      const response = await fetch("/api/learn/guide");
       if (!response.ok) {
-        throw new Error("Failed to load plan data");
+        throw new Error("Failed to load guide data");
       }
-      const data: StudyPlanResponse = await response.json();
-      setPlan(data.latestPlan);
+      
+      const data: GuideData = await response.json();
+      setProfile(data.profile);
+      setPlan(data.currentPlan);
       setHistory(data.history || []);
-      setHints(data.hints || null);
-      setForm((prev) => ({
-        ...prev,
-        targetExam: data.latestPlan?.targetExam || data.hints?.targetCertification || "",
-        confidenceLevel: data.latestPlan?.confidenceLevel || data.hints?.skillLevel || prev.confidenceLevel,
-      }));
+      
+      // Pre-fill form from existing plan if available
+      if (data.currentPlan) {
+        const styles = data.currentPlan!.learningStyles || data.currentPlan!.learningStyle;
+        setForm(prev => ({
+          ...prev,
+          hoursPerWeek: data.currentPlan!.hoursPerWeek || 6,
+          learningStyles: Array.isArray(styles) ? styles : [styles || "hands_on"],
+        }));
+      }
     } catch (err) {
       console.error(err);
-      setError("Unable to load your study plan. Please try again.");
+      setError("Unable to load your study guide. Please try again.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadPlan();
-  }, [loadPlan]);
+    loadData();
+  }, [loadData]);
 
-  const toggleMultiSelect = (key: "weakAreas" | "focusDomains" | "preferredFormats", value: string) => {
-    setForm((prev) => {
-      const exists = prev[key].includes(value);
-      return {
-        ...prev,
-        [key]: exists ? prev[key].filter((item) => item !== value) : [...prev[key], value],
-      };
-    });
-  };
-
-  const handleSubmit = async () => {
+  // Generate new plan
+  const handleGenerate = async () => {
+    if (!profile) return;
+    
     try {
-      setSubmitting(true);
+      setGenerating(true);
       setError(null);
-      const response = await fetch("/api/learn/study-plan", {
+      
+      const response = await fetch("/api/learn/guide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          examDate: form.examDate || null,
+          hoursPerWeek: form.hoursPerWeek,
+          learningStyles: form.learningStyles,  // Send as array
+          coachNotes: form.coachNotes,
+        }),
       });
 
       if (!response.ok) {
@@ -161,368 +209,469 @@ export default function GuidePage() {
 
       const data = await response.json();
       setPlan(data.plan);
-      toast.success("Study plan updated");
-      loadPlan();
+      toast.success("Study guide generated!");
+      loadData(); // Refresh to get updated history
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Plan generation failed");
-      toast.error("Plan generation failed");
+      const message = err instanceof Error ? err.message : "Plan generation failed";
+      setError(message);
+      toast.error(message);
     } finally {
-      setSubmitting(false);
+      setGenerating(false);
     }
   };
 
-  const planOutput = plan?.planOutput || {};
-  const weeklyPlan = Array.isArray(planOutput.weekly_plan) ? planOutput.weekly_plan : [];
-  const milestones = Array.isArray(planOutput.milestones) ? planOutput.milestones : [];
-  const actionItems = Array.isArray(planOutput.action_items) ? planOutput.action_items : [];
-  const accountability = Array.isArray(planOutput.accountability) ? planOutput.accountability : [];
+  // Toggle action completion
+  const toggleAction = async (weekNumber: number, actionId: string) => {
+    if (!plan) return;
+    
+    // Optimistic update
+    setPlan(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        weeks: prev.weeks.map(week => {
+          if (week.weekNumber !== weekNumber) return week;
+          return {
+            ...week,
+            actions: week.actions.map(action => {
+              if (action.id !== actionId) return action;
+              return { ...action, completed: !action.completed };
+            }),
+          };
+        }),
+      };
+    });
+    
+    // Persist to backend
+    try {
+      await fetch("/api/learn/guide/action", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: plan.id, weekNumber, actionId }),
+      });
+    } catch (err) {
+      console.error("Failed to update action:", err);
+      // Revert on error
+      loadData();
+    }
+  };
 
-  const timelineDescription = useMemo(() => {
-    if (!plan?.planInputs?.timeHorizon) return null;
-    return plan.planInputs.timeHorizon as string;
-  }, [plan?.planInputs]);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading your study guide...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={loadData}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const certName = profile?.targetCertification 
+    ? CERT_NAMES[profile.targetCertification] || profile.targetCertification
+    : null;
+  
+  const skillInfo = SKILL_LEVELS[profile?.skillLevel || "intermediate"];
 
   return (
     <div className="space-y-8 pb-12">
+      {/* Header with profile info */}
       <div className="flex flex-col lg:flex-row gap-6 items-start justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">
-            Submit your current goals and confidence to generate a SMART plan grounded in your actual activity.
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Brain className="h-6 w-6 text-primary" />
+            Study Guide
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Your personalized learning path based on your profile and goals.
           </p>
-          <div className="flex flex-wrap gap-2 mt-3">
-            {plan?.generatedAt && (
-              <Badge variant="outline">
-                <Clock className="h-3.5 w-3.5 mr-1" />
-                Updated {format(new Date(plan.generatedAt), "PPpp")}
+          
+          {/* Profile badges */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {certName && (
+              <Badge variant="outline" className="gap-1">
+                <Target className="h-3.5 w-3.5" />
+                {certName}
               </Badge>
             )}
-            {timelineDescription && <Badge variant="secondary">{timelineDescription}</Badge>}
-            {plan?.studyHoursPerWeek && (
-              <Badge variant="secondary">{plan.studyHoursPerWeek} hrs / week target</Badge>
+            {skillInfo && (
+              <Badge variant="secondary" className={cn("gap-1", skillInfo.color)}>
+                <TrendingUp className="h-3.5 w-3.5" />
+                {skillInfo.label}
+              </Badge>
+            )}
+            {profile && profile.currentStreak > 0 && (
+              <Badge variant="secondary" className="gap-1 text-orange-500">
+                <Zap className="h-3.5 w-3.5" />
+                {profile.currentStreak} day streak
+              </Badge>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={loadPlan} disabled={loading || submitting}>
-            <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-            Refresh
-          </Button>
-        </div>
+        
+        {plan && (
+          <Badge variant="outline" className="gap-1">
+            <Clock className="h-3.5 w-3.5" />
+            Updated {new Date(plan.generatedAt).toLocaleDateString()}
+          </Badge>
+        )}
       </div>
 
-      <div className="grid lg:grid-cols-[360px,1fr] gap-6">
+      <div className="grid lg:grid-cols-[380px,1fr] gap-6">
+        {/* Left: Input form */}
         <Card>
           <CardHeader>
-            <CardTitle>Plan inputs</CardTitle>
-            <CardDescription>Prefill from your telemetry, then adjust for your current exam push.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Generate Plan
+            </CardTitle>
+            <CardDescription>
+              Your certification and skill level are already set. Just tell us your availability.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
+            {/* Read-only profile info */}
+            <div className="rounded-lg bg-muted/50 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Target Certification</span>
+                <span className="font-medium">{certName || "Not set"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Skill Level</span>
+                <span className={cn("font-medium", skillInfo?.color)}>{skillInfo?.label || "Intermediate"}</span>
+              </div>
+              <p className="text-xs text-muted-foreground pt-2 border-t">
+                Update these in <Link href="/dashboard/settings" className="text-primary hover:underline">Settings</Link>
+              </p>
+            </div>
+
+            {/* Exam date */}
             <div className="space-y-2">
-              <Label>Target certification</Label>
+              <Label>Exam Date (optional)</Label>
               <Input
-                value={form.targetExam}
-                placeholder={hints?.targetCertification || "e.g. SAA-C03"}
+                type="date"
+                value={form.examDate}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setForm((prev) => ({ ...prev, targetExam: e.target.value }))
+                  setForm(prev => ({ ...prev, examDate: e.target.value }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                If set, your plan will be optimized for this deadline.
+              </p>
+            </div>
+
+            {/* Hours per week */}
+            <div className="space-y-2">
+              <Label>Hours per Week</Label>
+              <Input
+                type="number"
+                min={2}
+                max={40}
+                value={form.hoursPerWeek}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setForm(prev => ({ ...prev, hoursPerWeek: Number(e.target.value) || 6 }))
                 }
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Exam date (optional)</Label>
-                <Input
-                  type="date"
-                  value={form.examDate}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setForm((prev) => ({ ...prev, examDate: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Hours per week</Label>
-                <Input
-                  type="number"
-                  min={2}
-                  max={40}
-                  value={form.studyHoursPerWeek}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setForm((prev) => ({ ...prev, studyHoursPerWeek: Number(e.target.value) || 0 }))
-                  }
-                />
-              </div>
-            </div>
+
+            {/* Learning style */}
             <div className="space-y-2">
-              <Label>Confidence level</Label>
+              <Label>Learning Styles <span className="text-muted-foreground text-xs">(select all that apply)</span></Label>
               <div className="grid grid-cols-2 gap-2">
-                {confidenceOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={cn(
-                      "rounded-md border px-3 py-2 text-sm text-left",
-                      form.confidenceLevel === option.value
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:border-primary/50",
-                    )}
-                    onClick={() => setForm((prev) => ({ ...prev, confidenceLevel: option.value }))}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+                {LEARNING_STYLES.map((style) => {
+                  const isSelected = form.learningStyles.includes(style.value);
+                  return (
+                    <button
+                      key={style.value}
+                      type="button"
+                      className={cn(
+                        "rounded-lg border p-3 text-left transition-all",
+                        isSelected
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-border hover:border-primary/50"
+                      )}
+                      onClick={() => {
+                        setForm(prev => {
+                          const styles = prev.learningStyles.includes(style.value)
+                            ? prev.learningStyles.filter(s => s !== style.value)
+                            : [...prev.learningStyles, style.value];
+                          // Ensure at least one is selected
+                          return { ...prev, learningStyles: styles.length > 0 ? styles : [style.value] };
+                        });
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg">{style.icon}</span>
+                        {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                      </div>
+                      <p className="font-medium text-sm mt-1">{style.label}</p>
+                      <p className="text-xs text-muted-foreground">{style.description}</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <MultiSelectSection
-              label="Weak areas"
-              options={hints?.recommendedWeakAreas || []}
-              values={form.weakAreas}
-              onToggle={(value) => toggleMultiSelect("weakAreas", value)}
-            />
-
-            <MultiSelectSection
-              label="Focus domains"
-              options={hints?.recommendedFocusDomains || []}
-              values={form.focusDomains}
-              onToggle={(value) => toggleMultiSelect("focusDomains", value)}
-            />
-
-            <MultiSelectSection
-              label="Preferred formats"
-              options={hints?.recommendedFormats || []}
-              values={form.preferredFormats}
-              onToggle={(value) => toggleMultiSelect("preferredFormats", value)}
-            />
-
+            {/* Coach notes */}
             <div className="space-y-2">
-              <Label>Notes for your coach</Label>
+              <Label>Notes for Your Coach</Label>
               <Textarea
-                placeholder="Let the coach know about upcoming deadlines, blockers, or learning preferences."
-                value={form.learnerNotes}
+                placeholder="Any deadlines, blockers, or preferences the AI should know about..."
+                value={form.coachNotes}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                  setForm((prev) => ({ ...prev, learnerNotes: e.target.value }))
+                  setForm(prev => ({ ...prev, coachNotes: e.target.value }))
                 }
+                rows={3}
               />
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
 
-            <Button className="w-full" onClick={handleSubmit} disabled={submitting}>
-              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Generate plan
+            <Button 
+              className="w-full" 
+              onClick={handleGenerate} 
+              disabled={generating || !profile?.targetCertification}
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {plan ? "Regenerate Plan" : "Generate Plan"}
+                </>
+              )}
             </Button>
+            
+            {!profile?.targetCertification && (
+              <p className="text-xs text-amber-500 text-center">
+                Please set your target certification in Settings first.
+              </p>
+            )}
           </CardContent>
         </Card>
 
+        {/* Right: Plan display */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Plan summary</CardTitle>
-                <CardDescription>
-                  {planOutput.summary || "Generate a plan to see a personalized summary."}
-                </CardDescription>
-              </div>
-              {plan?.targetExam && (
-                <Badge variant="outline">
-                  <Target className="h-3.5 w-3.5 mr-1" />
-                  {plan.targetExam}
-                </Badge>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <section className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CalendarDays className="h-4 w-4" />
-                  {timelineDescription || "Timeline will align to your exam window."}
-                </div>
-                <div className="space-y-3">
-                  {weeklyPlan.length > 0 ? (
-                    weeklyPlan.map((week: any) => (
-                      <div key={week.week_number} className="rounded-lg border p-3">
-                        <div className="flex items-center justify-between text-sm font-medium">
-                          <span>Week {week.week_number}</span>
-                          <span className="text-muted-foreground">{week.date_range}</span>
-                        </div>
-                        <p className="text-sm mt-1 font-semibold">{week.theme}</p>
-                        <p className="text-sm text-muted-foreground">{week.key_focus}</p>
-                        <div className="text-xs text-muted-foreground mt-2">
-                          Deliverables: {Array.isArray(week.deliverables) ? week.deliverables.join(", ") : week.deliverables}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <EmptyState message="Once generated, you'll see each week's focus here." />
-                  )}
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Milestones</h3>
-                </div>
-                {milestones.length > 0 ? (
-                  <div className="grid md:grid-cols-2 gap-3">
-                    {milestones.map((milestone: any, index: number) => (
-                      <div key={`${milestone.label}-${index}`} className="rounded-lg border p-3">
-                        <div className="flex items-center justify-between text-sm font-semibold">
-                          <span>{milestone.label}</span>
-                          <span className="text-muted-foreground">{milestone.due_by}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Metric: {milestone.success_metric}
-                        </p>
-                        <p className="text-xs mt-2">{milestone.rationale}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState message="Milestones will appear once your plan is generated." />
-                )}
-              </section>
-
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Next actions</h3>
-                  <Badge variant="outline">{actionItems.length} tasks</Badge>
-                </div>
-                {actionItems.length > 0 ? (
-                  <div className="space-y-2">
-                    {actionItems.map((item: any, index: number) => (
-                      <div
-                        key={`${item.description}-${index}`}
-                        className="rounded-lg border p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
-                      >
-                        <div>
-                          <p className="font-medium">{item.description}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Target: {item.metric} → {item.target_value}
-                          </p>
-                          {item.source_reference && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Source: {item.source_reference}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Badge variant="secondary" className="capitalize">
-                            {item.category}
-                          </Badge>
-                          <span>Due {item.deadline}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState message="Action items will show concrete tasks once a plan is generated." />
-                )}
-              </section>
-
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Accountability</h3>
-                </div>
-                {accountability.length > 0 ? (
-                  <ul className="space-y-2">
-                    {accountability.map((item: any, index: number) => (
-                      <li key={`${item.reminder}-${index}`} className="rounded-lg border p-3 text-sm">
-                        {item.reminder}
-                        <span className="block text-xs text-muted-foreground mt-1">{item.trigger}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <EmptyState message="Your reminders will appear here once generated." />
-                )}
-              </section>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>History</CardTitle>
-                <CardDescription>Recent plans allow you to revert or compare.</CardDescription>
-              </div>
-              <Badge variant="outline">{history.length} saved</Badge>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {history.length > 0 ? (
-                history.map((record) => (
-                  <div key={record.id} className="border rounded-lg p-3">
-                    <div className="flex items-center justify-between text-sm font-semibold">
-                      <span>{record.targetExam || "Custom plan"}</span>
-                      <span className="text-muted-foreground">
-                        {format(new Date(record.generatedAt), "PPpp")}
-                      </span>
+          {plan ? (
+            <>
+              {/* Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Plan</CardTitle>
+                  <CardDescription>{plan.summary}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      <span>{plan.totalWeeks} weeks</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {record.planInputs?.timeHorizon || "Window not specified"}
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="mt-2 text-xs"
-                      onClick={() => {
-                        setPlan(record);
-                        toast.success("Previewing historical plan");
-                      }}
-                    >
-                      View plan
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>{plan.hoursPerWeek} hrs/week</span>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <EmptyState message="Previous plans will appear here." />
+                </CardContent>
+              </Card>
+
+              {/* Weekly breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Weekly Actions</CardTitle>
+                  <CardDescription>Check off tasks as you complete them.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {plan.weeks.map((week) => (
+                    <div key={week.weekNumber} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold">Week {week.weekNumber}: {week.theme}</h3>
+                        <Badge variant="outline" className="text-xs">
+                          {week.actions.filter(a => a.completed).length}/{week.actions.length} done
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{week.focus}</p>
+                      
+                      <div className="space-y-2">
+                        {week.actions.map((action) => {
+                          const config = ACTION_CONFIG[action.type] || ACTION_CONFIG.resource;
+                          return (
+                            <div
+                              key={action.id}
+                              className={cn(
+                                "flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer",
+                                action.completed 
+                                  ? "bg-muted/50 border-muted" 
+                                  : "hover:border-primary/50"
+                              )}
+                              onClick={() => toggleAction(week.weekNumber, action.id)}
+                            >
+                              <button className="mt-0.5 flex-shrink-0">
+                                {action.completed ? (
+                                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                ) : (
+                                  <Circle className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </button>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={cn("p-1 rounded", config.bg, config.color)}>
+                                    {config.icon}
+                                  </span>
+                                  <span className={cn(
+                                    "font-medium",
+                                    action.completed && "line-through text-muted-foreground"
+                                  )}>
+                                    {action.title}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {action.description}
+                                </p>
+                                {action.target && (
+                                  <p className="text-xs text-primary mt-1">
+                                    Target: {action.target}
+                                  </p>
+                                )}
+                              </div>
+                              {action.link && (
+                                <Link 
+                                  href={action.link}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex-shrink-0"
+                                >
+                                  <Button size="sm" variant="ghost">
+                                    <ChevronRight className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Milestones */}
+              {plan.milestones.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Milestones</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {plan.milestones.map((milestone, idx) => (
+                        <div 
+                          key={idx}
+                          className="flex items-center gap-3 p-3 rounded-lg border"
+                        >
+                          {milestone.completed ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          )}
+                          <div className="flex-1">
+                            <p className="font-medium">{milestone.label}</p>
+                            <p className="text-sm text-muted-foreground">{milestone.metric}</p>
+                          </div>
+                          <Badge variant="outline">Week {milestone.weekNumber}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
+
+              {/* Resources */}
+              {plan.resources && plan.resources.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recommended Resources</CardTitle>
+                    <CardDescription>Based on your learning style: {
+                      (plan.learningStyles || [plan.learningStyle])
+                        .filter(Boolean)
+                        .map(s => LEARNING_STYLES.find(ls => ls.value === s)?.label)
+                        .filter(Boolean)
+                        .join(", ") || "Hands-on"
+                    }</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {plan.resources.map((resource, idx) => (
+                        <a
+                          key={idx}
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/50 transition-colors"
+                        >
+                          <BookOpen className="h-4 w-4 text-blue-500" />
+                          <div className="flex-1">
+                            <p className="font-medium">{resource.title}</p>
+                            <p className="text-xs text-muted-foreground">{resource.type}</p>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                        </a>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Accountability */}
+              {plan.accountability && plan.accountability.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Accountability Reminders</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {plan.accountability.map((reminder, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm">
+                          <Zap className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                          {reminder}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center">
+                  <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">No Study Plan Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Generate a personalized study plan based on your certification goal and learning preferences.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Your plan will include specific actions from the platform: games, challenges, exams, quizzes, and flashcards.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
         </div>
       </div>
     </div>
   );
-}
-
-function MultiSelectSection({
-  label,
-  options,
-  values,
-  onToggle,
-}: {
-  label: string;
-  options: string[];
-  values: string[];
-  onToggle: (value: string) => void;
-}) {
-  if (!options?.length) {
-    return null;
-  }
-
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const active = values.includes(option);
-          return (
-            <button
-              key={option}
-              type="button"
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-full border",
-                active ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary",
-              )}
-              onClick={() => onToggle(option)}
-            >
-              {option}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return <p className="text-sm text-muted-foreground">{message}</p>;
 }

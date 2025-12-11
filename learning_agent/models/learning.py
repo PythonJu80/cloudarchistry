@@ -110,6 +110,36 @@ class StudyPlanRequest(BaseModel):
     preferred_model: Optional[str] = None
 
 
+class StudyGuideRequest(BaseModel):
+    """Request to generate a personalized study guide with platform-specific actions"""
+    target_certification: str
+    skill_level: str = "intermediate"
+    time_horizon_weeks: int = 6
+    hours_per_week: int = 6
+    learning_style: str = "hands_on"  # visual, auditory, reading, hands_on
+    coach_notes: Optional[str] = None
+    telemetry_summary: Optional[str] = None
+    platform_features: Optional[Dict[str, Any]] = None
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+class FormatStudyGuideRequest(BaseModel):
+    """Request to FORMAT a study guide from pre-selected content.
+    The tool has already decided what content goes in - AI just formats it nicely.
+    """
+    target_certification: str
+    skill_level: str = "intermediate"
+    time_horizon_weeks: int = 6
+    hours_per_week: int = 6
+    learning_styles: List[str] = ["hands_on"]  # Now supports multiple
+    coach_notes: Optional[str] = None
+    # PRE-SELECTED content from the database - AI does NOT decide this
+    structured_content: Dict[str, Any]
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
 class LearningChatRequestWithSession(BaseModel):
     """Request for learning chat with session tracking"""
     message: str

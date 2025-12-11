@@ -421,7 +421,7 @@ function DiagramCanvasInner({
           {
             ...params,
             type: "smoothstep",
-            animated: true,
+            animated: autoSaveEnabled, // Disable animation in perf mode
             style: { stroke: "#22d3ee", strokeWidth: 2 },
             markerEnd: { type: MarkerType.ArrowClosed, color: "#22d3ee" },
           },
@@ -429,7 +429,7 @@ function DiagramCanvasInner({
         )
       );
     },
-    [setEdges, nodes, animateScore, showProTip]
+    [setEdges, nodes, animateScore, showProTip, autoSaveEnabled]
   );
 
   // 📦 TIP JAR FUNCTIONS
@@ -1273,16 +1273,19 @@ function DiagramCanvasInner({
                 <span className="text-xs text-slate-400">pts</span>
               </div>
               
-              {/* Streak */}
+              {/* Streak - no animation in perf mode */}
               {diagramScore.currentStreak >= 2 && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 animate-pulse">
+                <div className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/20 border border-orange-500/30",
+                  autoSaveEnabled && "animate-pulse" // Only animate in normal mode
+                )}>
                   <Flame className="w-3.5 h-3.5 text-orange-400" />
                   <span className="text-xs font-bold text-orange-400">{diagramScore.currentStreak}x</span>
                 </div>
               )}
               
-              {/* Score Animation */}
-              {showScoreAnimation && (
+              {/* Score Animation - skip in perf mode */}
+              {showScoreAnimation && autoSaveEnabled && (
                 <div
                   className={cn(
                     "absolute top-16 right-48 text-lg font-bold animate-bounce",
@@ -1420,7 +1423,7 @@ function DiagramCanvasInner({
             zoomOnDoubleClick={false}
             defaultEdgeOptions={{
               type: "smoothstep",
-              animated: true,
+              animated: autoSaveEnabled, // Disable edge animations in performance mode
               style: { stroke: "#22d3ee", strokeWidth: 2 },
               markerEnd: { type: MarkerType.ArrowClosed, color: "#22d3ee" },
             }}

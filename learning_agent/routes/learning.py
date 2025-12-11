@@ -17,6 +17,8 @@ from models.learning import (
     LearningChatRequestWithSession,
     CloudScenario,
     StudyPlanRequest,
+    StudyGuideRequest,
+    FormatStudyGuideRequest,
 )
 from models.diagram import AuditDiagramRequest, AuditDiagramResponse
 from models.challenge import ChallengeQuestionsRequest, GradeChallengeAnswerRequest
@@ -27,6 +29,8 @@ from services.web_search import search_web
 import db
 from prompts import CERTIFICATION_PERSONAS, SOLUTION_EVALUATOR_PROMPT
 from generators import generate_study_plan, StudyPlanContext
+from generators.study_plan import generate_study_guide, StudyGuideContext
+from utils import ApiKeyRequiredError
 
 router = APIRouter()
 
@@ -461,6 +465,46 @@ async def generate_study_plan_endpoint(request: StudyPlanRequest):
     except Exception as exc:
         logger.error("Study plan generation failed: %s", exc)
         raise HTTPException(status_code=500, detail="Study plan generation failed") from exc
+    finally:
+        from utils import set_request_api_key, set_request_model
+
+        set_request_api_key(None)
+        set_request_model(None)
+
+
+@router.post("/format-study-guide")
+async def format_study_guide_endpoint(request: FormatStudyGuideRequest):
+    """FORMAT a study guide from pre-selected content.
+    
+    The tool has already decided what content goes in the plan.
+    The AI just formats it nicely with themes, descriptions, and accountability tips.
+    """
+    try:
+        from utils import set_request_api_key, set_request_model
+
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+
+        # Import the formatter function
+        from generators.study_plan import format_study_guide
+
+        plan = await format_study_guide(
+            target_certification=request.target_certification,
+            skill_level=request.skill_level,
+            time_horizon_weeks=request.time_horizon_weeks,
+            hours_per_week=request.hours_per_week,
+            learning_styles=request.learning_styles,
+            coach_notes=request.coach_notes,
+            structured_content=request.structured_content,
+        )
+        return {"success": True, "plan": plan}
+    except ApiKeyRequiredError as key_err:
+        raise HTTPException(status_code=402, detail=str(key_err)) from key_err
+    except Exception as exc:
+        logger.error("Study guide formatting failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Study guide formatting failed") from exc
     finally:
         from utils import set_request_api_key, set_request_model
 
