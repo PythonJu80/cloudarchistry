@@ -19,6 +19,7 @@ from models.learning import (
     StudyPlanRequest,
     StudyGuideRequest,
     FormatStudyGuideRequest,
+    GenerateFlashcardsFromCertRequest,
 )
 from models.diagram import AuditDiagramRequest, AuditDiagramResponse
 from models.challenge import ChallengeQuestionsRequest, GradeChallengeAnswerRequest
@@ -414,9 +415,172 @@ async def cli_validate_endpoint(request: CLIValidateRequest):
 
 @router.post("/generate-flashcards")
 async def generate_flashcards_endpoint(request: GenerateContentRequest):
-    """Generate flashcards"""
+    """Generate flashcards (legacy - scenario-based)"""
     from crawl4ai_mcp import generate_flashcards_endpoint as original_endpoint
     return await original_endpoint(request)
+
+
+@router.post("/generate-flashcards-from-cert")
+async def generate_flashcards_from_cert_endpoint(request: GenerateFlashcardsFromCertRequest):
+    """
+    Generate flashcards from user's certification + telemetry (no scenario required).
+    
+    This is the NEW simplified approach:
+    1. Uses user's target certification (SAA, DVA, SOA, etc.)
+    2. Uses user's skill level (beginner, intermediate, advanced)
+    3. Uses user telemetry (challenges completed, points, level) to personalize difficulty
+    4. Searches knowledge base for relevant AWS content
+    5. AI generates flashcards based on cert focus areas
+    """
+    from utils import set_request_api_key, set_request_model, get_request_api_key, ApiKeyRequiredError
+    from openai import AsyncOpenAI
+    
+    try:
+        # Set API key
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        api_key = get_request_api_key()
+        if not api_key:
+            raise ApiKeyRequiredError("OpenAI API key required")
+        
+        # Get certification persona
+        cert_code = request.certification_code.upper()
+        if cert_code not in CERTIFICATION_PERSONAS:
+            # Default to SAA if unknown
+            cert_code = "SAA"
+        
+        persona = CERTIFICATION_PERSONAS[cert_code]
+        cert_name = persona["cert"]
+        cert_level = persona["level"]
+        focus_areas = persona["focus"]
+        
+        # Build difficulty distribution based on skill level
+        skill_level = request.skill_level.lower()
+        if skill_level == "beginner":
+            difficulty_dist = {"easy": 0.5, "medium": 0.4, "hard": 0.1}
+        elif skill_level == "advanced":
+            difficulty_dist = {"easy": 0.1, "medium": 0.4, "hard": 0.5}
+        else:  # intermediate
+            difficulty_dist = {"easy": 0.25, "medium": 0.5, "hard": 0.25}
+        
+        # Search knowledge base for relevant content
+        knowledge_context = ""
+        try:
+            # Build search query from cert focus areas
+            import random
+            selected_focus = random.sample(focus_areas, min(3, len(focus_areas)))
+            search_query = f"{cert_name} {' '.join(selected_focus)} AWS best practices"
+            
+            client = AsyncOpenAI(api_key=api_key)
+            embed_response = await client.embeddings.create(
+                model="text-embedding-3-small",
+                input=search_query
+            )
+            query_embedding = embed_response.data[0].embedding
+            
+            kb_results = await db.search_knowledge_chunks(
+                query_embedding=query_embedding,
+                limit=8
+            )
+            
+            if kb_results:
+                for chunk in kb_results[:5]:
+                    knowledge_context += f"\n\n{chunk['content'][:600]}"
+        except Exception as kb_err:
+            logger.warning(f"Knowledge base search failed: {kb_err}")
+        
+        # Build telemetry context
+        telemetry_context = ""
+        if request.telemetry:
+            t = request.telemetry
+            telemetry_context = f"""
+User Progress:
+- Skill Level: {t.get('skillLevel', 'intermediate')}
+- Challenges Completed: {t.get('challengesCompleted', 0)}
+- Scenarios Completed: {t.get('scenariosCompleted', 0)}
+- Total Points: {t.get('totalPoints', 0)}
+- Level: {t.get('level', 1)}
+"""
+        
+        # Generate flashcards with AI
+        client = AsyncOpenAI(api_key=api_key)
+        model = request.preferred_model or "gpt-4o"
+        
+        prompt = f"""Generate {request.card_count} flashcards for the {cert_name} certification exam.
+
+Target Audience: {skill_level} level learner
+Focus Areas: {', '.join(focus_areas)}
+
+Difficulty Distribution:
+- Easy cards: {int(difficulty_dist['easy'] * request.card_count)}
+- Medium cards: {int(difficulty_dist['medium'] * request.card_count)}
+- Hard cards: {int(difficulty_dist['hard'] * request.card_count)}
+
+{telemetry_context}
+
+{f"Relevant AWS Knowledge:{knowledge_context}" if knowledge_context else ""}
+
+Generate flashcards that:
+1. Cover key concepts for the {cert_name} exam
+2. Include practical scenarios and use cases
+3. Test understanding of AWS services and best practices
+4. Match the difficulty distribution above
+
+Return a JSON object with this structure:
+{{
+  "title": "Deck title",
+  "description": "Brief description",
+  "cards": [
+    {{
+      "front": "Question or concept",
+      "back": "Answer or explanation",
+      "difficulty": "easy|medium|hard",
+      "tags": ["tag1", "tag2"],
+      "awsServices": ["S3", "EC2"]
+    }}
+  ]
+}}
+
+Return ONLY valid JSON, no markdown or explanation."""
+
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are an AWS certification exam preparation expert. Generate high-quality flashcards that help learners prepare for AWS certification exams."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7,
+        )
+        
+        import json
+        deck_data = json.loads(response.choices[0].message.content)
+        
+        # Ensure title and description
+        if not deck_data.get("title"):
+            deck_data["title"] = f"{cert_name} Flashcards"
+        if not deck_data.get("description"):
+            deck_data["description"] = f"AI-generated flashcards for {cert_name} certification preparation"
+        
+        return {
+            "success": True,
+            "deck": deck_data,
+            "certification": cert_code,
+            "cert_name": cert_name,
+            "card_count": len(deck_data.get("cards", [])),
+        }
+        
+    except ApiKeyRequiredError:
+        raise HTTPException(status_code=402, detail="OpenAI API key required")
+    except Exception as exc:
+        logger.error(f"Flashcard generation from cert failed: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        set_request_api_key(None)
+        set_request_model(None)
 
 
 @router.post("/generate-notes")

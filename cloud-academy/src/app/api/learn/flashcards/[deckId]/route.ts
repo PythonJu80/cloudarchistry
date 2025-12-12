@@ -105,15 +105,22 @@ export async function GET(
       };
     });
 
+    // Handle both scenario-based and certification-based decks
+    const isCertificationBased = deck.deckType === "certification";
+    
     return NextResponse.json({
       deck: {
         id: deck.id,
         title: deck.title,
         description: deck.description,
         totalCards: deck.totalCards,
+        deckType: deck.deckType,
+        // Scenario info (may be null for certification-based decks)
         scenarioId: deck.scenarioId,
-        scenarioTitle: deck.scenario.title,
-        locationName: deck.scenario.location?.name || "Unknown",
+        scenarioTitle: deck.scenario?.title || null,
+        locationName: deck.scenario?.location?.name || (isCertificationBased ? "Certification Study" : "Unknown"),
+        // Certification info
+        certificationCode: deck.certificationCode,
         generatedBy: deck.generatedBy,
         createdAt: deck.createdAt,
         cards: cardsWithProgress,

@@ -1311,6 +1311,7 @@ model AcademyUserProfile {
   portfolios       AcademyPortfolio[]
   
   // Learning mode relations
+  flashcardDecks    FlashcardDeck[]  // Certification-based decks owned by user
   flashcardProgress FlashcardUserProgress[]
   studyNotesProgress StudyNotesProgress[]
   coachingSessions CoachingSession[]
@@ -1784,12 +1785,18 @@ model AcademyActivity {
 // Flashcards, Notes, Chat, Quiz
 // ============================================
 
-// Flashcard Deck - collection of cards for a scenario
+// Flashcard Deck - collection of cards (scenario-based OR certification-based)
 model FlashcardDeck {
   id          String   @id @default(cuid())
   
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  // Option 1: Scenario-based deck (legacy)
+  scenarioId  String?
+  scenario    AcademyScenario? @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  
+  // Option 2: Certification-based deck (new - uses user telemetry)
+  profileId   String?
+  profile     AcademyUserProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  certificationCode String?  // SAA, DVA, SOA, etc.
   
   // Deck metadata
   title       String
@@ -1798,6 +1805,7 @@ model FlashcardDeck {
   // Generation info
   generatedBy String   @default("ai")  // ai, user, imported
   aiModel     String?  // gpt-4o, etc.
+  deckType    String   @default("scenario")  // scenario, certification, custom
   
   // Stats
   totalCards  Int      @default(0)
@@ -1810,6 +1818,8 @@ model FlashcardDeck {
   userProgress FlashcardUserProgress[]
   
   @@index([scenarioId])
+  @@index([profileId])
+  @@index([certificationCode])
 }
 
 // Individual Flashcard

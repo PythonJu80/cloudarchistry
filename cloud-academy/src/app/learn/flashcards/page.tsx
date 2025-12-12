@@ -3,24 +3,17 @@
 import { useState, useEffect } from "react";
 import {
   Layers,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   Check,
   X,
   Loader2,
   AlertCircle,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 interface FlashcardProgress {
   status: string;
@@ -50,9 +43,11 @@ interface FlashcardDeck {
   title: string;
   description: string | null;
   totalCards: number;
-  scenarioId: string;
-  scenarioTitle: string;
+  deckType?: string;
+  scenarioId?: string | null;
+  scenarioTitle?: string | null;
   locationName: string;
+  certificationCode?: string | null;
   generatedBy: string;
   createdAt: string;
   cards?: Flashcard[];
@@ -64,12 +59,6 @@ interface FlashcardDeck {
   };
 }
 
-interface Scenario {
-  id: string;
-  title: string;
-  locationName: string;
-}
-
 export default function FlashcardsPage() {
   const [decks, setDecks] = useState<FlashcardDeck[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,13 +66,7 @@ export default function FlashcardsPage() {
   const [activeDeck, setActiveDeck] = useState<FlashcardDeck | null>(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  
-  // Generate modal state
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [loadingScenarios, setLoadingScenarios] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
 
   // Fetch decks on mount
   useEffect(() => {
@@ -117,46 +100,30 @@ export default function FlashcardsPage() {
     }
   };
 
-  const fetchScenarios = async () => {
-    try {
-      setLoadingScenarios(true);
-      const res = await fetch("/api/scenarios?limit=50");
-      if (!res.ok) throw new Error("Failed to fetch scenarios");
-      const data = await res.json();
-      setScenarios(
-        (data.scenarios || []).map((s: { id: string; title: string; location?: { name: string } }) => ({
-          id: s.id,
-          title: s.title,
-          locationName: s.location?.name || "Unknown",
-        }))
-      );
-    } catch (err) {
-      console.error("Error fetching scenarios:", err);
-    } finally {
-      setLoadingScenarios(false);
-    }
-  };
-
-  const handleGenerateFromSources = () => {
-    setShowGenerateModal(true);
-    fetchScenarios();
-  };
-
+  // Generate flashcards from user's certification + telemetry (simplified - no scenario needed)
   const handleGenerateDeck = async () => {
-    if (!selectedScenarioId) return;
-    
     try {
       setGenerating(true);
+      setError(null);
+      
       const res = await fetch("/api/learn/flashcards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenarioId: selectedScenarioId, cardCount: 20 }),
+        body: JSON.stringify({ cardCount: 20 }),
       });
       
       if (res.status === 402) {
         setError("Please configure your OpenAI API key in Settings to generate flashcards.");
-        setShowGenerateModal(false);
         return;
+      }
+      
+      if (res.status === 400) {
+        const data = await res.json();
+        if (data.action === "set_certification") {
+          setError("Please set your target AWS certification in Settings before generating flashcards.");
+          return;
+        }
+        throw new Error(data.error || "Failed to generate deck");
       }
       
       if (!res.ok) {
@@ -166,8 +133,6 @@ export default function FlashcardsPage() {
       
       // Refresh decks
       await fetchDecks();
-      setShowGenerateModal(false);
-      setSelectedScenarioId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate flashcards");
     } finally {
@@ -353,9 +318,18 @@ export default function FlashcardsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleGenerateFromSources}>
-            <Sparkles className="w-4 h-4 mr-2" />
-            Generate from scenario
+          <Button onClick={handleGenerateDeck} disabled={generating}>
+            {generating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <GraduationCap className="w-4 h-4 mr-2" />
+                Generate Flashcards
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -377,11 +351,20 @@ export default function FlashcardsPage() {
           <Layers className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No flashcard decks yet</h3>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Generate flashcards from your completed scenarios to start studying.
+            Generate flashcards based on your target AWS certification to start studying.
           </p>
-          <Button onClick={handleGenerateFromSources}>
-            <Sparkles className="w-4 h-4 mr-2" />
-            Generate from scenario
+          <Button onClick={handleGenerateDeck} disabled={generating}>
+            {generating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <GraduationCap className="w-4 h-4 mr-2" />
+                Generate Flashcards
+              </>
+            )}
           </Button>
         </div>
       ) : (
@@ -403,7 +386,14 @@ export default function FlashcardsPage() {
                   </span>
                 </div>
                 <h3 className="font-semibold mb-1">{deck.title}</h3>
-                <p className="text-sm text-muted-foreground mb-1">{deck.scenarioTitle}</p>
+                {deck.scenarioTitle && (
+                  <p className="text-sm text-muted-foreground mb-1">{deck.scenarioTitle}</p>
+                )}
+                {deck.certificationCode && (
+                  <p className="text-sm text-muted-foreground mb-1">
+                    <Badge variant="outline" className="text-xs">{deck.certificationCode}</Badge>
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground mb-4">{deck.description}</p>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
@@ -420,66 +410,6 @@ export default function FlashcardsPage() {
         </div>
       )}
 
-      {/* Generate Modal */}
-      <Dialog open={showGenerateModal} onOpenChange={setShowGenerateModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Generate Flashcards</DialogTitle>
-            <DialogDescription>
-              Select a scenario to generate flashcards from its content.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {loadingScenarios ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-          ) : scenarios.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No scenarios found. Complete some scenarios first!</p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {scenarios.map((scenario) => (
-                <div
-                  key={scenario.id}
-                  onClick={() => setSelectedScenarioId(scenario.id)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    selectedScenarioId === scenario.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border/50 hover:border-primary/50"
-                  }`}
-                >
-                  <p className="font-medium">{scenario.title}</p>
-                  <p className="text-sm text-muted-foreground">{scenario.locationName}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowGenerateModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleGenerateDeck}
-              disabled={!selectedScenarioId || generating}
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Deck
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

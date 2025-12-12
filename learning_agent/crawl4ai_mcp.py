@@ -1709,22 +1709,11 @@ async def cli_validate_endpoint(request: CLIValidateRequest):
 @app.post("/api/learning/generate-flashcards")
 async def generate_flashcards_endpoint(request: GenerateContentRequest):
     """
-    Generate flashcards using "Tool uses AI" pattern.
-    
-    Tool pre-gathers:
-    1. Scenario data from DB
-    2. Knowledge chunks from vector search
-    3. Difficulty distribution by skill level (deterministic)
-    
-    AI just formats the pre-gathered knowledge into Q&A pairs.
+    Generate flashcards - supports two modes:
+    1. Scenario-based: Pass scenario_id to generate from a specific scenario
+    2. Certification-based: Pass certification_code to generate from user's target cert + telemetry
     """
-    from generators.flashcards import (
-        format_flashcards,
-        FlashcardStructuredContent,
-        calculate_difficulty_distribution,
-        extract_facts_from_knowledge,
-        generate_flashcards,  # Fallback if no knowledge found
-    )
+    import random
     
     try:
         from utils import set_request_api_key, set_request_model, get_request_api_key
@@ -1733,102 +1722,214 @@ async def generate_flashcards_endpoint(request: GenerateContentRequest):
         if request.preferred_model:
             set_request_model(request.preferred_model)
         
-        # Step 1: TOOL fetches scenario (no AI)
-        scenario = await db.get_scenario(request.scenario_id)
-        if not scenario:
-            raise HTTPException(status_code=404, detail="Scenario not found")
+        api_key = get_request_api_key()
+        if not api_key:
+            raise HTTPException(status_code=402, detail="OpenAI API key required")
         
-        # Step 2: TOOL determines persona context (no AI)
-        persona_id = request.persona_id
-        if not persona_id and request.user_id:
-            persona_id = await db.get_user_persona(request.user_id)
-        if not persona_id:
-            persona_id = DEFAULT_PERSONA
-        
-        persona_ctx = get_persona_context(persona_id)
-        cert_name = persona_ctx.get("cert_name", "AWS Certification")
-        cert_level = persona_ctx.get("level", "associate")
-        
-        # Step 3: TOOL extracts AWS services (no AI)
-        aws_services = set()
-        for c in scenario.get("challenges", []):
-            aws_services.update(c.get("aws_services_relevant", []))
-        aws_services_list = list(aws_services) if aws_services else ["EC2", "S3", "IAM", "VPC"]
-        
-        card_count = request.options.get("card_count", 20) if request.options else 20
+        card_count = request.card_count or (request.options.get("card_count", 20) if request.options else 20)
         user_level = request.user_level or "intermediate"
         
-        # Step 4: TOOL calculates difficulty distribution (deterministic, no AI)
-        difficulty_dist = calculate_difficulty_distribution(user_level, cert_level, card_count)
-        
-        # Step 5: TOOL searches knowledge base for relevant content (no AI reasoning)
-        knowledge_facts = []
-        try:
-            # Build search query from scenario + services
-            search_query = f"{cert_name} {' '.join(aws_services_list[:5])} {scenario.get('scenario_title', '')}"
+        # MODE 1: Scenario-based generation (legacy)
+        if request.scenario_id:
+            from generators.flashcards import (
+                format_flashcards,
+                FlashcardStructuredContent,
+                calculate_difficulty_distribution,
+                extract_facts_from_knowledge,
+                generate_flashcards,
+            )
             
-            # Get embedding for search
-            api_key = get_request_api_key()
-            if api_key:
+            scenario = await db.get_scenario(request.scenario_id)
+            if not scenario:
+                raise HTTPException(status_code=404, detail="Scenario not found")
+            
+            persona_id = request.persona_id
+            if not persona_id and request.user_id:
+                persona_id = await db.get_user_persona(request.user_id)
+            if not persona_id:
+                persona_id = DEFAULT_PERSONA
+            
+            persona_ctx = get_persona_context(persona_id)
+            cert_name = persona_ctx.get("cert_name", "AWS Certification")
+            cert_level = persona_ctx.get("level", "associate")
+            
+            aws_services = set()
+            for c in scenario.get("challenges", []):
+                aws_services.update(c.get("aws_services_relevant", []))
+            aws_services_list = list(aws_services) if aws_services else ["EC2", "S3", "IAM", "VPC"]
+            
+            difficulty_dist = calculate_difficulty_distribution(user_level, cert_level, card_count)
+            
+            knowledge_facts = []
+            try:
+                search_query = f"{cert_name} {' '.join(aws_services_list[:5])} {scenario.get('scenario_title', '')}"
                 client = AsyncOpenAI(api_key=api_key)
-                embed_response = await client.embeddings.create(
-                    model="text-embedding-3-small",
-                    input=search_query
-                )
+                embed_response = await client.embeddings.create(model="text-embedding-3-small", input=search_query)
                 query_embedding = embed_response.data[0].embedding
-                
-                # Search knowledge chunks
-                kb_results = await db.search_knowledge_chunks(
-                    query_embedding=query_embedding,
-                    limit=10
-                )
-                
+                kb_results = await db.search_knowledge_chunks(query_embedding=query_embedding, limit=10)
                 if kb_results:
-                    logger.info(f"Found {len(kb_results)} knowledge chunks for flashcards")
                     knowledge_facts = extract_facts_from_knowledge(kb_results, aws_services_list, max_facts=card_count + 5)
-        except Exception as kb_err:
-            logger.warning(f"Knowledge base search failed, using fallback: {kb_err}")
-        
-        # Step 6: Decide which path to take
-        if knowledge_facts and len(knowledge_facts) >= card_count // 2:
-            # NEW PATH: Tool uses AI - format pre-gathered knowledge
-            logger.info(f"Using 'Tool uses AI' pattern with {len(knowledge_facts)} facts")
+            except Exception as kb_err:
+                logger.warning(f"Knowledge base search failed: {kb_err}")
             
-            structured_content = FlashcardStructuredContent(
-                scenario_title=scenario["scenario_title"],
-                business_context=scenario.get("business_context", ""),
-                certification=cert_name,
-                cert_level=cert_level,
-                skill_level=user_level,
-                aws_services=aws_services_list,
-                knowledge_facts=knowledge_facts,
-                card_count=card_count,
-                difficulty_distribution=difficulty_dist,
+            if knowledge_facts and len(knowledge_facts) >= card_count // 2:
+                structured_content = FlashcardStructuredContent(
+                    scenario_title=scenario["scenario_title"],
+                    business_context=scenario.get("business_context", ""),
+                    certification=cert_name,
+                    cert_level=cert_level,
+                    skill_level=user_level,
+                    aws_services=aws_services_list,
+                    knowledge_facts=knowledge_facts,
+                    card_count=card_count,
+                    difficulty_distribution=difficulty_dist,
+                )
+                deck = await format_flashcards(structured_content)
+            else:
+                deck = await generate_flashcards(
+                    scenario_title=scenario["scenario_title"],
+                    business_context=scenario.get("business_context", ""),
+                    aws_services=aws_services_list,
+                    user_level=user_level,
+                    card_count=card_count,
+                    challenges=scenario.get("challenges"),
+                    persona_context=persona_ctx,
+                )
+            
+            deck_id = await db.save_flashcard_deck(
+                deck_data=deck.model_dump(),
+                scenario_id=request.scenario_id,
+                deck_type="scenario",
             )
-            
-            deck = await format_flashcards(structured_content)
+            return {"success": True, "deck_id": deck_id, "deck": deck.model_dump(), "generation_method": "scenario"}
+        
+        # MODE 2: Certification-based generation (new - uses telemetry)
         else:
-            # FALLBACK: Old path if no knowledge found (AI generates from scratch)
-            logger.info("Fallback to legacy generation (no knowledge chunks found)")
-            deck = await generate_flashcards(
-                scenario_title=scenario["scenario_title"],
-                business_context=scenario.get("business_context", ""),
-                aws_services=aws_services_list,
-                user_level=user_level,
-                card_count=card_count,
-                challenges=scenario.get("challenges"),
-                persona_context=persona_ctx,
+            # Map short codes (from DB) to persona IDs (used in CERTIFICATION_PERSONAS)
+            # DB stores: SAA, DVA, etc. CERTIFICATION_PERSONAS uses: solutions-architect-associate, etc.
+            CERT_CODE_TO_PERSONA = {
+                "SAA": "solutions-architect-associate",
+                "SAP": "solutions-architect-professional",
+                "DVA": "developer-associate",
+                "SOA": "sysops-associate",
+                "DOP": "devops-professional",
+                "ANS": "networking-specialty",
+                "SCS": "security-specialty",
+                "DBS": "database-specialty",
+                "MLS": "machine-learning-specialty",
+                "PAS": "data-analytics-specialty",
+                "CLF": "cloud-practitioner",
+            }
+            
+            short_code = (request.certification_code or "SAA").upper()
+            persona_id = CERT_CODE_TO_PERSONA.get(short_code, "solutions-architect-associate")
+            
+            persona = CERTIFICATION_PERSONAS[persona_id]
+            cert_name = persona["cert"]
+            focus_areas = persona["focus"]
+            
+            # Difficulty distribution based on skill level
+            if user_level == "beginner":
+                difficulty_dist = {"easy": 0.5, "medium": 0.4, "hard": 0.1}
+            elif user_level == "advanced":
+                difficulty_dist = {"easy": 0.1, "medium": 0.4, "hard": 0.5}
+            else:
+                difficulty_dist = {"easy": 0.25, "medium": 0.5, "hard": 0.25}
+            
+            # Search knowledge base
+            knowledge_context = ""
+            try:
+                selected_focus = random.sample(focus_areas, min(3, len(focus_areas)))
+                search_query = f"{cert_name} {' '.join(selected_focus)} AWS best practices"
+                client = AsyncOpenAI(api_key=api_key)
+                embed_response = await client.embeddings.create(model="text-embedding-3-small", input=search_query)
+                kb_results = await db.search_knowledge_chunks(query_embedding=embed_response.data[0].embedding, limit=8)
+                if kb_results:
+                    for chunk in kb_results[:5]:
+                        knowledge_context += f"\n\n{chunk['content'][:600]}"
+            except Exception as kb_err:
+                logger.warning(f"Knowledge base search failed: {kb_err}")
+            
+            # Build telemetry context
+            telemetry_context = ""
+            if request.telemetry:
+                t = request.telemetry
+                telemetry_context = f"""
+User Progress:
+- Skill Level: {t.get('skillLevel', 'intermediate')}
+- Challenges Completed: {t.get('challengesCompleted', 0)}
+- Scenarios Completed: {t.get('scenariosCompleted', 0)}
+- Total Points: {t.get('totalPoints', 0)}
+- Level: {t.get('level', 1)}
+"""
+            
+            # Generate with AI
+            client = AsyncOpenAI(api_key=api_key)
+            model = request.preferred_model or "gpt-4o"
+            
+            prompt = f"""Generate {card_count} flashcards for the {cert_name} certification exam.
+
+Target Audience: {user_level} level learner
+Focus Areas: {', '.join(focus_areas)}
+
+Difficulty Distribution:
+- Easy cards: {int(difficulty_dist['easy'] * card_count)}
+- Medium cards: {int(difficulty_dist['medium'] * card_count)}
+- Hard cards: {int(difficulty_dist['hard'] * card_count)}
+
+{telemetry_context}
+
+{f"Relevant AWS Knowledge:{knowledge_context}" if knowledge_context else ""}
+
+Generate flashcards that:
+1. Cover key concepts for the {cert_name} exam
+2. Include practical scenarios and use cases
+3. Test understanding of AWS services and best practices
+4. Match the difficulty distribution above
+
+Return a JSON object with this structure:
+{{
+  "title": "Deck title",
+  "description": "Brief description",
+  "cards": [
+    {{
+      "front": "Question or concept",
+      "back": "Answer or explanation",
+      "difficulty": "easy|medium|hard",
+      "tags": ["tag1", "tag2"],
+      "awsServices": ["S3", "EC2"]
+    }}
+  ]
+}}
+
+Return ONLY valid JSON, no markdown."""
+
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are an AWS certification exam preparation expert. Generate high-quality flashcards."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7,
             )
-        
-        deck_id = await db.save_flashcard_deck(scenario_id=request.scenario_id, deck_data=deck.model_dump())
-        return {
-            "success": True,
-            "deck_id": deck_id,
-            "deck": deck.model_dump(),
-            "persona": persona_id,
-            "generation_method": "tool_uses_ai" if knowledge_facts else "legacy",
-            "knowledge_facts_used": len(knowledge_facts),
-        }
+            
+            deck_data = json.loads(response.choices[0].message.content)
+            if not deck_data.get("title"):
+                deck_data["title"] = f"{cert_name} Flashcards"
+            if not deck_data.get("description"):
+                deck_data["description"] = f"AI-generated flashcards for {cert_name} certification"
+            
+            # Return deck data - Next.js will save via Prisma
+            return {
+                "success": True,
+                "deck": deck_data,
+                "certification": short_code,
+                "cert_name": cert_name,
+                "card_count": len(deck_data.get("cards", [])),
+                "generation_method": "certification",
+            }
+    
     finally:
         from utils import set_request_api_key, set_request_model
         set_request_api_key(None)

@@ -180,11 +180,14 @@ async def get_scenario(scenario_id: str) -> Optional[dict]:
 # =============================================================================
 
 async def save_flashcard_deck(
-    scenario_id: str,
     deck_data: dict,
     generated_by: str = "ai",
+    scenario_id: str = None,
+    profile_id: str = None,
+    certification_code: str = None,
+    deck_type: str = "certification",
 ) -> str:
-    """Save a flashcard deck."""
+    """Save a flashcard deck - supports both scenario-based and certification-based."""
     pool = await get_pool()
     
     import uuid
@@ -193,12 +196,16 @@ async def save_flashcard_deck(
     async with pool.acquire() as conn:
         await conn.execute("""
             INSERT INTO "FlashcardDeck" (
-                id, "scenarioId", title, description, "generatedBy",
+                id, "scenarioId", "profileId", "certificationCode", "deckType",
+                title, description, "generatedBy",
                 "totalCards", "isActive", "createdAt", "updatedAt"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
         """,
             deck_id,
             scenario_id,
+            profile_id,
+            certification_code,
+            deck_type,
             deck_data.get("title", "Flashcards"),
             deck_data.get("description", ""),
             generated_by,

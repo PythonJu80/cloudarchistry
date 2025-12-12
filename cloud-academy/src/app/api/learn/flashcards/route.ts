@@ -8,7 +8,7 @@ const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL;
 
 /**
  * GET /api/learn/flashcards
- * List all flashcard decks for the current user
+ * List all flashcard decks for the current user (both scenario-based and certification-based)
  */
 export async function GET() {
   try {
@@ -19,9 +19,15 @@ export async function GET() {
 
     const profileId = session.user.academyProfileId;
 
-    // Get all flashcard decks with user progress
+    // Get all flashcard decks - both scenario-based and certification-based
     const decks = await prisma.flashcardDeck.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          { profileId }, // User's certification-based decks
+          { scenarioId: { not: null } }, // Scenario-based decks (shared)
+        ],
+      },
       include: {
         scenario: {
           select: {
@@ -49,17 +55,23 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    // Transform for frontend
+    // Transform for frontend - handle both deck types
     const transformedDecks = decks.map((deck) => {
       const progress = deck.userProgress[0] || null;
+      const isCertificationBased = deck.deckType === "certification";
+      
       return {
         id: deck.id,
         title: deck.title,
         description: deck.description,
         totalCards: deck.totalCards,
+        deckType: deck.deckType,
+        // Scenario info (may be null for certification-based decks)
         scenarioId: deck.scenarioId,
-        scenarioTitle: deck.scenario.title,
-        locationName: deck.scenario.location?.name || "Unknown",
+        scenarioTitle: deck.scenario?.title || null,
+        locationName: deck.scenario?.location?.name || (isCertificationBased ? "Certification Study" : "Unknown"),
+        // Certification info (for certification-based decks)
+        certificationCode: deck.certificationCode,
         generatedBy: deck.generatedBy,
         createdAt: deck.createdAt,
         // Difficulty distribution
@@ -93,7 +105,11 @@ export async function GET() {
 
 /**
  * POST /api/learn/flashcards
- * Generate a new flashcard deck from a scenario
+ * Generate a new flashcard deck - either from scenario OR from user's certification/telemetry
+ * 
+ * Body options:
+ * - { scenarioId, cardCount } - Generate from a specific scenario (legacy)
+ * - { cardCount } - Generate from user's target certification + skill level (new)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -105,13 +121,6 @@ export async function POST(request: NextRequest) {
     const profileId = session.user.academyProfileId;
     const body = await request.json();
     const { scenarioId, cardCount = 20 } = body;
-
-    if (!scenarioId) {
-      return NextResponse.json(
-        { error: "scenarioId is required" },
-        { status: 400 }
-      );
-    }
 
     // Get AI config
     const aiConfig = await getAiConfigForRequest(profileId);
@@ -126,11 +135,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user profile for persona
+    // Get user profile with telemetry data
     const profile = await prisma.academyUserProfile.findUnique({
       where: { id: profileId },
-      select: { skillLevel: true, targetCertification: true },
+      select: {
+        skillLevel: true,
+        targetCertification: true,
+        challengesCompleted: true,
+        scenariosCompleted: true,
+        totalPoints: true,
+        level: true,
+        achievements: true,
+      },
     });
+
+    if (!profile?.targetCertification) {
+      return NextResponse.json(
+        {
+          error: "No target certification set",
+          message: "Please set your target AWS certification in Settings before generating flashcards.",
+          action: "set_certification",
+        },
+        { status: 400 }
+      );
+    }
 
     if (!LEARNING_AGENT_URL) {
       return NextResponse.json(
@@ -139,6 +167,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build telemetry summary for AI context
+    const telemetrySummary = {
+      skillLevel: profile.skillLevel,
+      targetCertification: profile.targetCertification,
+      challengesCompleted: profile.challengesCompleted,
+      scenariosCompleted: profile.scenariosCompleted,
+      totalPoints: profile.totalPoints,
+      level: profile.level,
+      achievements: profile.achievements,
+    };
+
     // Call learning agent to generate flashcards
     const response = await fetch(
       `${LEARNING_AGENT_URL}/api/learning/generate-flashcards`,
@@ -146,10 +185,11 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          scenario_id: scenarioId,
-          user_level: profile?.skillLevel || "intermediate",
-          persona_id: profile?.targetCertification || null,
-          options: { card_count: cardCount },
+          certification_code: profile.targetCertification,
+          user_level: profile.skillLevel || "intermediate",
+          card_count: cardCount,
+          telemetry: telemetrySummary,
+          scenario_id: scenarioId || null,
           openai_api_key: aiConfig.key,
           preferred_model: aiConfig.preferredModel,
         }),
@@ -173,18 +213,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // The learning agent saves to the DB, but we need to fetch and return the deck
-    // First, find the deck by scenario
-    const newDeck = await prisma.flashcardDeck.findFirst({
-      where: { scenarioId, isActive: true },
-      orderBy: { createdAt: "desc" },
-      include: {
-        scenario: {
-          select: {
-            title: true,
-            location: { select: { name: true } },
-          },
+    // Save the deck to our database
+    const deck = data.deck;
+    const newDeck = await prisma.flashcardDeck.create({
+      data: {
+        profileId,
+        certificationCode: profile.targetCertification,
+        title: deck.title,
+        description: deck.description,
+        generatedBy: "ai",
+        aiModel: aiConfig.preferredModel || "gpt-4o",
+        deckType: "certification",
+        totalCards: deck.cards?.length || 0,
+        cards: {
+          create: (deck.cards || []).map((card: {
+            front: string;
+            back: string;
+            difficulty?: string;
+            tags?: string[];
+            awsServices?: string[];
+          }, index: number) => ({
+            front: card.front,
+            back: card.back,
+            difficulty: card.difficulty || "medium",
+            tags: card.tags || [],
+            awsServices: card.awsServices || [],
+            orderIndex: index,
+          })),
         },
+      },
+      include: {
         cards: {
           orderBy: { orderIndex: "asc" },
           select: {
@@ -199,13 +257,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!newDeck) {
-      return NextResponse.json(
-        { error: "Deck created but could not be retrieved" },
-        { status: 500 }
-      );
-    }
-
     return NextResponse.json({
       success: true,
       deck: {
@@ -213,8 +264,9 @@ export async function POST(request: NextRequest) {
         title: newDeck.title,
         description: newDeck.description,
         totalCards: newDeck.totalCards,
-        scenarioTitle: newDeck.scenario.title,
-        locationName: newDeck.scenario.location?.name || "Unknown",
+        deckType: newDeck.deckType,
+        certificationCode: newDeck.certificationCode,
+        locationName: "Certification Study",
         cards: newDeck.cards.map((c) => ({
           id: c.id,
           front: c.front,

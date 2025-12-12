@@ -85,11 +85,14 @@ class ScenarioResponse(BaseModel):
 
 class GenerateContentRequest(BaseModel):
     """Request to generate learning content"""
-    scenario_id: str
-    content_type: str
+    scenario_id: Optional[str] = None  # Optional - can generate from certification instead
+    content_type: str = "flashcards"
     user_level: str = "intermediate"
     user_id: Optional[str] = None  # To fetch user's persona
     persona_id: Optional[str] = None  # Override persona
+    certification_code: Optional[str] = None  # e.g. SAA, DVA - used when no scenario_id
+    card_count: int = 20
+    telemetry: Optional[Dict[str, Any]] = None  # User stats for personalization
     options: Optional[Dict[str, Any]] = None
     openai_api_key: Optional[str] = None  # BYOK - user's own API key
     preferred_model: Optional[str] = None  # User's preferred model
@@ -150,3 +153,15 @@ class LearningChatRequestWithSession(BaseModel):
     user_id: Optional[str] = None  # For personalization
     openai_api_key: Optional[str] = None  # BYOK - user's own API key
     preferred_model: Optional[str] = None  # User's preferred model
+
+
+class GenerateFlashcardsFromCertRequest(BaseModel):
+    """Request to generate flashcards from user's certification + telemetry (no scenario required)"""
+    profile_id: str
+    certification_code: str  # SAA, DVA, SOA, etc.
+    skill_level: str = "intermediate"
+    card_count: int = 20
+    telemetry: Optional[Dict[str, Any]] = None  # User stats: challenges completed, points, etc.
+    scenario_id: Optional[str] = None  # Optional: still support scenario-based if provided
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None

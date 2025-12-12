@@ -113,8 +113,8 @@ export async function GET() {
           },
         },
       }),
-      // Flashcard deck with lowest mastery
-      prisma.flashcardProgress.findFirst({
+      // Flashcard deck with lowest mastery (use FlashcardUserProgress, not FlashcardProgress)
+      prisma.flashcardUserProgress.findFirst({
         where: { profileId },
         orderBy: { cardsMastered: "asc" },
         select: {
