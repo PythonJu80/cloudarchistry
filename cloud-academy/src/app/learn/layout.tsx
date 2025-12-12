@@ -6,7 +6,6 @@ import {
   MessageSquare,
   FileText,
   Layers,
-  Headphones,
   BookOpen,
   ListTodo,
   GraduationCap,
@@ -22,13 +21,12 @@ interface LearnLayoutProps {
 const tabs = [
   { href: "/learn", label: "Overview", icon: BookOpen, exact: true },
   { href: "/learn/guide", label: "Guide", icon: Lightbulb },
-  { href: "/learn/sources", label: "Sources", icon: Layers },
+  { href: "/learn/sources", label: "Resources", icon: Layers },
   { href: "/learn/chat", label: "Chat", icon: MessageSquare },
   { href: "/learn/flashcards", label: "Flashcards", icon: GraduationCap },
   { href: "/learn/exams", label: "Practice Exams", icon: Trophy },
   { href: "/learn/quiz", label: "Quizzes", icon: ListTodo },
   { href: "/learn/notes", label: "Notes", icon: FileText },
-  { href: "/learn/studio", label: "Studio", icon: Headphones },
 ];
 
 export default function LearnLayout({ children }: LearnLayoutProps) {

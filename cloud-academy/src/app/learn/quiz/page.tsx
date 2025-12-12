@@ -12,6 +12,7 @@ import {
   Trophy,
   Loader2,
   Trash2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,8 +25,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+interface Scenario {
+  id: string;
+  title: string;
+  locationName: string;
+}
 
 interface QuizOption {
   id: string;
@@ -93,8 +99,11 @@ export default function QuizPage() {
   
   // Generate dialog
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
-  const [generateTopic, setGenerateTopic] = useState("");
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [loadingScenarios, setLoadingScenarios] = useState(false);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
   const [generateCount, setGenerateCount] = useState(10);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch quizzes from API
   const fetchQuizzes = useCallback(async () => {
@@ -116,32 +125,65 @@ export default function QuizPage() {
     fetchQuizzes();
   }, [fetchQuizzes]);
 
+  // Fetch scenarios for generation
+  const fetchScenarios = async () => {
+    try {
+      setLoadingScenarios(true);
+      const res = await fetch("/api/scenarios?limit=50");
+      if (!res.ok) throw new Error("Failed to fetch scenarios");
+      const data = await res.json();
+      setScenarios(
+        (data.scenarios || []).map((s: { id: string; title: string; location?: { name: string } }) => ({
+          id: s.id,
+          title: s.title,
+          locationName: s.location?.name || "Unknown",
+        }))
+      );
+    } catch (err) {
+      console.error("Error fetching scenarios:", err);
+    } finally {
+      setLoadingScenarios(false);
+    }
+  };
+
+  const handleOpenGenerateDialog = () => {
+    setShowGenerateDialog(true);
+    fetchScenarios();
+  };
+
   // Generate new quiz
   const handleGenerateQuiz = async () => {
-    if (!generateTopic.trim()) return;
+    if (!selectedScenarioId) return;
     
     try {
       setGenerating(true);
+      setError(null);
       const response = await fetch("/api/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic: generateTopic,
+          scenarioId: selectedScenarioId,
           questionCount: generateCount,
         }),
       });
 
+      if (response.status === 402) {
+        setError("Please configure your OpenAI API key in Settings to generate quizzes.");
+        setShowGenerateDialog(false);
+        return;
+      }
+
       if (response.ok) {
         setShowGenerateDialog(false);
-        setGenerateTopic("");
+        setSelectedScenarioId(null);
         await fetchQuizzes();
       } else {
-        const error = await response.json();
-        alert(error.error || "Failed to generate quiz");
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to generate quiz");
       }
-    } catch (error) {
-      console.error("Error generating quiz:", error);
-      alert("Failed to generate quiz");
+    } catch (err) {
+      console.error("Error generating quiz:", err);
+      setError("Failed to generate quiz");
     } finally {
       setGenerating(false);
     }
@@ -487,11 +529,22 @@ export default function QuizPage() {
             Test your knowledge with AI-generated quizzes
           </p>
         </div>
-        <Button onClick={() => setShowGenerateDialog(true)}>
+        <Button onClick={handleOpenGenerateDialog}>
           <Sparkles className="w-4 h-4 mr-2" />
           Generate Quiz
         </Button>
       </div>
+
+      {/* Error display */}
+      {error && (
+        <div className="mb-6 p-4 rounded-lg border border-red-500/50 bg-red-500/10 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500" />
+          <p className="text-red-500">{error}</p>
+          <Button variant="ghost" size="sm" onClick={() => setError(null)} className="ml-auto">
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       {/* Quizzes Grid */}
       {quizzes.length === 0 ? (
@@ -499,9 +552,9 @@ export default function QuizPage() {
           <ListTodo className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No quizzes yet</h3>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Generate quizzes on any AWS topic to test your knowledge.
+            Generate quizzes from your completed scenarios to test your knowledge.
           </p>
-          <Button onClick={() => setShowGenerateDialog(true)}>
+          <Button onClick={handleOpenGenerateDialog}>
             <Sparkles className="w-4 h-4 mr-2" />
             Generate Quiz
           </Button>
@@ -560,42 +613,78 @@ export default function QuizPage() {
 
       {/* Generate Quiz Dialog */}
       <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Generate Quiz</DialogTitle>
             <DialogDescription>
-              Create an AI-generated quiz on any AWS topic
+              Select a scenario to generate a quiz from its content.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="topic">Topic</Label>
-              <Input
-                id="topic"
-                placeholder="e.g., S3 Security, Lambda Best Practices, VPC Networking"
-                value={generateTopic}
-                onChange={(e) => setGenerateTopic(e.target.value)}
-              />
+          
+          {loadingScenarios ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="count">Number of Questions</Label>
-              <Input
-                id="count"
-                type="number"
-                min={5}
-                max={20}
-                value={generateCount}
-                onChange={(e) => setGenerateCount(parseInt(e.target.value) || 10)}
-              />
+          ) : scenarios.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No scenarios found. Complete some scenarios first!</p>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                <Label>Select Scenario</Label>
+                {scenarios.map((scenario) => (
+                  <div
+                    key={scenario.id}
+                    onClick={() => setSelectedScenarioId(scenario.id)}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                      selectedScenarioId === scenario.id
+                        ? "border-primary bg-primary/10"
+                        : "border-border/50 hover:border-primary/50"
+                    }`}
+                  >
+                    <p className="font-medium">{scenario.title}</p>
+                    <p className="text-sm text-muted-foreground">{scenario.locationName}</p>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="questionCount">Number of Questions</Label>
+                <select
+                  id="questionCount"
+                  value={generateCount}
+                  onChange={(e) => setGenerateCount(parseInt(e.target.value))}
+                  className="w-full p-2 rounded-md border border-border bg-background"
+                >
+                  <option value={5}>5 questions</option>
+                  <option value={10}>10 questions</option>
+                  <option value={15}>15 questions</option>
+                  <option value={20}>20 questions</option>
+                </select>
+              </div>
+            </div>
+          )}
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleGenerateQuiz} disabled={generating || !generateTopic.trim()}>
-              {generating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Generate
+            <Button
+              onClick={handleGenerateQuiz}
+              disabled={!selectedScenarioId || generating}
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Quiz
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

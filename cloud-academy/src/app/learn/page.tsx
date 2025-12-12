@@ -16,17 +16,16 @@ interface DashboardSnapshot {
     title: string;
     description: string;
     eta: string;
+    link?: string;
   }>;
 }
 
 interface DashboardApiResponse {
-  stats?: {
-    totalChallenges?: number;
-    completedChallenges?: number;
-  };
-  challengeProgress?: {
-    averageScore?: number;
-  };
+  totalChallenges?: number;
+  completedChallenges?: number;
+  avgScoreLast7Days?: number;
+  focusAreas?: Array<{ label: string; progress: number }>;
+  upcomingMilestones?: Array<{ title: string; description: string; eta: string; link?: string }>;
 }
 
 export default function LearnPage() {
@@ -44,33 +43,18 @@ export default function LearnPage() {
 
   const hydrate = async () => {
     try {
-      const dashRes = await fetch("/api/dashboard");
+      const dashRes = await fetch("/api/learn/overview");
       let data: DashboardApiResponse | null = null;
       if (dashRes.ok) {
         data = (await dashRes.json()) as DashboardApiResponse;
       }
       const stats = data ?? {};
       setSnapshot({
-        totalChallenges: stats.stats?.totalChallenges ?? 0,
-        completedChallenges: stats.stats?.completedChallenges ?? 0,
-        avgScore: stats.challengeProgress?.averageScore ?? 0,
-        focusAreas: [
-          { label: "Compute & Containers", progress: 72 },
-          { label: "Networking & Edge", progress: 58 },
-          { label: "Security & Identity", progress: 83 },
-        ],
-        upcomingMilestones: [
-          {
-            title: "SAA-C03 Readiness Check",
-            description: "Run a timed assessment to confirm week 4 outcomes.",
-            eta: "Due in 5 days",
-          },
-          {
-            title: "Identity Deep Dive",
-            description: "Reinforce IAM governance before final mock.",
-            eta: "Scheduled: Next Tuesday 8pm",
-          },
-        ],
+        totalChallenges: stats.totalChallenges ?? 0,
+        completedChallenges: stats.completedChallenges ?? 0,
+        avgScore: stats.avgScoreLast7Days ?? 0,
+        focusAreas: stats.focusAreas ?? [],
+        upcomingMilestones: stats.upcomingMilestones ?? [],
       });
 
     } catch (error) {
@@ -150,10 +134,10 @@ export default function LearnPage() {
             cta: "Launch Studio",
           },
           {
-            title: "Sources",
-            description: "Save notes, flashcards, and references that the coach can cite later.",
+            title: "Resources",
+            description: "Save videos, docs, and links so you never have to hunt through tabs again.",
             link: "/learn/sources",
-            cta: "View sources",
+            cta: "View resources",
           },
         ].map((item) => (
           <Card key={item.title} className="border-white/10 bg-slate-950/70">
@@ -229,11 +213,15 @@ export default function LearnPage() {
             ) : (
               <div className="space-y-3">
                 {snapshot.upcomingMilestones.map((milestone) => (
-                  <div key={milestone.title} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <Link
+                    key={milestone.title}
+                    href={milestone.link || "#"}
+                    className="block rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors"
+                  >
                     <p className="text-sm font-semibold text-white">{milestone.title}</p>
                     <p className="text-xs text-white/70">{milestone.description}</p>
                     <Badge className="mt-2 bg-cyan-500/20 text-cyan-200">{milestone.eta}</Badge>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

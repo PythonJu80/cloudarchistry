@@ -40,8 +40,28 @@ export function useDashboardSocket({
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  
+  // Store callbacks in refs to avoid reconnection on callback changes
+  const callbacksRef = useRef({
+    onVersusUpdate,
+    onChallengeUpdate,
+    onJourneyUpdate,
+    onProfileUpdate,
+    onNotification,
+  });
+  
+  // Update refs when callbacks change (without triggering reconnect)
+  useEffect(() => {
+    callbacksRef.current = {
+      onVersusUpdate,
+      onChallengeUpdate,
+      onJourneyUpdate,
+      onProfileUpdate,
+      onNotification,
+    };
+  }, [onVersusUpdate, onChallengeUpdate, onJourneyUpdate, onProfileUpdate, onNotification]);
 
-  // Initialize socket connection
+  // Initialize socket connection - only depends on userId
   useEffect(() => {
     if (!userId) return;
 
@@ -77,38 +97,38 @@ export function useDashboardSocket({
       setIsConnected(false);
     });
 
-    // Dashboard-specific event listeners
+    // Dashboard-specific event listeners - use refs to get latest callbacks
     socket.on("dashboard-update", (update: DashboardUpdate) => {
       switch (update.type) {
         case "versus":
-          onVersusUpdate?.(update.data as VersusMatch[]);
+          callbacksRef.current.onVersusUpdate?.(update.data as VersusMatch[]);
           break;
         case "challenge":
-          onChallengeUpdate?.(update.data);
+          callbacksRef.current.onChallengeUpdate?.(update.data);
           break;
         case "journey":
-          onJourneyUpdate?.(update.data);
+          callbacksRef.current.onJourneyUpdate?.(update.data);
           break;
         case "profile":
-          onProfileUpdate?.(update.data);
+          callbacksRef.current.onProfileUpdate?.(update.data);
           break;
       }
     });
 
     socket.on("versus-update", (matches: VersusMatch[]) => {
-      onVersusUpdate?.(matches);
+      callbacksRef.current.onVersusUpdate?.(matches);
     });
 
     socket.on("challenge-completed", (data: unknown) => {
-      onChallengeUpdate?.(data);
+      callbacksRef.current.onChallengeUpdate?.(data);
     });
 
     socket.on("journey-progress", (data: unknown) => {
-      onJourneyUpdate?.(data);
+      callbacksRef.current.onJourneyUpdate?.(data);
     });
 
     socket.on("notification", (message: string) => {
-      onNotification?.(message);
+      callbacksRef.current.onNotification?.(message);
     });
 
     // Cleanup on unmount
@@ -117,7 +137,7 @@ export function useDashboardSocket({
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [userId, onVersusUpdate, onChallengeUpdate, onJourneyUpdate, onProfileUpdate, onNotification]);
+  }, [userId]); // Only reconnect when userId changes
 
   // Request a refresh of versus data
   const requestVersusRefresh = useCallback(() => {

@@ -210,7 +210,6 @@ export default function GuidePage() {
       const data = await response.json();
       setPlan(data.plan);
       toast.success("Study guide generated!");
-      loadData(); // Refresh to get updated history
     } catch (err) {
       console.error(err);
       const message = err instanceof Error ? err.message : "Plan generation failed";

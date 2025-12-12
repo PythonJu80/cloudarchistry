@@ -1326,6 +1326,9 @@ model AcademyUserProfile {
   // Learning Centre Chat
   learningChats    LearningChat[]
   
+  // External Resources (YouTube, docs, user-added)
+  externalResources ExternalResource[]
+  
   @@index([academyUserId])
   @@index([academyTenantId])
   @@index([totalPoints])
@@ -3572,4 +3575,43 @@ model DiagramAuditTip {
   @@index([profileId])
   @@index([isDismissed])
   @@index([category])
+}
+
+// External Resources - YouTube videos, AWS docs, user-added content
+model ExternalResource {
+  id          String   @id @default(cuid())
+  
+  profileId   String
+  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // Resource info
+  title       String
+  url         String
+  type        String   // "video", "documentation", "course", "article"
+  source      String   // "youtube", "aws", "user" (user-added), "study-guide" (auto-added)
+  
+  // For YouTube videos
+  videoId     String?  // YouTube video ID for embedding
+  thumbnailUrl String? // YouTube thumbnail
+  duration    String?  // Video duration if available
+  channelName String?  // YouTube channel name
+  
+  // Metadata
+  certification String? // Which cert this relates to (from user's targetCertification)
+  tags        Json     @default("[]")
+  notes       String?  @db.Text // User's personal notes
+  
+  // Tracking
+  isWatched   Boolean  @default(false)
+  watchedAt   DateTime?
+  isFavorite  Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([profileId])
+  @@index([type])
+  @@index([source])
+  @@index([certification])
+  @@index([isFavorite])
 }

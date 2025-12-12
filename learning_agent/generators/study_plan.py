@@ -470,6 +470,22 @@ async def format_study_guide(
     # Validate that actions weren't changed (safety check)
     plan = validate_and_fix_actions(plan, structured_content)
 
+    # Fetch real resources using Crawl4AI (YouTube + AWS docs)
+    try:
+        from generators.resource_fetcher import fetch_study_resources
+        real_resources = await fetch_study_resources(
+            certification=target_certification,
+            learning_styles=learning_styles,
+            max_youtube=2,
+            max_docs=2
+        )
+        if real_resources:
+            plan["resources"] = real_resources
+            logger.info(f"Fetched {len(real_resources)} real resources for study guide")
+    except Exception as e:
+        logger.warning(f"Failed to fetch real resources, using AI-generated: {e}")
+        # Keep AI-generated resources as fallback
+
     return plan
 
 

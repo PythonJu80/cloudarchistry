@@ -214,12 +214,15 @@ export async function gatherStudyGuideData(
 // Data Fetching Functions
 // ============================================
 
-async function fetchChallenges(_certCode: string): Promise<AvailableChallenge[]> {
-  // AcademyScenario doesn't have certificationCode - just fetch active scenarios
+async function fetchChallenges(certCode: string): Promise<AvailableChallenge[]> {
+  // Filter by user's targetCertification via scenario.tags JSON array
   const challenges = await prisma.academyChallenge.findMany({
     where: {
       scenario: {
         isActive: true,
+        tags: {
+          array_contains: [certCode],
+        },
       },
     },
     select: {
@@ -318,11 +321,16 @@ async function fetchExams(certCode: string): Promise<AvailableExam[]> {
   }));
 }
 
-async function fetchFlashcardDecks(_certCode: string): Promise<AvailableFlashcardDeck[]> {
-  // AcademyScenario doesn't have certificationCode - just fetch active decks
+async function fetchFlashcardDecks(certCode: string): Promise<AvailableFlashcardDeck[]> {
+  // Filter by user's targetCertification via scenario.tags
   const decks = await prisma.flashcardDeck.findMany({
     where: {
       isActive: true,
+      scenario: {
+        tags: {
+          array_contains: [certCode],
+        },
+      },
     },
     select: {
       id: true,
@@ -347,11 +355,16 @@ async function fetchFlashcardDecks(_certCode: string): Promise<AvailableFlashcar
   }));
 }
 
-async function fetchQuizzes(_certCode: string): Promise<AvailableQuiz[]> {
-  // AcademyScenario doesn't have certificationCode - just fetch active quizzes
+async function fetchQuizzes(certCode: string): Promise<AvailableQuiz[]> {
+  // Filter by user's targetCertification via scenario.tags
   const quizzes = await prisma.quiz.findMany({
     where: {
       isActive: true,
+      scenario: {
+        tags: {
+          array_contains: [certCode],
+        },
+      },
     },
     select: {
       id: true,

@@ -21,6 +21,7 @@ from .study_plan import (
     StudyGuideContext,
     format_study_guide,
 )
+from .resource_fetcher import fetch_study_resources
 from .game_modes import (
     generate_sniper_quiz_questions,
     generate_speed_round_questions,
