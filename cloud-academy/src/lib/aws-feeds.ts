@@ -62,12 +62,19 @@ export const AWS_FEED_CATEGORIES: AWSFeedCategory[] = [
 
   // SECONDARY - Complementary topics
   {
+    name: "Podcasts",
+    priority: "secondary",
+    description: "AWS podcasts and audio content",
+    feeds: [
+      { name: "AWS Podcast", url: "https://d3gih7jbfe3jlq.cloudfront.net/aws-podcast.rss", description: "Official weekly AWS podcast" },
+    ],
+  },
+  {
     name: "AWS News & Updates",
     priority: "secondary",
     description: "General announcements and news",
     feeds: [
       { name: "AWS News", url: "https://aws.amazon.com/blogs/aws/feed/", description: "Official AWS announcements" },
-      { name: "AWS Podcast", url: "https://d3gih7jbfe3jlq.cloudfront.net/aws-podcast.rss", description: "Weekly AWS podcast episodes" },
     ],
   },
   {
