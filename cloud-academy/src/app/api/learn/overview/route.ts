@@ -196,7 +196,7 @@ export async function GET() {
       const mins = nextChallenge.challenge.estimatedMinutes || 30;
       nextActions.push({
         title: nextChallenge.challenge.title,
-        description: `Continue this ${nextChallenge.challenge.difficulty} challenge from ${nextChallenge.attempt.scenario.title}`,
+        description: `Continue this ${nextChallenge.challenge.difficulty} challenge from ${nextChallenge.attempt.scenario?.title ?? "your scenario"}`,
         eta: `~${mins} min`,
         link: `/challenges/${nextChallenge.challenge.id}`,
       });
