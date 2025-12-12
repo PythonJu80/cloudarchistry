@@ -235,6 +235,73 @@ Return JSON with: title, description, questions (array of: id, question, questio
     )
 
 
+async def generate_quiz_for_certification(
+    cert_name: str,
+    focus_areas: List[str],
+    user_level: str = "intermediate",
+    question_count: int = 10,
+    telemetry: Optional[Dict] = None,
+    existing_questions: Optional[List[str]] = None,
+) -> Dict:
+    """Generate quiz from certification + telemetry + skill level."""
+    import random
+    
+    # Build avoid list for prompt
+    avoid_context = ""
+    if existing_questions:
+        avoid_context = f"\n\nAVOID these questions (already asked in previous quizzes):\n" + "\n".join(f"- {q[:80]}" for q in existing_questions[:20])
+    
+    # Difficulty distribution based on skill level
+    if user_level == "beginner":
+        difficulty_dist = {"easy": 0.5, "medium": 0.4, "hard": 0.1}
+    elif user_level == "advanced":
+        difficulty_dist = {"easy": 0.1, "medium": 0.4, "hard": 0.5}
+    else:
+        difficulty_dist = {"easy": 0.25, "medium": 0.5, "hard": 0.25}
+    
+    # Build telemetry context
+    telemetry_context = ""
+    if telemetry:
+        telemetry_context = f"""
+User Progress:
+- Skill Level: {telemetry.get('skillLevel', 'intermediate')}
+- Challenges Completed: {telemetry.get('challengesCompleted', 0)}
+- Scenarios Completed: {telemetry.get('scenariosCompleted', 0)}
+- Total Points: {telemetry.get('totalPoints', 0)}
+- Level: {telemetry.get('level', 1)}
+"""
+    
+    selected_focus = random.sample(focus_areas, min(3, len(focus_areas)))
+    
+    # Use the existing PERSONA_QUIZ_PROMPT
+    base_prompt = PERSONA_QUIZ_PROMPT.format(
+        cert_name=cert_name,
+        scenario_title=f"{cert_name} Practice",
+        business_context="Certification exam preparation",
+        focus_areas=', '.join(selected_focus),
+        level=user_level,
+        question_count=question_count,
+    )
+    
+    system_prompt = f"""{base_prompt}
+{avoid_context}
+{telemetry_context}
+
+Return JSON: {{"title": "...", "description": "...", "questions": [{{"id": "q1", "question": "...", "question_type": "multiple_choice", "options": [{{"id": "a", "text": "...", "is_correct": true/false}}], "explanation": "...", "difficulty": "easy|medium|hard", "points": 10, "aws_services": [...], "tags": [...]}}]}}"""
+
+    result = await _chat_json([
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"Generate {question_count} questions for {cert_name}"},
+    ])
+    
+    if not result.get("title"):
+        result["title"] = f"{cert_name} Practice Quiz"
+    if not result.get("description"):
+        result["description"] = f"AI-generated quiz for {cert_name} certification"
+    
+    return result
+
+
 async def grade_free_text_answer(
     question: str,
     expected_answer: str,

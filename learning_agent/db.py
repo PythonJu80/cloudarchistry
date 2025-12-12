@@ -278,6 +278,55 @@ async def get_flashcard_deck(deck_id: str) -> Optional[dict]:
         }
 
 
+async def get_existing_flashcard_topics(certification_code: str = None, limit: int = 50) -> List[str]:
+    """Get existing flashcard front questions to avoid duplicates."""
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        if certification_code:
+            rows = await conn.fetch("""
+                SELECT f.front FROM "Flashcard" f
+                JOIN "FlashcardDeck" d ON f."deckId" = d.id
+                WHERE d."certificationCode" = $1 AND d."isActive" = true
+                ORDER BY d."createdAt" DESC
+                LIMIT $2
+            """, certification_code, limit)
+        else:
+            rows = await conn.fetch("""
+                SELECT front FROM "Flashcard" f
+                JOIN "FlashcardDeck" d ON f."deckId" = d.id
+                WHERE d."isActive" = true
+                ORDER BY d."createdAt" DESC
+                LIMIT $1
+            """, limit)
+        
+        return [row["front"] for row in rows]
+
+
+async def get_existing_quiz_questions(certification_code: str = None, limit: int = 50) -> List[str]:
+    """Get existing quiz questions to avoid duplicates."""
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        if certification_code:
+            rows = await conn.fetch("""
+                SELECT q.question FROM "QuizQuestion" q
+                JOIN "AcademyQuiz" qz ON q."quizId" = qz.id
+                WHERE qz."certificationCode" = $1
+                ORDER BY qz."createdAt" DESC
+                LIMIT $2
+            """, certification_code, limit)
+        else:
+            rows = await conn.fetch("""
+                SELECT question FROM "QuizQuestion" q
+                JOIN "AcademyQuiz" qz ON q."quizId" = qz.id
+                ORDER BY qz."createdAt" DESC
+                LIMIT $1
+            """, limit)
+        
+        return [row["question"] for row in rows]
+
+
 async def get_flashcard_decks_for_scenario(scenario_id: str) -> List[dict]:
     """Get all flashcard decks for a scenario."""
     pool = await get_pool()

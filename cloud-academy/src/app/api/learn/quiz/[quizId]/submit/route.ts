@@ -21,9 +21,10 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { answers, timeSpentSeconds } = body as {
+    const { answers, timeSpentSeconds, attemptId } = body as {
       answers: SubmittedAnswer[];
       timeSpentSeconds: number;
+      attemptId?: string;
     };
 
     // Get user's profile
@@ -96,37 +97,58 @@ export async function POST(
     const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
     const passed = score >= quiz.passingScore;
 
-    // Create quiz attempt
-    const attempt = await prisma.quizAttempt.create({
-      data: {
-        profileId: profile.id,
-        quizId: quiz.id,
-        score,
-        passed,
-        questionsAnswered: answers.length,
-        questionsCorrect: gradedAnswers.filter((a) => a.isCorrect).length,
-        totalQuestions: quiz.questions.length,
-        pointsEarned: earnedPoints,
-        maxPoints: totalPoints,
-        timeSpentSeconds: timeSpentSeconds || 0,
-        status: "completed",
-        completedAt: new Date(),
-      },
-    });
-
-    // Save individual answers
-    for (const answer of answers) {
-      const graded = gradedAnswers.find((g) => g.questionId === answer.questionId);
-      await prisma.quizAnswer.create({
+    // Update existing attempt or create new one
+    let attempt;
+    if (attemptId) {
+      // Update existing in-progress attempt
+      attempt = await prisma.quizAttempt.update({
+        where: { id: attemptId },
         data: {
-          attemptId: attempt.id,
-          questionId: answer.questionId,
-          selectedOptions: answer.selectedOptions,
-          textAnswer: answer.freeText,
-          isCorrect: graded?.isCorrect || false,
-          pointsAwarded: graded?.pointsEarned || 0,
+          score,
+          passed,
+          questionsAnswered: answers.length,
+          questionsCorrect: gradedAnswers.filter((a) => a.isCorrect).length,
+          pointsEarned: earnedPoints,
+          timeSpentSeconds: timeSpentSeconds || 0,
+          status: "completed",
+          completedAt: new Date(),
         },
       });
+      
+      // Answers were already saved incrementally via grade endpoint
+    } else {
+      // Create new attempt (fallback if no attemptId provided)
+      attempt = await prisma.quizAttempt.create({
+        data: {
+          profileId: profile.id,
+          quizId: quiz.id,
+          score,
+          passed,
+          questionsAnswered: answers.length,
+          questionsCorrect: gradedAnswers.filter((a) => a.isCorrect).length,
+          totalQuestions: quiz.questions.length,
+          pointsEarned: earnedPoints,
+          maxPoints: totalPoints,
+          timeSpentSeconds: timeSpentSeconds || 0,
+          status: "completed",
+          completedAt: new Date(),
+        },
+      });
+
+      // Save individual answers for new attempts
+      for (const answer of answers) {
+        const graded = gradedAnswers.find((g) => g.questionId === answer.questionId);
+        await prisma.quizAnswer.create({
+          data: {
+            attemptId: attempt.id,
+            questionId: answer.questionId,
+            selectedOptions: answer.selectedOptions,
+            textAnswer: answer.freeText,
+            isCorrect: graded?.isCorrect || false,
+            pointsAwarded: graded?.pointsEarned || 0,
+          },
+        });
+      }
     }
 
     // Update user's XP and points

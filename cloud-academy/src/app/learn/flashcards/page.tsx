@@ -10,6 +10,7 @@ import {
   Loader2,
   AlertCircle,
   GraduationCap,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -197,6 +198,20 @@ export default function FlashcardsPage() {
     fetchDecks();
   };
 
+  const deleteDeck = async (deckId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Delete this flashcard deck?")) return;
+    
+    try {
+      const res = await fetch(`/api/learn/flashcards/${deckId}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchDecks();
+      }
+    } catch (err) {
+      console.error("Error deleting deck:", err);
+    }
+  };
+
   // Study mode
   if (activeDeck && currentCard) {
     return (
@@ -377,13 +392,23 @@ export default function FlashcardsPage() {
               <div
                 key={deck.id}
                 onClick={() => startStudying(deck)}
-                className="p-5 rounded-xl border border-border/50 hover:border-primary/50 hover:bg-muted/30 transition-all cursor-pointer"
+                className="group p-5 rounded-xl border border-border/50 hover:border-primary/50 hover:bg-muted/30 transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between mb-3">
                   <Badge variant="secondary">{deck.locationName}</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {deckTotal} cards
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {deckTotal} cards
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 h-8 w-8"
+                      onClick={(e) => deleteDeck(deck.id, e)}
+                    >
+                      <Trash2 className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </div>
                 </div>
                 <h3 className="font-semibold mb-1">{deck.title}</h3>
                 {deck.scenarioTitle && (

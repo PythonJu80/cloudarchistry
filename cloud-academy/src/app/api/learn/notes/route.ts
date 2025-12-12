@@ -88,7 +88,7 @@ export async function GET() {
 
 /**
  * POST /api/learn/notes
- * Generate new study notes from a scenario
+ * Generate new study notes from user's certification/telemetry (same pattern as flashcards)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -98,15 +98,6 @@ export async function POST(request: NextRequest) {
     }
 
     const profileId = session.user.academyProfileId;
-    const body = await request.json();
-    const { scenarioId } = body;
-
-    if (!scenarioId) {
-      return NextResponse.json(
-        { error: "scenarioId is required" },
-        { status: 400 }
-      );
-    }
 
     // Get AI config
     const aiConfig = await getAiConfigForRequest(profileId);
@@ -121,11 +112,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user profile for persona
+    // Get user profile with telemetry data
     const profile = await prisma.academyUserProfile.findUnique({
       where: { id: profileId },
-      select: { skillLevel: true, targetCertification: true },
+      select: {
+        skillLevel: true,
+        targetCertification: true,
+        challengesCompleted: true,
+        scenariosCompleted: true,
+        totalPoints: true,
+        level: true,
+      },
     });
+
+    if (!profile?.targetCertification) {
+      return NextResponse.json(
+        {
+          error: "No target certification set",
+          message: "Please set your target AWS certification in Settings before generating notes.",
+          action: "set_certification",
+        },
+        { status: 400 }
+      );
+    }
 
     if (!LEARNING_AGENT_URL) {
       return NextResponse.json(
@@ -134,6 +143,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build telemetry summary for AI context
+    const telemetrySummary = {
+      skillLevel: profile.skillLevel,
+      targetCertification: profile.targetCertification,
+      challengesCompleted: profile.challengesCompleted,
+      scenariosCompleted: profile.scenariosCompleted,
+      totalPoints: profile.totalPoints,
+      level: profile.level,
+    };
+
     // Call learning agent to generate notes
     const response = await fetch(
       `${LEARNING_AGENT_URL}/api/learning/generate-notes`,
@@ -141,9 +160,9 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          scenario_id: scenarioId,
-          user_level: profile?.skillLevel || "intermediate",
-          persona_id: profile?.targetCertification || null,
+          certification_code: profile.targetCertification,
+          user_level: profile.skillLevel || "intermediate",
+          telemetry: telemetrySummary,
           openai_api_key: aiConfig.key,
           preferred_model: aiConfig.preferredModel,
         }),
@@ -167,10 +186,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Save the notes to our database (same pattern as flashcards)
+    const notesData = data.notes;
+    const newNotes = await prisma.studyNotes.create({
+      data: {
+        profileId,
+        certificationCode: profile.targetCertification,
+        title: notesData.title || `${profile.targetCertification} Study Notes`,
+        content: notesData.content || "",
+        sections: notesData.sections || [],
+        awsServices: notesData.aws_services || notesData.awsServices || [],
+        keyTakeaways: notesData.key_takeaways || notesData.keyTakeaways || [],
+        generatedBy: "ai",
+        aiModel: aiConfig.preferredModel || "gpt-4o",
+      },
+    });
+
     return NextResponse.json({
       success: true,
-      notesId: data.notes_id,
-      generationMethod: data.generation_method,
+      notesId: newNotes.id,
     });
   } catch (error) {
     console.error("Error generating notes:", error);

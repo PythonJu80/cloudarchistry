@@ -1945,12 +1945,17 @@ model StudyPlan {
   @@map("StudyPlan")
 }
 
-// AI-generated or user-created study notes for a scenario
+// AI-generated or user-created study notes
 model StudyNotes {
   id          String   @id @default(cuid())
   
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  // Can be scenario-based OR certification-based
+  scenarioId  String?
+  scenario    AcademyScenario? @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  
+  // For certification-based notes (no scenario)
+  profileId         String?
+  certificationCode String?
   
   // Notes metadata
   title       String
@@ -1971,6 +1976,9 @@ model StudyNotes {
   // Version control
   version     Int      @default(1)
   
+  // Key takeaways
+  keyTakeaways Json     @default("[]")
+  
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1979,6 +1987,8 @@ model StudyNotes {
   annotations  StudyAnnotation[]
   
   @@index([scenarioId])
+  @@index([profileId])
+  @@index([certificationCode])
 }
 
 // User's progress/interaction with study notes
@@ -2117,12 +2127,17 @@ model CoachingMessage {
 // Quizzes
 // ============================================
 
-// Quiz for a scenario
+// Quiz - can be scenario-based OR certification-based
 model Quiz {
   id          String   @id @default(cuid())
   
-  scenarioId  String
-  scenario    AcademyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  // Can be scenario-based OR certification-based
+  scenarioId  String?
+  scenario    AcademyScenario? @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  
+  // For certification-based quizzes (no scenario)
+  profileId         String?
+  certificationCode String?
   
   // Quiz metadata
   title       String
@@ -2158,6 +2173,8 @@ model Quiz {
   attempts    QuizAttempt[]
   
   @@index([scenarioId])
+  @@index([profileId])
+  @@index([certificationCode])
 }
 
 // Quiz question

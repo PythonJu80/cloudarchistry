@@ -25,6 +25,7 @@ import {
   XCircle,
   Loader2,
   Globe,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -167,6 +168,9 @@ interface DashboardData {
     passed: boolean;
     completedAt: string | null;
   }>;
+  notesCount: number;
+  flashcardDecksCount: number;
+  quizzesCount: number;
 }
 
 interface VersusMatch {
@@ -790,7 +794,7 @@ export default function DashboardPage() {
                         <span className="text-sm">Flashcards</span>
                       </div>
                       <Badge variant="outline">
-                        {data.flashcardProgress?.length || 0} decks
+                        {data.flashcardDecksCount || 0}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/50">
@@ -799,7 +803,16 @@ export default function DashboardPage() {
                         <span className="text-sm">Quizzes</span>
                       </div>
                       <Badge variant="outline">
-                        {data.quizAttempts?.length || 0} taken
+                        {data.quizzesCount || 0}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/50">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-cyan-400" />
+                        <span className="text-sm">Notes</span>
+                      </div>
+                      <Badge variant="outline">
+                        {data.notesCount || 0}
                       </Badge>
                     </div>
                   </div>

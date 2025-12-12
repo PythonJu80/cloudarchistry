@@ -116,6 +116,39 @@ export async function GET() {
       take: 5,
     });
 
+    // Get notes count
+    const notesCount = await prisma.studyNotes.count({
+      where: {
+        isActive: true,
+        OR: [
+          { profileId: profile.id },
+          { scenarioId: { not: null } },
+        ],
+      },
+    });
+
+    // Get flashcard decks count
+    const flashcardDecksCount = await prisma.flashcardDeck.count({
+      where: {
+        isActive: true,
+        OR: [
+          { profileId: profile.id },
+          { scenarioId: { not: null } },
+        ],
+      },
+    });
+
+    // Get quizzes count
+    const quizzesCount = await prisma.quiz.count({
+      where: {
+        isActive: true,
+        OR: [
+          { profileId: profile.id },
+          { scenarioId: { not: null } },
+        ],
+      },
+    });
+
     // Format user journeys (scenarios in progress or completed) with full challenge data for modal
     const userJourneys = scenarioAttempts.map((attempt) => {
       // Sort challenges by orderIndex and map progress
@@ -276,12 +309,15 @@ export async function GET() {
       quizAttempts: quizAttempts.map((qa) => ({
         id: qa.id,
         quizTitle: qa.quiz.title,
-        scenarioTitle: qa.quiz.scenario.title,
-        locationName: qa.quiz.scenario.location.name,
+        scenarioTitle: qa.quiz.scenario?.title || "Certification Quiz",
+        locationName: qa.quiz.scenario?.location?.name || "Certification Study",
         score: qa.score,
         passed: qa.passed,
         completedAt: qa.completedAt,
       })),
+      notesCount,
+      flashcardDecksCount,
+      quizzesCount,
     });
   } catch (error) {
     console.error("Dashboard API error:", error);

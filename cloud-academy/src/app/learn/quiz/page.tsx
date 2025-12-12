@@ -17,21 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-
-interface Scenario {
-  id: string;
-  title: string;
-  locationName: string;
-}
 
 interface QuizOption {
   id: string;
@@ -96,20 +81,15 @@ export default function QuizPage() {
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [startTime, setStartTime] = useState<number>(0);
   const [currentGradedAnswer, setCurrentGradedAnswer] = useState<GradedAnswer | null>(null);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
   
-  // Generate dialog
-  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [loadingScenarios, setLoadingScenarios] = useState(false);
-  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
-  const [generateCount, setGenerateCount] = useState(10);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch quizzes from API
   const fetchQuizzes = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/quiz");
+      const response = await fetch("/api/learn/quiz");
       if (response.ok) {
         const data = await response.json();
         setQuizzes(data.quizzes || []);
@@ -125,89 +105,82 @@ export default function QuizPage() {
     fetchQuizzes();
   }, [fetchQuizzes]);
 
-  // Fetch scenarios for generation
-  const fetchScenarios = async () => {
-    try {
-      setLoadingScenarios(true);
-      const res = await fetch("/api/scenarios?limit=50");
-      if (!res.ok) throw new Error("Failed to fetch scenarios");
-      const data = await res.json();
-      setScenarios(
-        (data.scenarios || []).map((s: { id: string; title: string; location?: { name: string } }) => ({
-          id: s.id,
-          title: s.title,
-          locationName: s.location?.name || "Unknown",
-        }))
-      );
-    } catch (err) {
-      console.error("Error fetching scenarios:", err);
-    } finally {
-      setLoadingScenarios(false);
-    }
-  };
-
-  const handleOpenGenerateDialog = () => {
-    setShowGenerateDialog(true);
-    fetchScenarios();
-  };
-
-  // Generate new quiz
+  // Generate quiz from certification (no scenario needed - same as flashcards)
   const handleGenerateQuiz = async () => {
-    if (!selectedScenarioId) return;
-    
     try {
       setGenerating(true);
       setError(null);
-      const response = await fetch("/api/quiz", {
+      
+      const res = await fetch("/api/learn/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenarioId: selectedScenarioId,
-          questionCount: generateCount,
-        }),
+        body: JSON.stringify({ questionCount: 10 }),
       });
-
-      if (response.status === 402) {
+      
+      if (res.status === 402) {
         setError("Please configure your OpenAI API key in Settings to generate quizzes.");
-        setShowGenerateDialog(false);
         return;
       }
-
-      if (response.ok) {
-        setShowGenerateDialog(false);
-        setSelectedScenarioId(null);
-        await fetchQuizzes();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to generate quiz");
+      
+      if (res.status === 400) {
+        const data = await res.json();
+        if (data.action === "set_certification") {
+          setError("Please set your target AWS certification in Settings before generating quizzes.");
+          return;
+        }
+        throw new Error(data.error || "Failed to generate quiz");
       }
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to generate quiz");
+      }
+      
+      await fetchQuizzes();
     } catch (err) {
-      console.error("Error generating quiz:", err);
-      setError("Failed to generate quiz");
+      setError(err instanceof Error ? err.message : "Failed to generate quiz");
     } finally {
       setGenerating(false);
     }
   };
 
-  // Start a quiz
+  // Start a quiz (or resume if in-progress attempt exists)
   const startQuiz = async (quiz: Quiz) => {
     try {
-      // Fetch full quiz with questions
-      const response = await fetch(`/api/quiz/${quiz.id}`);
+      // Fetch full quiz with questions and check for existing attempt
+      const response = await fetch(`/api/learn/quiz/${quiz.id}`);
       if (!response.ok) throw new Error("Failed to load quiz");
       
       const fullQuiz = await response.json();
       
       setActiveQuiz(quiz);
       setActiveQuizQuestions(fullQuiz.questions);
-      setCurrentQuestionIndex(0);
+      
+      // Resume from existing attempt if available
+      if (fullQuiz.attemptId) {
+        setAttemptId(fullQuiz.attemptId);
+        setCurrentQuestionIndex(fullQuiz.resumeIndex || 0);
+        // Restore previous answers
+        const previousAnswers = new Map<string, string[]>();
+        fullQuiz.questions.forEach((q: { id: string; previousAnswer?: { selectedOptions: string[] } }) => {
+          if (q.previousAnswer) {
+            previousAnswers.set(q.id, q.previousAnswer.selectedOptions);
+          }
+        });
+        setAnswers(previousAnswers);
+        setStartTime(fullQuiz.startedAt ? new Date(fullQuiz.startedAt).getTime() : Date.now());
+      } else {
+        setAttemptId(null);
+        setCurrentQuestionIndex(0);
+        setAnswers(new Map());
+        setStartTime(Date.now());
+      }
+      
       setSelectedOptions([]);
       setShowResult(false);
-      setAnswers(new Map());
       setQuizComplete(false);
       setQuizResult(null);
       setCurrentGradedAnswer(null);
-      setStartTime(Date.now());
     } catch (error) {
       console.error("Error starting quiz:", error);
       alert("Failed to load quiz");
@@ -241,19 +214,24 @@ export default function QuizPage() {
       newAnswers.set(currentQuestion.id, selectedOptions);
       setAnswers(newAnswers);
       
-      // Get grading for this question
-      const response = await fetch(`/api/quiz/${activeQuiz.id}/grade`, {
+      // Get grading for this question and save progress
+      const response = await fetch(`/api/learn/quiz/${activeQuiz.id}/grade`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           questionId: currentQuestion.id,
           selectedOptions,
+          attemptId,
         }),
       });
       
       if (response.ok) {
         const graded = await response.json();
         setCurrentGradedAnswer(graded);
+        // Store attemptId from first graded answer
+        if (graded.attemptId && !attemptId) {
+          setAttemptId(graded.attemptId);
+        }
       }
       
       setShowResult(true);
@@ -290,12 +268,13 @@ export default function QuizPage() {
         selectedOptions: opts,
       }));
 
-      const response = await fetch(`/api/quiz/${activeQuiz.id}/submit`, {
+      const response = await fetch(`/api/learn/quiz/${activeQuiz.id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           answers: answersArray,
           timeSpentSeconds: timeSpent,
+          attemptId,
         }),
       });
 
@@ -334,7 +313,7 @@ export default function QuizPage() {
     if (!confirm("Delete this quiz?")) return;
     
     try {
-      const response = await fetch(`/api/quiz/${quizId}`, { method: "DELETE" });
+      const response = await fetch(`/api/learn/quiz/${quizId}`, { method: "DELETE" });
       if (response.ok) {
         await fetchQuizzes();
       }
@@ -529,9 +508,18 @@ export default function QuizPage() {
             Test your knowledge with AI-generated quizzes
           </p>
         </div>
-        <Button onClick={handleOpenGenerateDialog}>
-          <Sparkles className="w-4 h-4 mr-2" />
-          Generate Quiz
+        <Button onClick={handleGenerateQuiz} disabled={generating}>
+          {generating ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate Quiz
+            </>
+          )}
         </Button>
       </div>
 
@@ -554,9 +542,18 @@ export default function QuizPage() {
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Generate quizzes from your completed scenarios to test your knowledge.
           </p>
-          <Button onClick={handleOpenGenerateDialog}>
-            <Sparkles className="w-4 h-4 mr-2" />
-            Generate Quiz
+          <Button onClick={handleGenerateQuiz} disabled={generating}>
+            {generating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Quiz
+              </>
+            )}
           </Button>
         </div>
       ) : (
@@ -611,84 +608,6 @@ export default function QuizPage() {
         </div>
       )}
 
-      {/* Generate Quiz Dialog */}
-      <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Generate Quiz</DialogTitle>
-            <DialogDescription>
-              Select a scenario to generate a quiz from its content.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {loadingScenarios ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-          ) : scenarios.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No scenarios found. Complete some scenarios first!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2 max-h-[250px] overflow-y-auto">
-                <Label>Select Scenario</Label>
-                {scenarios.map((scenario) => (
-                  <div
-                    key={scenario.id}
-                    onClick={() => setSelectedScenarioId(scenario.id)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                      selectedScenarioId === scenario.id
-                        ? "border-primary bg-primary/10"
-                        : "border-border/50 hover:border-primary/50"
-                    }`}
-                  >
-                    <p className="font-medium">{scenario.title}</p>
-                    <p className="text-sm text-muted-foreground">{scenario.locationName}</p>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="questionCount">Number of Questions</Label>
-                <select
-                  id="questionCount"
-                  value={generateCount}
-                  onChange={(e) => setGenerateCount(parseInt(e.target.value))}
-                  className="w-full p-2 rounded-md border border-border bg-background"
-                >
-                  <option value={5}>5 questions</option>
-                  <option value={10}>10 questions</option>
-                  <option value={15}>15 questions</option>
-                  <option value={20}>20 questions</option>
-                </select>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleGenerateQuiz}
-              disabled={!selectedScenarioId || generating}
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Quiz
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

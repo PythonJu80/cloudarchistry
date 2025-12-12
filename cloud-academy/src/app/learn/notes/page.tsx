@@ -13,21 +13,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-
-interface Scenario {
-  id: string;
-  title: string;
-  locationName: string;
-}
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Note {
   id: string;
@@ -47,11 +34,6 @@ export default function NotesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Generate dialog
-  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [loadingScenarios, setLoadingScenarios] = useState(false);
-  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
   // Active note view
@@ -77,64 +59,40 @@ export default function NotesPage() {
     fetchNotes();
   }, [fetchNotes]);
 
-  // Fetch scenarios for generation
-  const fetchScenarios = async () => {
-    try {
-      setLoadingScenarios(true);
-      const res = await fetch("/api/scenarios?limit=50");
-      if (!res.ok) throw new Error("Failed to fetch scenarios");
-      const data = await res.json();
-      setScenarios(
-        (data.scenarios || []).map((s: { id: string; title: string; location?: { name: string } }) => ({
-          id: s.id,
-          title: s.title,
-          locationName: s.location?.name || "Unknown",
-        }))
-      );
-    } catch (err) {
-      console.error("Error fetching scenarios:", err);
-    } finally {
-      setLoadingScenarios(false);
-    }
-  };
-
-  const handleOpenGenerateDialog = () => {
-    setShowGenerateDialog(true);
-    fetchScenarios();
-  };
-
-  // Generate new notes
+  // Generate notes from certification (no scenario needed - same as flashcards)
   const handleGenerateNotes = async () => {
-    if (!selectedScenarioId) return;
-
     try {
       setGenerating(true);
       setError(null);
-      const response = await fetch("/api/learn/notes", {
+      
+      const res = await fetch("/api/learn/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenarioId: selectedScenarioId,
-        }),
+        body: JSON.stringify({}),
       });
-
-      if (response.status === 402) {
+      
+      if (res.status === 402) {
         setError("Please configure your OpenAI API key in Settings to generate notes.");
-        setShowGenerateDialog(false);
         return;
       }
-
-      if (response.ok) {
-        setShowGenerateDialog(false);
-        setSelectedScenarioId(null);
-        await fetchNotes();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to generate notes");
+      
+      if (res.status === 400) {
+        const data = await res.json();
+        if (data.action === "set_certification") {
+          setError("Please set your target AWS certification in Settings before generating notes.");
+          return;
+        }
+        throw new Error(data.error || "Failed to generate notes");
       }
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to generate notes");
+      }
+      
+      await fetchNotes();
     } catch (err) {
-      console.error("Error generating notes:", err);
-      setError("Failed to generate notes");
+      setError(err instanceof Error ? err.message : "Failed to generate notes");
     } finally {
       setGenerating(false);
     }
@@ -214,8 +172,10 @@ export default function NotesPage() {
             </div>
           )}
           
-          <div className="prose prose-invert max-w-none">
-            <div dangerouslySetInnerHTML={{ __html: activeNote.content.replace(/\n/g, '<br />') }} />
+          <div className="prose prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground prose-table:text-sm prose-th:bg-muted/50 prose-th:p-2 prose-td:p-2 prose-td:border prose-th:border">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {activeNote.content}
+            </ReactMarkdown>
           </div>
         </div>
       </div>
@@ -230,12 +190,21 @@ export default function NotesPage() {
           <div>
             <h1 className="text-2xl font-bold">Study Notes</h1>
             <p className="text-muted-foreground">
-              AI-generated study notes from your scenarios
+              Generated study notes from your scenarios
             </p>
           </div>
-          <Button onClick={handleOpenGenerateDialog}>
-            <Sparkles className="w-4 h-4 mr-2" />
-            Generate Notes
+          <Button onClick={handleGenerateNotes} disabled={generating}>
+            {generating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Notes
+              </>
+            )}
           </Button>
         </div>
 
@@ -274,9 +243,18 @@ export default function NotesPage() {
             <p className="text-muted-foreground text-center max-w-md mb-6">
               Generate study notes from your scenarios to build your knowledge base.
             </p>
-            <Button onClick={handleOpenGenerateDialog}>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate Study Notes
+            <Button onClick={handleGenerateNotes} disabled={generating}>
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Study Notes
+                </>
+              )}
             </Button>
           </div>
         ) : (
@@ -320,67 +298,6 @@ export default function NotesPage() {
         )}
       </div>
 
-      {/* Generate Notes Dialog */}
-      <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Generate Study Notes</DialogTitle>
-            <DialogDescription>
-              Select a scenario to generate study notes from its content.
-            </DialogDescription>
-          </DialogHeader>
-
-          {loadingScenarios ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-          ) : scenarios.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No scenarios found. Complete some scenarios first!</p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              <Label>Select Scenario</Label>
-              {scenarios.map((scenario) => (
-                <div
-                  key={scenario.id}
-                  onClick={() => setSelectedScenarioId(scenario.id)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    selectedScenarioId === scenario.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border/50 hover:border-primary/50"
-                  }`}
-                >
-                  <p className="font-medium">{scenario.title}</p>
-                  <p className="text-sm text-muted-foreground">{scenario.locationName}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleGenerateNotes}
-              disabled={!selectedScenarioId || generating}
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Notes
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

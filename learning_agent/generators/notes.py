@@ -204,6 +204,65 @@ Return JSON with: title, summary, content (markdown), sections, aws_services, ke
     )
 
 
+async def generate_notes_for_certification(
+    cert_name: str,
+    focus_areas: List[str],
+    user_level: str = "intermediate",
+    telemetry: Optional[Dict] = None,
+) -> Dict:
+    """Generate study notes from certification + telemetry + skill level."""
+    import random
+    
+    # Build telemetry context
+    telemetry_context = ""
+    if telemetry:
+        telemetry_context = f"""
+User Progress:
+- Skill Level: {telemetry.get('skillLevel', 'intermediate')}
+- Challenges Completed: {telemetry.get('challengesCompleted', 0)}
+- Scenarios Completed: {telemetry.get('scenariosCompleted', 0)}
+- Total Points: {telemetry.get('totalPoints', 0)}
+- Level: {telemetry.get('level', 1)}
+"""
+    
+    selected_focus = random.sample(focus_areas, min(3, len(focus_areas)))
+    
+    # Use the existing PERSONA_NOTES_PROMPT
+    base_prompt = PERSONA_NOTES_PROMPT.format(
+        cert_name=cert_name,
+        scenario_title=f"{cert_name} Practice",
+        business_context="Certification exam preparation",
+        aws_services=', '.join(selected_focus[:5]),
+        focus_areas=', '.join(selected_focus),
+        level=user_level,
+    )
+    
+    system_prompt = f"""{base_prompt}
+{telemetry_context}
+
+Return a JSON object with these fields:
+- title: A descriptive title for the study notes
+- summary: A 2-3 sentence summary of what the notes cover
+- content: The FULL study notes content in markdown format (at least 500 words with headers, bullet points, code examples where relevant)
+- sections: Array of section objects with id, title, level, content, aws_services
+- aws_services: Array of AWS service names covered
+- key_takeaways: Array of 3-5 key points to remember
+
+The content field MUST contain actual detailed study material, not placeholder text."""
+
+    result = await _chat_json([
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"Generate study notes for {cert_name}"},
+    ])
+    
+    if not result.get("title"):
+        result["title"] = f"{cert_name} Study Notes"
+    if not result.get("summary"):
+        result["summary"] = f"AI-generated study notes for {cert_name} certification"
+    
+    return result
+
+
 # ============================================
 # "TOOL USES AI" PATTERN - AI is just a formatter
 # ============================================

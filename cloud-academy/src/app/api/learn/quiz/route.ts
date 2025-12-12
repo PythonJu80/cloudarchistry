@@ -99,35 +99,64 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Generate a new quiz
+// POST - Generate a new quiz from user's certification/telemetry (same pattern as flashcards)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.academyProfileId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const profileId = session.user.academyProfileId;
     const body = await request.json();
-    const { questionCount = 10, scenarioId } = body;
+    const { questionCount = 10 } = body;
 
-    if (!scenarioId) {
+    // Get AI config
+    const aiConfig = await getAiConfigForRequest(profileId);
+    if (!aiConfig) {
       return NextResponse.json(
-        { error: "Scenario ID is required" },
+        {
+          error: "OpenAI API key required",
+          message: "Add an API key in Settings to generate quizzes.",
+          action: "configure_api_key",
+        },
+        { status: 402 }
+      );
+    }
+
+    // Get user profile with telemetry data
+    const profile = await prisma.academyUserProfile.findUnique({
+      where: { id: profileId },
+      select: {
+        skillLevel: true,
+        targetCertification: true,
+        challengesCompleted: true,
+        scenariosCompleted: true,
+        totalPoints: true,
+        level: true,
+      },
+    });
+
+    if (!profile?.targetCertification) {
+      return NextResponse.json(
+        {
+          error: "No target certification set",
+          message: "Please set your target AWS certification in Settings before generating quizzes.",
+          action: "set_certification",
+        },
         { status: 400 }
       );
     }
 
-    // Get user's profile
-    const profile = await prisma.academyUserProfile.findFirst({
-      where: { academyUserId: session.user.id },
-    });
-
-    if (!profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-    }
-
-    // Get AI config for BYOK
-    const aiConfig = await getAiConfigForRequest(session.user.id);
+    // Build telemetry summary for AI context
+    const telemetrySummary = {
+      skillLevel: profile.skillLevel,
+      targetCertification: profile.targetCertification,
+      challengesCompleted: profile.challengesCompleted,
+      scenariosCompleted: profile.scenariosCompleted,
+      totalPoints: profile.totalPoints,
+      level: profile.level,
+    };
 
     // Call learning agent to generate quiz
     const response = await fetch(
@@ -136,15 +165,12 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          scenario_id: scenarioId,
-          content_type: "quiz",
+          certification_code: profile.targetCertification,
           user_level: profile.skillLevel || "intermediate",
-          persona_id: profile.targetCertification || "solutions-architect",
-          options: {
-            question_count: questionCount,
-          },
-          openai_api_key: aiConfig?.key,
-          preferred_model: aiConfig?.preferredModel,
+          telemetry: telemetrySummary,
+          options: { question_count: questionCount },
+          openai_api_key: aiConfig.key,
+          preferred_model: aiConfig.preferredModel,
         }),
       }
     );
@@ -160,24 +186,66 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json();
 
-    if (!result.success || !result.quiz_id) {
+    if (!result.success) {
       return NextResponse.json(
         { error: result.error || "Quiz generation failed" },
         { status: 500 }
       );
     }
 
-    // Fetch the created quiz
-    const quiz = await prisma.quiz.findUnique({
-      where: { id: result.quiz_id },
+    // Save the quiz to our database (same pattern as flashcards)
+    const quizData = result.quiz;
+    const newQuiz = await prisma.quiz.create({
+      data: {
+        profileId,
+        certificationCode: profile.targetCertification,
+        title: quizData.title || `${profile.targetCertification} Practice Quiz`,
+        description: quizData.description || "AI-generated certification quiz",
+        quizType: "certification",
+        questionCount: quizData.questions?.length || 0,
+        generatedBy: "ai",
+        aiModel: aiConfig.preferredModel || "gpt-4o",
+        questions: {
+          create: (quizData.questions || []).map((q: {
+            question: string;
+            question_type?: string;
+            options?: { id: string; text: string; is_correct: boolean }[];
+            explanation?: string;
+            difficulty?: string;
+            points?: number;
+            aws_services?: string[];
+            tags?: string[];
+          }, index: number) => ({
+            question: q.question,
+            questionType: q.question_type || "multiple_choice",
+            options: q.options || [],
+            explanation: q.explanation || "",
+            difficulty: q.difficulty || "medium",
+            points: q.points || 10,
+            awsServices: q.aws_services || [],
+            tags: q.tags || [],
+            orderIndex: index,
+          })),
+        },
+      },
       include: {
-        questions: true,
+        questions: {
+          orderBy: { orderIndex: "asc" },
+        },
       },
     });
 
     return NextResponse.json({
       success: true,
-      quiz,
+      quiz: {
+        id: newQuiz.id,
+        title: newQuiz.title,
+        description: newQuiz.description,
+        questionCount: newQuiz.questionCount,
+        quizType: newQuiz.quizType,
+        certificationCode: newQuiz.certificationCode,
+        questions: newQuiz.questions,
+      },
     });
   } catch (error) {
     console.error("Error generating quiz:", error);
