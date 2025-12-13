@@ -216,7 +216,7 @@ export function BusinessModal({
     setIsValidating(true);
     
     try {
-      const response = await fetch("/api/game/tycoon/validate", {
+      const response = await fetch("/api/gaming/tycoon/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -120,7 +120,7 @@ async function saveGameState(state: GameState) {
   
   // Save to database in background
   try {
-    await fetch("/api/game/slots/state", {
+    await fetch("/api/gaming/slots/state", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(state),
@@ -133,7 +133,7 @@ async function saveGameState(state: GameState) {
 // Load from database (primary) with localStorage fallback
 async function loadGameStateFromDB(): Promise<GameState> {
   try {
-    const response = await fetch("/api/game/slots/state");
+    const response = await fetch("/api/gaming/slots/state");
     if (response.ok) {
       const data = await response.json();
       // Also update localStorage cache
@@ -528,7 +528,7 @@ export default function ServiceSlotsPage() {
   // Fetch a single challenge from API
   const fetchSingleChallenge = useCallback(async (): Promise<Challenge | null> => {
     try {
-      const response = await fetch("/api/game/slots/challenge", {
+      const response = await fetch("/api/gaming/slots/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -628,7 +628,7 @@ export default function ServiceSlotsPage() {
     setSelectedOption(optionId);
     
     try {
-      const response = await fetch("/api/game/slots/validate", {
+      const response = await fetch("/api/gaming/slots/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

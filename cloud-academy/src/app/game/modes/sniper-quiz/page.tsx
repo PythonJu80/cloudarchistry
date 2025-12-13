@@ -143,7 +143,7 @@ export default function SniperQuizPage() {
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/game/sniper-quiz/questions", {
+      const res = await fetch("/api/gaming/sniper-quiz/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ count: 10 }),
@@ -307,7 +307,7 @@ export default function SniperQuizPage() {
 
   const submitScore = async () => {
     try {
-      await fetch("/api/game/sniper-quiz/submit", {
+      await fetch("/api/gaming/sniper-quiz/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
