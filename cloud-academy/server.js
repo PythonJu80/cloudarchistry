@@ -18,6 +18,10 @@ const handle = app.getRequestHandler();
 // Track match rooms
 const matchRooms = new Map(); // matchCode -> Set of { socketId, userId }
 
+// Track user sockets for direct messaging (userId -> Set of socketIds)
+const userSockets = new Map();
+
+
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
     const parsedUrl = parse(req.url, true);
@@ -41,6 +45,24 @@ app.prepare().then(() => {
 
   io.on("connection", (socket) => {
     console.log(`[Socket] Client connected: ${socket.id}`);
+
+    // Register user for direct messaging (called when user logs in)
+    socket.on("register-user", ({ userId, userName }) => {
+      if (!userId) return;
+      
+      // Track this socket for the user
+      if (!userSockets.has(userId)) {
+        userSockets.set(userId, new Set());
+      }
+      userSockets.get(userId).add(socket.id);
+      socket.data.userId = userId;
+      socket.data.userName = userName;
+      
+      // Join user's personal room for direct messages
+      socket.join(`user:${userId}`);
+      
+      console.log(`[Socket] User ${userName} (${userId}) registered`);
+    });
 
     // Join a match room
     socket.on("join-match", ({ matchCode, userId, userName }) => {
@@ -163,6 +185,14 @@ app.prepare().then(() => {
     // Handle disconnect
     socket.on("disconnect", () => {
       const { matchCode, userId, userName } = socket.data || {};
+      
+      // Clean up user socket tracking
+      if (userId && userSockets.has(userId)) {
+        userSockets.get(userId).delete(socket.id);
+        if (userSockets.get(userId).size === 0) {
+          userSockets.delete(userId);
+        }
+      }
       
       if (matchCode && matchRooms.has(matchCode)) {
         matchRooms.get(matchCode).delete(socket.id);

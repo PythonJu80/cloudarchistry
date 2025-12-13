@@ -142,13 +142,11 @@ export interface QuestionRecap {
 // Game mode definitions
 export type GameModeSlug =
   | "quiz_battle"
-  | "lightning_round"
   | "hot_streak"
   | "sniper_quiz"
   | "service_slots"
   | "speed_deploy"
   | "cloud_tycoon"
-  | "architecture_poker"
   | "ticking_bomb"
   | "tournament"
   | "daily_jackpot"
@@ -184,16 +182,6 @@ export const GAME_MODES: GameMode[] = [
     description: "Spin to match 3 AWS services that work together. Jackpot!",
     players: "Solo",
     gradient: "linear-gradient(135deg, #fbbf24, #f59e0b)",
-    isLive: true,
-    comingSoon: false,
-  },
-  {
-    slug: "lightning_round",
-    title: "Lightning Round",
-    icon: "⚡",
-    description: "60 seconds. Answer as many as you can. Pure speed!",
-    players: "Solo",
-    gradient: "linear-gradient(135deg, #facc15, #eab308)",
     isLive: true,
     comingSoon: false,
   },
@@ -236,16 +224,6 @@ export const GAME_MODES: GameMode[] = [
     gradient: "linear-gradient(135deg, #22c55e, #16a34a)",
     isLive: true,
     comingSoon: false,
-  },
-  {
-    slug: "architecture_poker",
-    title: "Architecture Poker",
-    icon: "🃏",
-    description: "Build the best 'hand' of services for each scenario.",
-    players: "2-6",
-    gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-    isLive: false,
-    comingSoon: true,
   },
   {
     slug: "ticking_bomb",

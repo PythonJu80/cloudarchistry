@@ -12,6 +12,7 @@ from .config import router as config_router
 from .chat import router as chat_router
 from .game import router as game_router
 from .cloud_tycoon import router as cloud_tycoon_router
+from .service_slots import router as service_slots_router
 
 # Create main router that includes all sub-routers
 def register_routes(app):
@@ -25,3 +26,4 @@ def register_routes(app):
     app.include_router(chat_router, prefix="/api", tags=["Chat"])
     app.include_router(game_router, prefix="/api/game", tags=["Game Modes"])
     app.include_router(cloud_tycoon_router, prefix="/api/tycoon", tags=["Cloud Tycoon"])
+    app.include_router(service_slots_router, prefix="/api/slots", tags=["Service Slots"])

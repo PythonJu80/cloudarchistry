@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -6,8 +6,9 @@ import { prisma } from "@/lib/db";
 /**
  * GET /api/versus/pending - Get pending challenges for current user
  * Returns only challenges where the current user is player2 and status is pending
+ * Optional query param: matchType (quiz, rummy) to filter by game type
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -23,11 +24,15 @@ export async function GET() {
       return NextResponse.json({ challenges: [] });
     }
 
+    // Optional matchType filter
+    const matchType = req.nextUrl.searchParams.get("matchType");
+
     // Get pending challenges where user is the challenged player (player2)
     const challenges = await prisma.versusMatch.findMany({
       where: {
         player2Id: academyUser.id,
         status: "pending",
+        ...(matchType && { matchType }),
       },
       include: {
         player1: {

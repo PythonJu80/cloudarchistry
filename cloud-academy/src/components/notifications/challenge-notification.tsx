@@ -36,7 +36,7 @@ export function ChallengeNotificationProvider({ children }: { children: React.Re
     if (status !== "authenticated") return;
     
     try {
-      const res = await fetch("/api/versus/pending");
+      const res = await fetch("/api/versus/pending?matchType=quiz");
       if (res.ok) {
         const data = await res.json();
         setChallenges(data.challenges || []);

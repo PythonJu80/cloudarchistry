@@ -704,8 +704,9 @@ export default function GameModePage() {
                       router.push("/game/modes/sniper-quiz");
                     } else if (mode.slug === "cloud_tycoon") {
                       router.push("/game/modes/cloud-tycoon");
+                    } else if (mode.slug === "service_slots") {
+                      router.push("/game/modes/service-slots");
                     }
-                    // Add other game mode routes here as they're built
                   } : undefined}
                 />
               ))}

@@ -145,15 +145,22 @@ export async function POST(req: NextRequest) {
     const academyUser = await prisma.academyUser.findFirst({
       where: { email: session.user.email! },
       select: { 
-        id: true, 
-        skillLevel: true,
-        targetCertification: true,
+        id: true,
+        profile: {
+          select: {
+            skillLevel: true,
+            targetCertification: true,
+          },
+        },
       },
     });
 
     if (!academyUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+    
+    const skillLevel = academyUser.profile?.skillLevel || "intermediate";
+    const targetCertification = academyUser.profile?.targetCertification || null;
 
     // Try to get AI-generated questions from Learning Agent
     try {
@@ -161,8 +168,8 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_level: academyUser.skillLevel || "intermediate",
-          cert_code: academyUser.targetCertification || null,
+          user_level: skillLevel,
+          cert_code: targetCertification,
           weak_topics: body.weakTopics || null,
           recent_topics: body.recentTopics || null,
           question_count: count,

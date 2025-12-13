@@ -2949,6 +2949,7 @@ model GameProfile {
   arenaStats      Json     @default("{}")  // { games, wins, avgRating }
   scrambleStats   Json     @default("{}")  // { games, wins, bestTime }
   defusalStats    Json     @default("{}")  // { games, wins, bombsDefused }
+  serviceSlotsStats Json   @default("{}")  // { balance, totalWinnings, gamesPlayed, gamesWon, currentStreak, bestStreak }
   
   // Activity
   lastPlayedAt    DateTime?

@@ -14,6 +14,32 @@ from openai import AsyncOpenAI
 from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
+# Map cert codes (e.g., "SAA-C03") to persona IDs
+CERT_CODE_TO_PERSONA = {
+    "SAA": "solutions-architect-associate",
+    "SAA-C03": "solutions-architect-associate",
+    "SAP": "solutions-architect-professional",
+    "SAP-C02": "solutions-architect-professional",
+    "DVA": "developer-associate",
+    "DVA-C02": "developer-associate",
+    "SOA": "sysops-associate",
+    "SOA-C02": "sysops-associate",
+    "DOP": "devops-professional",
+    "DOP-C02": "devops-professional",
+    "ANS": "advanced-networking",
+    "ANS-C01": "advanced-networking",
+    "SCS": "security-specialty",
+    "SCS-C02": "security-specialty",
+    "DBS": "database-specialty",
+    "DBS-C01": "database-specialty",
+    "MLS": "machine-learning",
+    "MLS-C01": "machine-learning",
+    "PAS": "data-analytics",
+    "DAS-C01": "data-analytics",
+    "CLF": "cloud-practitioner",
+    "CLF-C02": "cloud-practitioner",
+}
+
 
 class GameQuestion(BaseModel):
     """A question for game modes"""
@@ -155,8 +181,19 @@ async def generate_sniper_quiz_questions(
     cert_context = ""
     focus_areas = ["Core AWS Services", "Cloud Concepts", "Security", "Pricing"]
     
-    if cert_code and cert_code in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[cert_code]
+    # Map cert code to persona ID
+    persona_id = None
+    if cert_code:
+        # Try direct lookup first, then strip version suffix
+        upper_code = cert_code.upper()
+        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
+        if not persona_id:
+            # Try without version (e.g., "SAA-C03" -> "SAA")
+            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    
+    if persona_id and persona_id in CERTIFICATION_PERSONAS:
+        persona = CERTIFICATION_PERSONAS[persona_id]
         cert_name = persona.get("cert", cert_name)
         focus_areas = persona.get("focus", focus_areas)
         cert_context = f"""
@@ -239,8 +276,14 @@ async def generate_speed_round_questions(
     
     # Similar to sniper quiz but with shorter questions
     cert_name = "AWS"
-    if cert_code and cert_code in CERTIFICATION_PERSONAS:
-        cert_name = CERTIFICATION_PERSONAS[cert_code].get("cert", "AWS")
+    if cert_code:
+        upper_code = cert_code.upper()
+        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
+        if not persona_id:
+            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+        if persona_id and persona_id in CERTIFICATION_PERSONAS:
+            cert_name = CERTIFICATION_PERSONAS[persona_id].get("cert", "AWS")
     
     system_prompt = f"""Generate {question_count} RAPID-FIRE quiz questions for AWS certification practice.
 

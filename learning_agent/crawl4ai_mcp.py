@@ -2465,6 +2465,124 @@ async def get_tycoon_themes():
 
 
 # ============================================
+# SERVICE SLOTS ENDPOINTS
+# ============================================
+
+class SlotsGenerateRequest(PydanticBaseModel):
+    user_level: str = "intermediate"
+    cert_code: Optional[str] = None
+    difficulty: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+class SlotsValidateRequest(PydanticBaseModel):
+    challenge_id: str
+    services: List[Dict[str, Any]]
+    pattern_name: str
+    options: List[Dict[str, Any]]
+    difficulty: str
+    base_payout: float
+    selected_option_id: str
+    bet_amount: int
+
+
+@app.post("/api/slots/challenge/generate")
+async def generate_slots_challenge_endpoint(request: SlotsGenerateRequest):
+    """Generate a Service Slots challenge with 3 services and 4 options."""
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.service_slots import generate_slot_challenge
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        challenge = await generate_slot_challenge(
+            user_level=request.user_level,
+            cert_code=request.cert_code,
+            difficulty=request.difficulty,
+            api_key=request.openai_api_key,
+            model=request.preferred_model,
+        )
+        
+        return {
+            "id": challenge.id,
+            "services": [
+                {
+                    "service_id": svc.service_id,
+                    "service_name": svc.service_name,
+                    "category": svc.category,
+                }
+                for svc in challenge.services
+            ],
+            "pattern_name": challenge.pattern_name,
+            "pattern_description": challenge.pattern_description,
+            "options": [
+                {
+                    "id": opt.id,
+                    "text": opt.text,
+                    "is_correct": opt.is_correct,
+                    "explanation": opt.explanation,
+                }
+                for opt in challenge.options
+            ],
+            "difficulty": challenge.difficulty,
+            "base_payout": challenge.base_payout,
+        }
+    except ApiKeyRequiredError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Slots challenge generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate challenge: {str(e)}")
+
+
+@app.post("/api/slots/validate")
+async def validate_slots_answer_endpoint(request: SlotsValidateRequest):
+    """Validate the player's answer and calculate winnings."""
+    try:
+        from generators.service_slots import validate_slot_answer, SlotChallenge, SlotService, AnswerOption
+        
+        # Reconstruct challenge from request
+        challenge = SlotChallenge(
+            id=request.challenge_id,
+            services=[
+                SlotService(
+                    service_id=svc.get("service_id", ""),
+                    service_name=svc.get("service_name", ""),
+                    category=svc.get("category", ""),
+                )
+                for svc in request.services
+            ],
+            pattern_name=request.pattern_name,
+            pattern_description="",
+            options=[
+                AnswerOption(
+                    id=opt.get("id", ""),
+                    text=opt.get("text", ""),
+                    is_correct=opt.get("is_correct", False),
+                    explanation=opt.get("explanation", ""),
+                )
+                for opt in request.options
+            ],
+            difficulty=request.difficulty,
+            base_payout=request.base_payout,
+        )
+        
+        result = validate_slot_answer(
+            challenge=challenge,
+            selected_option_id=request.selected_option_id,
+            bet_amount=request.bet_amount,
+        )
+        
+        return result
+    except Exception as e:
+        logger.error(f"Slots validation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+
+
+# ============================================
 # MAIN
 # ============================================
 
