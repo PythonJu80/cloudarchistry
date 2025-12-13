@@ -700,8 +700,8 @@ export default function GameModePage() {
                   gradient={mode.gradient}
                   index={index}
                   onClick={mode.isLive ? () => {
-                    if (mode.slug === "sniper_quiz") {
-                      router.push("/game/modes/sniper-quiz");
+                    if (mode.slug === "service_sniper") {
+                      router.push("/game/modes/service-sniper");
                     } else if (mode.slug === "cloud_tycoon") {
                       router.push("/game/modes/cloud-tycoon");
                     } else if (mode.slug === "service_slots") {

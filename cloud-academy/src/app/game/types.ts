@@ -143,7 +143,7 @@ export interface QuestionRecap {
 export type GameModeSlug =
   | "quiz_battle"
   | "hot_streak"
-  | "sniper_quiz"
+  | "service_sniper"
   | "service_slots"
   | "speed_deploy"
   | "cloud_tycoon"
@@ -196,10 +196,10 @@ export const GAME_MODES: GameMode[] = [
     comingSoon: false,
   },
   {
-    slug: "sniper_quiz",
-    title: "Sniper Quiz",
+    slug: "service_sniper",
+    title: "Service Sniper",
     icon: "🎯",
-    description: "One shot, high stakes. Big points or nothing. No pressure...",
+    description: "Shoot real AWS services, avoid the fakes! Test your reflexes.",
     players: "Solo",
     gradient: "linear-gradient(135deg, #10b981, #059669)",
     isLive: true,

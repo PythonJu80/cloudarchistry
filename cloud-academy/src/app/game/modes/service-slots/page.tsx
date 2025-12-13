@@ -173,7 +173,7 @@ function SlotHandle({
     
     // Animate handle down
     await controls.start({
-      rotate: 45,
+      y: 80,
       transition: { duration: 0.3, ease: "easeOut" }
     });
     
@@ -181,10 +181,10 @@ function SlotHandle({
     onPull();
     
     // Wait a moment then spring back
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     await controls.start({
-      rotate: 0,
+      y: 0,
       transition: { type: "spring", stiffness: 300, damping: 15 }
     });
     
@@ -192,69 +192,99 @@ function SlotHandle({
   };
 
   return (
-    <div className="relative flex flex-col items-center">
-      {/* Handle base mount */}
+    <div className="relative flex flex-col items-center select-none">
+      {/* Glow effect behind lever */}
+      <motion.div
+        className="absolute -inset-4 rounded-full blur-xl"
+        style={{ background: 'radial-gradient(circle, rgba(255,0,0,0.3) 0%, transparent 70%)' }}
+        animate={{ opacity: [0.5, 0.8, 0.5], scale: [1, 1.1, 1] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      />
+      
+      {/* Chrome lever housing - BIGGER */}
       <div 
-        className="w-8 h-24 rounded-lg relative"
+        className="w-10 h-52 rounded-full relative"
         style={{ 
-          background: `linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%)`,
-          boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.5), inset 2px 0 4px rgba(255,255,255,0.1)'
+          background: `linear-gradient(90deg, #5a4a3a 0%, #C0A060 20%, #FFD700 50%, #C0A060 80%, #5a4a3a 100%)`,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.6), inset 0 3px 6px rgba(255,255,255,0.4), 0 0 40px rgba(255,215,0,0.3)'
         }}
       >
-        {/* Handle arm */}
+        {/* Inner track groove */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 top-3 bottom-3 w-4 rounded-full"
+          style={{
+            background: 'linear-gradient(90deg, #0a0a0a, #222, #0a0a0a)',
+            boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.9)'
+          }}
+        />
+
+        {/* Handle arm - moves up and down */}
         <motion.div
           animate={controls}
           style={{ 
-            originX: 0.5, 
-            originY: 0,
             position: 'absolute',
-            top: '8px',
+            top: '12px',
             left: '50%',
-            marginLeft: '-6px'
+            marginLeft: '-6px',
+            zIndex: 10
           }}
           className="cursor-pointer"
           onClick={handlePull}
         >
-          {/* Arm shaft */}
+          {/* Chrome shaft - THICKER */}
           <div 
-            className="w-3 h-32 rounded-full"
+            className="w-3 h-28 rounded-full"
             style={{ 
-              background: `linear-gradient(90deg, #666 0%, #888 50%, #666 100%)`,
-              boxShadow: '2px 2px 4px rgba(0,0,0,0.3)'
+              background: `linear-gradient(90deg, #666 0%, #aaa 25%, #eee 50%, #aaa 75%, #666 100%)`,
+              boxShadow: '0 6px 15px rgba(0,0,0,0.5)'
             }}
           />
           
-          {/* Ball grip */}
+          {/* Big red ball grip - BIGGER & SHINIER */}
           <motion.div 
-            className="w-10 h-10 rounded-full -ml-[14px] -mt-1 flex items-center justify-center"
+            className="w-16 h-16 rounded-full -ml-[26px] -mt-2 flex items-center justify-center"
             style={{ 
-              background: `radial-gradient(circle at 30% 30%, ${AWS_ORANGE}, #cc7a00)`,
-              boxShadow: `0 4px 12px rgba(255, 153, 0, 0.5), inset 0 2px 4px rgba(255,255,255,0.3)`
+              background: `radial-gradient(circle at 30% 30%, #ff6666 0%, #ff0000 40%, #cc0000 70%, #880000 100%)`,
+              boxShadow: `
+                0 8px 30px rgba(255,0,0,0.6), 
+                0 0 60px rgba(255,0,0,0.4),
+                inset 0 -6px 15px rgba(0,0,0,0.4), 
+                inset 0 6px 15px rgba(255,255,255,0.4)
+              `,
+              border: '4px solid #660000'
             }}
-            whileHover={{ scale: disabled ? 1 : 1.1 }}
-            whileTap={{ scale: disabled ? 1 : 0.95 }}
+            whileHover={{ scale: disabled ? 1 : 1.15, boxShadow: '0 8px 40px rgba(255,0,0,0.8), 0 0 80px rgba(255,0,0,0.5)' }}
+            whileTap={{ scale: disabled ? 1 : 0.9 }}
           >
-            {isSpinning && (
+            {isSpinning ? (
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 0.5, repeat: Infinity, ease: "linear" }}
               >
-                <Sparkles className="w-5 h-5 text-white" />
+                <Sparkles className="w-6 h-6 text-white drop-shadow-lg" />
               </motion.div>
+            ) : (
+              <div className="w-3 h-3 rounded-full bg-white/40" />
             )}
           </motion.div>
         </motion.div>
       </div>
       
-      {/* Pull instruction */}
+      {/* Pull instruction - MORE PROMINENT */}
       {!disabled && !isSpinning && (
-        <motion.p 
-          className="text-xs text-orange-400 mt-2 font-medium"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity }}
+        <motion.div 
+          className="mt-4 text-center"
+          animate={{ y: [0, 5, 0] }}
+          transition={{ duration: 1, repeat: Infinity }}
         >
-          PULL!
-        </motion.p>
+          <motion.p 
+            className="text-sm text-yellow-300 font-black tracking-widest drop-shadow-lg"
+            animate={{ opacity: [0.6, 1, 0.6], textShadow: ['0 0 10px #ffd700', '0 0 20px #ffd700', '0 0 10px #ffd700'] }}
+            transition={{ duration: 1, repeat: Infinity }}
+          >
+            ⬇ PULL ⬇
+          </motion.p>
+        </motion.div>
       )}
     </div>
   );
@@ -329,103 +359,115 @@ function SlotReel({
 
   return (
     <div className="relative">
-      {/* Reel frame */}
+      {/* Glow behind reel when not spinning */}
+      {!isReelSpinning && currentService && (
+        <motion.div
+          className="absolute -inset-2 rounded-2xl blur-lg -z-10"
+          style={{ background: `${color}40` }}
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+      )}
+      
+      {/* BIGGER Golden reel frame */}
       <div 
-        className="relative w-44 h-56 rounded-2xl overflow-hidden"
-        style={{ 
-          background: `linear-gradient(180deg, ${AWS_DARK} 0%, #0f1419 100%)`,
+        className="relative w-40 h-48 rounded-2xl"
+        style={{
+          background: `linear-gradient(180deg, #FFE55C 0%, #FFD700 15%, #DAA520 50%, #FFD700 85%, #FFE55C 100%)`,
           boxShadow: `
-            inset 0 4px 20px rgba(0,0,0,0.8),
-            inset 0 -4px 20px rgba(0,0,0,0.8),
-            0 0 30px rgba(255, 153, 0, 0.2)
+            0 10px 40px rgba(0,0,0,0.5),
+            0 0 60px rgba(255,215,0,0.3),
+            inset 0 3px 6px rgba(255,255,255,0.6),
+            inset 0 -3px 6px rgba(0,0,0,0.3)
           `,
-          border: `3px solid ${AWS_ORANGE}40`
+          padding: '8px'
         }}
       >
-        {/* Glass reflection effect */}
+        {/* Inner reel window - BIGGER */}
+        <div
+          className="relative w-full h-full rounded-xl overflow-hidden"
+          style={{
+            background: `linear-gradient(180deg, #fffff0 0%, #ffffff 50%, #fffff0 100%)`,
+            boxShadow: `
+              inset 0 6px 20px rgba(0,0,0,0.25),
+              inset 0 -6px 20px rgba(0,0,0,0.15)
+            `,
+            border: '4px solid #B8860B'
+          }}
+        >
+        {/* Glass shine effect */}
         <div 
           className="absolute inset-0 pointer-events-none z-20"
           style={{
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.3) 100%)'
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 25%, transparent 50%)'
           }}
         />
         
-        {/* Spinning blur overlay */}
+        {/* Spinning blur overlay with more energy */}
         {isReelSpinning && (
-          <div 
+          <motion.div 
             className="absolute inset-0 z-10 pointer-events-none"
             style={{
-              background: 'linear-gradient(180deg, rgba(255,153,0,0.1) 0%, transparent 50%, rgba(255,153,0,0.1) 100%)',
-              backdropFilter: 'blur(2px)'
+              background: 'linear-gradient(180deg, rgba(255,215,0,0.4) 0%, rgba(255,255,255,0.1) 50%, rgba(255,215,0,0.4) 100%)',
             }}
+            animate={{ opacity: [0.5, 0.8, 0.5] }}
+            transition={{ duration: 0.2, repeat: Infinity }}
           />
         )}
         
-        {/* Reel content */}
-        <div className="flex flex-col items-center justify-center h-full p-4">
+        {/* Reel content - BIGGER */}
+        <div className="flex flex-col items-center justify-center h-full p-3">
           {currentService ? (
             <motion.div
               key={currentService.id}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.2 }}
+              initial={{ scale: 0.5, opacity: 0, y: isReelSpinning ? -30 : 0 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ duration: 0.12, type: "spring", stiffness: 500 }}
               className="flex flex-col items-center text-center"
             >
-              {/* Service icon container */}
+              {/* BIG BOLD symbol */}
               <motion.div 
-                className="w-20 h-20 rounded-xl flex items-center justify-center mb-3"
+                className="w-20 h-20 rounded-xl flex items-center justify-center mb-2 relative"
                 style={{ 
-                  backgroundColor: `${color}25`, 
-                  border: `3px solid ${color}`,
-                  boxShadow: `0 0 20px ${color}40`
+                  background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+                  boxShadow: `
+                    0 6px 20px ${color}80, 
+                    0 0 40px ${color}40,
+                    inset 0 2px 4px rgba(255,255,255,0.4),
+                    inset 0 -2px 4px rgba(0,0,0,0.2)
+                  `
                 }}
                 animate={!isReelSpinning ? {
-                  boxShadow: [`0 0 20px ${color}40`, `0 0 30px ${color}60`, `0 0 20px ${color}40`]
+                  scale: [1, 1.08, 1],
+                  boxShadow: [
+                    `0 6px 20px ${color}80, 0 0 40px ${color}40`,
+                    `0 8px 30px ${color}aa, 0 0 60px ${color}60`,
+                    `0 6px 20px ${color}80, 0 0 40px ${color}40`
+                  ]
                 } : {}}
-                transition={{ duration: 2, repeat: Infinity }}
+                transition={{ duration: 1.5, repeat: Infinity }}
               >
-                <span className="text-4xl font-bold" style={{ color }}>
+                <span className="text-4xl font-black text-white drop-shadow-lg" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
                   {currentService.shortName?.charAt(0) || currentService.name.charAt(0)}
                 </span>
               </motion.div>
               
-              {/* Service name */}
-              <span className="text-sm font-bold text-white leading-tight mb-1">
+              {/* Service name - bolder */}
+              <span className="text-sm font-black text-gray-800 leading-tight drop-shadow-sm">
                 {currentService.shortName || currentService.name}
-              </span>
-              
-              {/* Category badge */}
-              <span 
-                className="text-xs px-3 py-1 rounded-full font-medium"
-                style={{ backgroundColor: `${color}30`, color }}
-              >
-                {currentService.category}
               </span>
             </motion.div>
           ) : (
-            <div className="text-slate-600 text-6xl font-bold">?</div>
+            <motion.div 
+              className="text-gray-300 text-6xl font-black"
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              ?
+            </motion.div>
           )}
         </div>
-        
-        {/* Win line indicator */}
-        <div 
-          className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 pointer-events-none z-30"
-          style={{ 
-            background: `linear-gradient(90deg, transparent, ${AWS_ORANGE}, transparent)`,
-            boxShadow: `0 0 10px ${AWS_ORANGE}`
-          }}
-        />
-      </div>
-      
-      {/* Reel number indicator */}
-      <div 
-        className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-        style={{ 
-          background: `linear-gradient(180deg, ${AWS_ORANGE}, #cc7a00)`,
-          boxShadow: `0 2px 8px rgba(255, 153, 0, 0.5)`
-        }}
-      >
-        {reelIndex + 1}
+        </div>
       </div>
     </div>
   );
@@ -650,15 +692,67 @@ export default function ServiceSlotsPage() {
         background: `radial-gradient(ellipse at center top, ${AWS_DARK} 0%, #0a0f14 50%, #050709 100%)`
       }}
     >
-      {/* Ambient casino lighting effects */}
-      <div className="fixed inset-0 pointer-events-none">
+      {/* DRAMATIC Casino lighting effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Central spotlight burst behind machine */}
+        <motion.div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]"
+          style={{
+            background: 'radial-gradient(circle, rgba(255,215,0,0.4) 0%, rgba(255,153,0,0.2) 30%, transparent 70%)',
+          }}
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.6, 0.9, 0.6]
+          }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        />
+        
+        {/* Rotating light rays */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px]"
+          style={{
+            background: `conic-gradient(from 0deg, transparent, rgba(255,215,0,0.1) 10%, transparent 20%, transparent, rgba(255,153,0,0.1) 60%, transparent 70%)`,
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        />
+        
+        {/* Floating sparkles */}
+        {[...Array(12)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-2 h-2 rounded-full"
+            style={{
+              background: i % 2 === 0 ? '#FFD700' : '#FF9900',
+              boxShadow: `0 0 10px ${i % 2 === 0 ? '#FFD700' : '#FF9900'}`,
+              left: `${10 + (i * 7)}%`,
+              top: `${20 + (i % 4) * 20}%`,
+            }}
+            animate={{
+              y: [0, -30, 0],
+              opacity: [0.3, 1, 0.3],
+              scale: [0.8, 1.2, 0.8],
+            }}
+            transition={{
+              duration: 2 + (i % 3),
+              repeat: Infinity,
+              delay: i * 0.3,
+            }}
+          />
+        ))}
+        
+        {/* Corner glows */}
         <div 
-          className="absolute top-0 left-1/4 w-96 h-96 rounded-full opacity-20 blur-3xl"
-          style={{ background: AWS_ORANGE }}
+          className="absolute -top-20 -left-20 w-80 h-80 rounded-full opacity-30 blur-3xl"
+          style={{ background: 'radial-gradient(circle, #FFD700, transparent)' }}
         />
         <div 
-          className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full opacity-10 blur-3xl"
-          style={{ background: AWS_ORANGE }}
+          className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-30 blur-3xl"
+          style={{ background: 'radial-gradient(circle, #FF9900, transparent)' }}
+        />
+        <div 
+          className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-96 h-40 rounded-full opacity-40 blur-3xl"
+          style={{ background: 'radial-gradient(ellipse, #FFD700, transparent)' }}
         />
       </div>
 
@@ -829,158 +923,212 @@ export default function ServiceSlotsPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center w-full max-w-5xl"
+            className="flex flex-col items-center w-full max-w-3xl"
           >
-            {/* Slot Machine Frame */}
-            <div 
-              className="relative rounded-3xl p-1"
-              style={{ 
-                background: `linear-gradient(180deg, ${AWS_ORANGE}80, ${AWS_ORANGE}20, ${AWS_ORANGE}80)`,
-              }}
-            >
+            {/* EPIC Golden Slot Machine Cabinet */}
+            <div className="relative">
+              {/* Glow behind entire machine */}
+              <motion.div
+                className="absolute -inset-8 rounded-[40px] blur-2xl -z-10"
+                style={{ background: 'radial-gradient(circle, rgba(255,215,0,0.5) 0%, rgba(255,153,0,0.3) 40%, transparent 70%)' }}
+                animate={{ opacity: [0.6, 1, 0.6], scale: [0.98, 1.02, 0.98] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              
               <div 
-                className="rounded-3xl p-6 relative"
+                className="relative rounded-3xl"
                 style={{ 
-                  background: `linear-gradient(180deg, ${AWS_DARK} 0%, #0f1419 50%, ${AWS_DARK} 100%)`,
+                  background: `linear-gradient(180deg, #FFE55C 0%, #FFD700 10%, #DAA520 30%, #B8860B 50%, #DAA520 70%, #FFD700 90%, #FFE55C 100%)`,
+                  padding: '16px',
                   boxShadow: `
-                    0 0 60px ${AWS_ORANGE}30,
-                    inset 0 2px 20px rgba(255,255,255,0.05),
-                    inset 0 -2px 20px rgba(0,0,0,0.5)
+                    0 30px 80px rgba(0,0,0,0.7), 
+                    0 0 120px rgba(255,215,0,0.4),
+                    inset 0 2px 4px rgba(255,255,255,0.6),
+                    inset 0 -2px 4px rgba(0,0,0,0.3)
                   `
                 }}
               >
-                {/* Top marquee / title */}
+                {/* Inner cabinet body - DEEP RED */}
                 <div 
-                  className="text-center mb-4 py-3 px-6 rounded-xl"
+                  className="rounded-2xl p-6 relative overflow-hidden"
                   style={{ 
-                    background: `linear-gradient(180deg, ${AWS_ORANGE}, #cc7a00)`,
-                    boxShadow: `0 4px 20px ${AWS_ORANGE}50`
+                    background: `linear-gradient(180deg, #a01010 0%, #8B0000 20%, #660000 50%, #4a0000 80%, #330000 100%)`,
+                    boxShadow: 'inset 0 6px 30px rgba(255,100,100,0.15), inset 0 -6px 30px rgba(0,0,0,0.6)'
                   }}
                 >
-                  <h2 className="text-xl font-black text-white tracking-wider">AWS SERVICE SLOTS</h2>
-                  <div className="flex items-center justify-center gap-4 mt-1">
-                    <span className={cn(
-                      "px-2 py-0.5 rounded text-xs font-bold",
-                      DIFFICULTY_COLORS[challenge.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
-                    )}>
-                      {challenge.difficulty.toUpperCase()}
-                    </span>
-                    <span className="text-white/80 text-sm font-medium">
-                      {challenge.base_payout}x PAYOUT
-                    </span>
-                  </div>
-                </div>
-
-                {/* Main display area with reels and handle */}
-                <div className="flex items-stretch gap-4">
-                  {/* Reels container */}
-                  <div 
-                    className="flex-1 rounded-2xl p-4"
-                    style={{ 
-                      background: 'linear-gradient(180deg, #0a0f14, #050709)',
-                      boxShadow: 'inset 0 4px 30px rgba(0,0,0,0.8)'
-                    }}
-                  >
-                    {/* Reels */}
-                    <div className="flex justify-center items-center gap-3">
-                      {challenge.services.map((service, index) => (
-                        <SlotReel
-                          key={`${challenge.id}-${index}`}
-                          service={showOptions || result ? service : null}
-                          isSpinning={isSpinning}
-                          delay={index * 400}
-                          reelIndex={index}
+                  {/* Decorative corner accents */}
+                  <div className="absolute top-2 left-2 w-8 h-8 border-t-4 border-l-4 border-yellow-400/50 rounded-tl-lg" />
+                  <div className="absolute top-2 right-2 w-8 h-8 border-t-4 border-r-4 border-yellow-400/50 rounded-tr-lg" />
+                  <div className="absolute bottom-2 left-2 w-8 h-8 border-b-4 border-l-4 border-yellow-400/50 rounded-bl-lg" />
+                  <div className="absolute bottom-2 right-2 w-8 h-8 border-b-4 border-r-4 border-yellow-400/50 rounded-br-lg" />
+                  
+                  {/* JACKPOT Marquee with lights */}
+                  <div className="relative mb-6">
+                    {/* Light bulbs row - TOP */}
+                    <div className="flex justify-center gap-3 mb-3">
+                      {[...Array(16)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          className="w-4 h-4 rounded-full"
+                          style={{ 
+                            background: `radial-gradient(circle at 30% 30%, ${i % 3 === 0 ? '#ffff88' : i % 3 === 1 ? '#ff8844' : '#ff4444'}, ${i % 3 === 0 ? '#ffcc00' : i % 3 === 1 ? '#ff6600' : '#cc0000'})`,
+                            boxShadow: `0 0 15px ${i % 3 === 0 ? '#ffff00' : i % 3 === 1 ? '#ff6600' : '#ff0000'}, 0 0 30px ${i % 3 === 0 ? '#ffff0066' : i % 3 === 1 ? '#ff660066' : '#ff000066'}`
+                          }}
+                          animate={{ 
+                            opacity: [1, 0.3, 1],
+                            scale: [1, 0.9, 1]
+                          }}
+                          transition={{ duration: 0.4, repeat: Infinity, delay: i * 0.08 }}
                         />
                       ))}
                     </div>
                     
-                    {/* Spinning indicator */}
-                    {isSpinning && (
-                      <motion.div 
-                        className="text-center mt-4"
-                        animate={{ opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 0.5, repeat: Infinity }}
-                      >
-                        <p className="text-xl font-bold text-orange-400">SPINNING...</p>
-                      </motion.div>
-                    )}
-                  </div>
-
-                  {/* Handle */}
-                  <div className="flex items-center">
-                    <SlotHandle 
-                      onPull={handleSpin}
-                      disabled={gameState.balance < betAmount || isSpinning || showOptions || !!result}
-                      isSpinning={isSpinning}
-                    />
-                  </div>
-                </div>
-
-                {/* Betting controls - below reels */}
-                {!showOptions && !result && !isSpinning && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="mt-4 flex items-center justify-center gap-6"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-400 text-sm">BET:</span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setBetAmount(Math.max(MIN_BET, betAmount - 50))}
-                          disabled={betAmount <= MIN_BET}
-                          className="w-8 h-8 p-0 border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
-                        >
-                          -
-                        </Button>
-                        <span 
-                          className="w-24 text-center text-xl font-bold px-3 py-1 rounded-lg"
-                          style={{ 
-                            background: 'rgba(34,197,94,0.2)',
-                            color: '#4ade80'
-                          }}
-                        >
-                          ${betAmount}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setBetAmount(Math.min(MAX_BET, gameState.balance, betAmount + 50))}
-                          disabled={betAmount >= MAX_BET || betAmount >= gameState.balance}
-                          className="w-8 h-8 p-0 border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      onClick={handleSpin}
-                      disabled={gameState.balance < betAmount}
-                      size="lg"
-                      className="gap-2 text-lg px-8 font-bold text-white"
+                    {/* Main title banner - BIGGER */}
+                    <motion.div 
+                      className="text-center py-4 px-12 rounded-xl mx-auto relative"
                       style={{ 
-                        background: `linear-gradient(135deg, ${AWS_ORANGE}, #cc7a00)`,
-                        boxShadow: `0 4px 20px ${AWS_ORANGE}40`
+                        background: 'linear-gradient(180deg, #FFE55C 0%, #FFD700 30%, #FFA500 100%)',
+                        boxShadow: '0 8px 30px rgba(255,165,0,0.6), inset 0 3px 6px rgba(255,255,255,0.6), inset 0 -3px 6px rgba(0,0,0,0.2)'
+                      }}
+                      animate={{ boxShadow: ['0 8px 30px rgba(255,165,0,0.6)', '0 8px 50px rgba(255,165,0,0.9)', '0 8px 30px rgba(255,165,0,0.6)'] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <h2 className="text-3xl font-black tracking-widest" style={{ color: '#8B0000', textShadow: '0 2px 0 rgba(255,255,255,0.3)' }}>
+                        ★ AWS JACKPOT ★
+                      </h2>
+                      <div className="flex items-center justify-center gap-6 mt-2">
+                        <span className={cn(
+                          "px-3 py-1 rounded-full text-sm font-black",
+                          DIFFICULTY_COLORS[challenge.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
+                        )}>
+                          {challenge.difficulty.toUpperCase()}
+                        </span>
+                        <span className="text-red-900 text-lg font-black">
+                          💰 {challenge.base_payout}x PAYOUT 💰
+                        </span>
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  {/* Main display area with reels and handle */}
+                  <div className="flex items-center gap-8">
+                    {/* Reels container - CHUNKY golden frame */}
+                    <div 
+                      className="flex-1 rounded-2xl p-4"
+                      style={{ 
+                        background: 'linear-gradient(180deg, #DAA520 0%, #B8860B 30%, #8B6914 50%, #B8860B 70%, #DAA520 100%)',
+                        boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.4), inset 0 -3px 6px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.5)'
                       }}
                     >
-                      <Sparkles className="w-5 h-5" />
-                      SPIN
-                    </Button>
-                    
-                    {gameState.balance < MIN_BET && (
-                      <div className="text-center">
-                        <p className="text-red-400 text-sm mb-1">Out of money!</p>
-                        <Button variant="outline" size="sm" onClick={resetBalance}>
-                          Get $1,000 Bonus
-                        </Button>
+                      {/* Inner dark display - deeper */}
+                      <div 
+                        className="rounded-xl p-5"
+                        style={{
+                          background: 'linear-gradient(180deg, #12121f 0%, #0a0a12 50%, #050508 100%)',
+                          boxShadow: 'inset 0 8px 30px rgba(0,0,0,0.9), inset 0 -4px 20px rgba(0,0,0,0.5)'
+                        }}
+                      >
+                        {/* Reels */}
+                        <div className="flex justify-center items-center gap-5">
+                          {challenge.services.map((service, index) => (
+                            <SlotReel
+                              key={`${challenge.id}-${index}`}
+                              service={showOptions || result ? service : null}
+                              isSpinning={isSpinning}
+                              delay={index * 400}
+                              reelIndex={index}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    )}
-                  </motion.div>
-                )}
+                    </div>
+
+                    {/* Handle */}
+                    <div className="flex items-center">
+                      <SlotHandle 
+                        onPull={handleSpin}
+                        disabled={gameState.balance < betAmount || isSpinning || showOptions || !!result}
+                        isSpinning={isSpinning}
+                      />
+                    </div>
+                  </div>
+                
+                {/* Bottom coin tray area with betting controls */}
+                <div 
+                  className="mt-4 rounded-lg p-3"
+                  style={{
+                    background: 'linear-gradient(180deg, #2a2a2a, #1a1a1a)',
+                    boxShadow: 'inset 0 4px 15px rgba(0,0,0,0.6)'
+                  }}
+                >
+                  {/* Betting controls - below reels */}
+                  {!showOptions && !result && !isSpinning && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex items-center justify-center gap-6"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-yellow-400 text-sm font-bold">BET:</span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBetAmount(Math.max(MIN_BET, betAmount - 50))}
+                            disabled={betAmount <= MIN_BET}
+                            className="w-8 h-8 p-0 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                          >
+                            -
+                          </Button>
+                          <span 
+                            className="w-24 text-center text-xl font-bold px-3 py-1 rounded-lg"
+                            style={{ 
+                              background: 'linear-gradient(180deg, #228B22, #006400)',
+                              color: '#90EE90',
+                              border: '2px solid #32CD32'
+                            }}
+                          >
+                            ${betAmount}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBetAmount(Math.min(MAX_BET, gameState.balance, betAmount + 50))}
+                            disabled={betAmount >= MAX_BET || betAmount >= gameState.balance}
+                            className="w-8 h-8 p-0 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={handleSpin}
+                        disabled={gameState.balance < betAmount}
+                        size="lg"
+                        className="gap-2 text-lg px-8 font-bold text-white rounded-full"
+                        style={{ 
+                          background: 'linear-gradient(180deg, #22c55e, #16a34a)',
+                          boxShadow: '0 4px 20px rgba(34,197,94,0.5), inset 0 2px 4px rgba(255,255,255,0.3)'
+                        }}
+                      >
+                        <Sparkles className="w-5 h-5" />
+                        SPIN
+                      </Button>
+                      
+                      {gameState.balance < MIN_BET && (
+                        <div className="text-center">
+                          <p className="text-red-400 text-sm mb-1">Out of money!</p>
+                          <Button variant="outline" size="sm" onClick={resetBalance}>
+                            Get $1,000 Bonus
+                          </Button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </div>
               </div>
+            </div>
             </div>
 
             {/* Answer Options - Below the slot machine */}
