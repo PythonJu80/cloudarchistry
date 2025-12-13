@@ -2030,6 +2030,51 @@ async def generate_quiz_endpoint(request: GenerateContentRequest):
         set_request_model(None)
 
 
+@app.post("/api/gaming/hot-streak/generate")
+async def generate_hot_streak_endpoint(request: GenerateContentRequest):
+    """Generate quick-fire questions for Hot Streak game mode."""
+    from utils import set_request_api_key, set_request_model
+    from generators.game_modes import generate_hot_streak_questions
+    
+    try:
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        short_code = (request.certification_code or "SAA").upper()
+        question_count = request.options.get("question_count", 25) if request.options else 25
+        exclude_ids = request.options.get("exclude_ids", []) if request.options else []
+        
+        result = await generate_hot_streak_questions(
+            user_level=request.user_level or "intermediate",
+            cert_code=short_code,
+            question_count=question_count,
+            exclude_ids=exclude_ids,
+        )
+        
+        return {
+            "success": True,
+            "questions": [
+                {
+                    "id": q.id,
+                    "question": q.question,
+                    "options": q.options,
+                    "correct_index": q.correct_index,
+                    "topic": q.topic,
+                    "difficulty": q.difficulty,
+                    "explanation": q.explanation,
+                }
+                for q in result.questions
+            ],
+            "topics_covered": result.topics_covered,
+            "certification": short_code,
+        }
+    finally:
+        set_request_api_key(None)
+        set_request_model(None)
+
+
 @app.post("/api/learning/detect-skill")
 async def detect_skill_endpoint(message: str):
     """Detect skill level"""

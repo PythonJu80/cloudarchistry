@@ -333,6 +333,168 @@ id, question, options (4), correct_index (0-3), topic, difficulty, explanation""
     )
 
 
+class HotStreakQuestions(BaseModel):
+    """Questions for Hot Streak game mode"""
+    questions: List[GameQuestion]
+    topics_covered: List[str]
+
+
+HOT_STREAK_PROMPT = """You are generating quick-fire quiz questions for a "Hot Streak" game mode.
+This is a 60-second timed game where users answer as many questions as possible to build heat/temperature.
+
+USER PROFILE:
+- Skill Level: {user_level}
+- Target Certification: {cert_name}
+- Focus Areas: {focus_areas}
+
+CERTIFICATION CONTEXT:
+{cert_context}
+
+Generate {question_count} UNIQUE quick-fire questions that:
+
+1. ARE QUICK TO READ AND ANSWER:
+   - Short, direct questions (1-2 sentences max)
+   - No long scenarios - this is rapid-fire
+   - Clear, unambiguous correct answers
+
+2. MATCH THE CERTIFICATION:
+   - Questions should be relevant to {cert_name}
+   - Cover the key focus areas for this cert
+   - Test practical knowledge, not obscure trivia
+
+3. SCALE TO SKILL LEVEL:
+   - {user_level}: Adjust complexity accordingly
+   - beginner: Core concepts, clear answers
+   - intermediate: Best practices, trade-offs
+   - advanced/expert: Optimization, edge cases
+
+4. ENSURE VARIETY:
+   - Mix different AWS services
+   - Mix question types (what/which/how/why)
+   - NO REPEATED QUESTIONS
+
+5. QUALITY:
+   - All 4 options plausible
+   - Exactly 1 correct answer
+   - Brief but helpful explanations
+
+IMPORTANT: Randomize which option is correct! Do NOT always put the correct answer first.
+The correct_index should vary between 0, 1, 2, and 3 across questions.
+
+Return JSON:
+{{
+  "questions": [
+    {{
+      "id": "unique_id",
+      "question": "Short question text",
+      "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+      "correct_index": 2,
+      "topic": "AWS Service/Topic",
+      "difficulty": "easy|medium|hard",
+      "explanation": "Brief explanation"
+    }}
+  ],
+  "topics_covered": ["list", "of", "topics"]
+}}
+"""
+
+
+async def generate_hot_streak_questions(
+    user_level: str = "intermediate",
+    cert_code: Optional[str] = None,
+    question_count: int = 25,
+    exclude_ids: Optional[List[str]] = None,
+    api_key: Optional[str] = None,
+) -> HotStreakQuestions:
+    """
+    Generate quick-fire questions for Hot Streak game mode.
+    
+    Args:
+        user_level: User's skill level (beginner/intermediate/advanced/expert)
+        cert_code: Target certification code (e.g., "SAA-C03", "DVA-C02")
+        question_count: Number of questions to generate
+        exclude_ids: Question IDs to exclude (already answered)
+        api_key: User's OpenAI API key
+    
+    Returns:
+        HotStreakQuestions with quick-fire questions
+    """
+    
+    # Build cert context
+    cert_name = "AWS Cloud Practitioner"
+    cert_context = ""
+    focus_areas = ["Core AWS Services", "Cloud Concepts", "Security", "Pricing"]
+    
+    # Map cert code to persona
+    persona_id = None
+    if cert_code:
+        upper_code = cert_code.upper()
+        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
+        if not persona_id:
+            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    
+    if persona_id and persona_id in CERTIFICATION_PERSONAS:
+        persona = CERTIFICATION_PERSONAS[persona_id]
+        cert_name = persona.get("cert", cert_name)
+        focus_areas = persona.get("focus", focus_areas)
+        cert_context = f"""
+This is for the {cert_name} certification.
+Exam Style: {persona.get('style', 'Standard AWS exam format')}
+Key Focus Areas: {', '.join(focus_areas)}
+"""
+    
+    # Build the prompt
+    system_prompt = HOT_STREAK_PROMPT.format(
+        user_level=user_level,
+        cert_name=cert_name,
+        focus_areas=", ".join(focus_areas),
+        cert_context=cert_context,
+        question_count=question_count,
+    )
+    
+    exclude_note = ""
+    if exclude_ids and len(exclude_ids) > 0:
+        exclude_note = f"\n\nIMPORTANT: Generate completely NEW questions. The user has already answered {len(exclude_ids)} questions."
+    
+    user_prompt = f"""Generate {question_count} unique Hot Streak questions for:
+- Certification: {cert_name}
+- Skill Level: {user_level}
+
+Make them quick to read and answer - this is a 60-second timed game!{exclude_note}"""
+
+    result = await _chat_json(
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        api_key=api_key,
+    )
+    
+    # Parse questions
+    questions = []
+    for idx, q in enumerate(result.get("questions", [])):
+        base_points = {"easy": 10, "medium": 15, "hard": 20}.get(q.get("difficulty", "medium"), 10)
+        
+        questions.append(GameQuestion(
+            id=q.get("id", f"hotstreak_{uuid.uuid4().hex[:8]}"),
+            question=q.get("question", ""),
+            options=q.get("options", ["A", "B", "C", "D"]),
+            correct_index=q.get("correct_index", 0),
+            topic=q.get("topic", "AWS"),
+            difficulty=q.get("difficulty", "medium"),
+            explanation=q.get("explanation", ""),
+            points=base_points,
+        ))
+    
+    topics_covered = result.get("topics_covered", list(set(q.topic for q in questions)))
+    
+    return HotStreakQuestions(
+        questions=questions,
+        topics_covered=topics_covered,
+    )
+
+
 # Quick test
 if __name__ == "__main__":
     import asyncio

@@ -11,7 +11,9 @@ from typing import List, Optional
 from generators.game_modes import (
     generate_sniper_quiz_questions,
     generate_speed_round_questions,
+    generate_hot_streak_questions,
     GameQuestion,
+    HotStreakQuestions,
 )
 from utils import ApiKeyRequiredError
 
@@ -25,6 +27,8 @@ class SniperQuizRequest(BaseModel):
     weak_topics: Optional[List[str]] = None  # Topics to prioritize
     recent_topics: Optional[List[str]] = None  # Recently studied topics
     question_count: int = 10
+    openai_api_key: Optional[str] = None  # User's API key (BYOK)
+    preferred_model: Optional[str] = None  # User's preferred model
 
 
 class SpeedRoundRequest(BaseModel):
@@ -72,6 +76,7 @@ async def generate_sniper_quiz(request: SniperQuizRequest):
             weak_topics=request.weak_topics,
             recent_topics=request.recent_topics,
             question_count=request.question_count,
+            api_key=request.openai_api_key,
         )
         
         return SniperQuizResponse(
@@ -134,25 +139,25 @@ async def generate_speed_round(request: SpeedRoundRequest):
 
 
 class HotStreakRequest(BaseModel):
-    """Request body for Hot Streak questions - mixed types"""
+    """Request body for Hot Streak questions"""
     user_level: str = "intermediate"
     cert_code: Optional[str] = None
-    weak_topics: Optional[List[str]] = None
-    recent_topics: Optional[List[str]] = None
-    question_count: int = 30
-    question_types: Optional[List[str]] = None  # Types to include
+    question_count: int = 25
+    exclude_ids: Optional[List[str]] = None
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
 
 
 class HotStreakQuestionResponse(BaseModel):
-    """Single Hot Streak question with type"""
+    """Single Hot Streak question"""
     id: str
-    type: str  # identify_service, best_for, inside_vpc, category_match, connection, service_purpose
     question: str
     options: List[str]
     correct_index: int
     topic: str
     difficulty: str
     explanation: Optional[str] = None
+    points: int = 10
 
 
 class HotStreakResponse(BaseModel):
@@ -164,53 +169,37 @@ class HotStreakResponse(BaseModel):
 @router.post("/hot-streak/generate", response_model=HotStreakResponse)
 async def generate_hot_streak(request: HotStreakRequest):
     """
-    Generate Hot Streak questions - mixed question types for streak-based gameplay.
-    
-    Question types include:
-    - identify_service: Name the AWS service
-    - best_for: Which service is best for X?
-    - inside_vpc: True/False about VPC requirements
-    - category_match: Match service to category
-    - connection: Architecture/networking questions
-    - service_purpose: What does this service do?
+    Generate Hot Streak questions - quick-fire questions for 60-second timed gameplay.
+    Uses dedicated Hot Streak generator with user's API key.
     """
     try:
-        # Reuse sniper quiz generator but request mixed types
-        result = await generate_sniper_quiz_questions(
+        result = await generate_hot_streak_questions(
             user_level=request.user_level,
             cert_code=request.cert_code,
-            weak_topics=request.weak_topics,
-            recent_topics=request.recent_topics,
             question_count=request.question_count,
+            exclude_ids=request.exclude_ids,
+            api_key=request.openai_api_key,
         )
         
-        # Assign question types based on content
-        question_types = request.question_types or [
-            "identify_service", "best_for", "inside_vpc", 
-            "category_match", "connection", "service_purpose"
-        ]
-        
-        questions = []
-        for idx, q in enumerate(result.questions):
-            # Rotate through question types
-            q_type = question_types[idx % len(question_types)]
-            
-            questions.append(HotStreakQuestionResponse(
+        questions = [
+            HotStreakQuestionResponse(
                 id=q.id,
-                type=q_type,
                 question=q.question,
                 options=q.options,
                 correct_index=q.correct_index,
                 topic=q.topic,
                 difficulty=q.difficulty,
                 explanation=q.explanation,
-            ))
+                points=q.points,
+            )
+            for q in result.questions
+        ]
         
         return HotStreakResponse(
             questions=questions,
             topics_covered=result.topics_covered,
         )
     except ApiKeyRequiredError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=402, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
