@@ -131,3 +131,86 @@ async def generate_speed_round(request: SpeedRoundRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
+
+
+class HotStreakRequest(BaseModel):
+    """Request body for Hot Streak questions - mixed types"""
+    user_level: str = "intermediate"
+    cert_code: Optional[str] = None
+    weak_topics: Optional[List[str]] = None
+    recent_topics: Optional[List[str]] = None
+    question_count: int = 30
+    question_types: Optional[List[str]] = None  # Types to include
+
+
+class HotStreakQuestionResponse(BaseModel):
+    """Single Hot Streak question with type"""
+    id: str
+    type: str  # identify_service, best_for, inside_vpc, category_match, connection, service_purpose
+    question: str
+    options: List[str]
+    correct_index: int
+    topic: str
+    difficulty: str
+    explanation: Optional[str] = None
+
+
+class HotStreakResponse(BaseModel):
+    """Response for Hot Streak questions"""
+    questions: List[HotStreakQuestionResponse]
+    topics_covered: List[str]
+
+
+@router.post("/hot-streak/generate", response_model=HotStreakResponse)
+async def generate_hot_streak(request: HotStreakRequest):
+    """
+    Generate Hot Streak questions - mixed question types for streak-based gameplay.
+    
+    Question types include:
+    - identify_service: Name the AWS service
+    - best_for: Which service is best for X?
+    - inside_vpc: True/False about VPC requirements
+    - category_match: Match service to category
+    - connection: Architecture/networking questions
+    - service_purpose: What does this service do?
+    """
+    try:
+        # Reuse sniper quiz generator but request mixed types
+        result = await generate_sniper_quiz_questions(
+            user_level=request.user_level,
+            cert_code=request.cert_code,
+            weak_topics=request.weak_topics,
+            recent_topics=request.recent_topics,
+            question_count=request.question_count,
+        )
+        
+        # Assign question types based on content
+        question_types = request.question_types or [
+            "identify_service", "best_for", "inside_vpc", 
+            "category_match", "connection", "service_purpose"
+        ]
+        
+        questions = []
+        for idx, q in enumerate(result.questions):
+            # Rotate through question types
+            q_type = question_types[idx % len(question_types)]
+            
+            questions.append(HotStreakQuestionResponse(
+                id=q.id,
+                type=q_type,
+                question=q.question,
+                options=q.options,
+                correct_index=q.correct_index,
+                topic=q.topic,
+                difficulty=q.difficulty,
+                explanation=q.explanation,
+            ))
+        
+        return HotStreakResponse(
+            questions=questions,
+            topics_covered=result.topics_covered,
+        )
+    except ApiKeyRequiredError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")

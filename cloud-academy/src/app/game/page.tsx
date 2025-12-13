@@ -702,6 +702,8 @@ export default function GameModePage() {
                   onClick={mode.isLive ? () => {
                     if (mode.slug === "service_sniper") {
                       router.push("/game/modes/service-sniper");
+                    } else if (mode.slug === "hot_streak") {
+                      router.push("/game/modes/hot-streak");
                     } else if (mode.slug === "cloud_tycoon") {
                       router.push("/game/modes/cloud-tycoon");
                     } else if (mode.slug === "service_slots") {
