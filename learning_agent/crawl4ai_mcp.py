@@ -2135,11 +2135,9 @@ Expected Hierarchy: {expected_hierarchy}
 Expected Connections: {expected_connections}
 
 ## User's Submission
-Placement (parent_id shows what container each piece is inside):
-{placement_data}
-
-Connections drawn by user:
-{connections_data}
+```json
+{diagram_json}
+```
 
 ## Scoring Guide (out of 100)
 - 0-30: Pieces not placed in containers, no connections
@@ -2166,26 +2164,43 @@ async def audit_architect_arena_endpoint(request: dict):
         nodes = request.get("nodes", [])
         connections = request.get("connections", [])
         
-        # Build placement data - focus on parent_id (what container each piece is in)
-        placement_data = []
-        for node in nodes:
-            parent = node.get("parent_id") or "canvas (not in any container)"
-            placement_data.append(f"- {node.get('label', node.get('id'))} ({node.get('type')}) is inside: {parent}")
+        # Build hierarchy - so AI knows what's inside what
+        nodes_by_id = {n.get("id"): n for n in nodes}
         
-        # Build connections data
-        connections_data = []
-        for conn in connections:
-            connections_data.append(f"- {conn.get('source')} -> {conn.get('target')}")
-        if not connections_data:
-            connections_data.append("- No connections drawn by user")
+        def build_node_data(node):
+            data = {"id": node.get("id"), "type": node.get("type"), "label": node.get("label")}
+            if node.get("config"):
+                data["config"] = node.get("config")
+            if node.get("parent_id"):
+                data["inside"] = node.get("parent_id")
+            return data
+        
+        hierarchy = {}
+        for node in nodes:
+            if not node.get("parent_id"):
+                if node.get("id") not in hierarchy:
+                    hierarchy[node.get("id")] = {"node": build_node_data(node), "children": []}
+            else:
+                parent_id = node.get("parent_id")
+                if parent_id not in hierarchy:
+                    parent = nodes_by_id.get(parent_id)
+                    if parent:
+                        hierarchy[parent_id] = {"node": build_node_data(parent), "children": []}
+                if parent_id in hierarchy:
+                    hierarchy[parent_id]["children"].append(build_node_data(node))
+        
+        diagram_data = {
+            "architecture_hierarchy": [{**h["node"], "contains": h["children"] if h["children"] else None} for h in hierarchy.values()],
+            "all_nodes": [build_node_data(n) for n in nodes],
+            "connections": [{"from": c.get("source"), "to": c.get("target")} for c in connections]
+        }
         
         system_prompt = ARCHITECT_ARENA_AUDIT_PROMPT.format(
             puzzle_title=request.get("puzzle_title", "Architecture Puzzle"),
             puzzle_brief=request.get("puzzle_brief", "Build the architecture"),
-            expected_hierarchy=request.get("expected_hierarchy", "Not specified"),
-            expected_connections=request.get("expected_connections", "Not specified"),
-            placement_data="\n".join(placement_data),
-            connections_data="\n".join(connections_data),
+            expected_hierarchy=json.dumps(request.get("expected_hierarchy", {}), indent=2),
+            expected_connections=json.dumps(request.get("expected_connections", []), indent=2),
+            diagram_json=json.dumps(diagram_data, indent=2),
         )
         
         # Use OpenAI client directly (not _chat_json which doesn't exist here)

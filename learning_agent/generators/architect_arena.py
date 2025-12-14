@@ -249,11 +249,13 @@ Do NOT fall back to generic patterns like "3-tier web app" or "serverless API" u
 - Focus Areas: {focus_areas}
 - Unique Request ID: {request_id}
 
-## DIFFICULTY: {difficulty}
-- easy: 10 pieces, simple 2-tier architecture, basic networking
-- medium: 20 pieces, 3-tier architecture, load balancing, caching
-- hard: 30 pieces, multi-AZ, security groups, DR considerations
-- expert: 40 pieces, multi-region, complex networking, full enterprise stack
+## SKILL LEVEL: {user_level}
+- beginner: EXACTLY 10 pieces, simple 2-tier architecture, basic networking
+- intermediate: EXACTLY 20 pieces, 3-tier architecture, load balancing, caching
+- advanced: EXACTLY 30 pieces, multi-AZ, security groups, DR considerations
+- expert: EXACTLY 40 pieces, multi-region, complex networking, full enterprise stack
+
+**YOU MUST GENERATE EXACTLY {piece_count} PIECES. NO EXCEPTIONS.**
 
 ## AVAILABLE AWS SERVICES (use ONLY these service_id values)
 {services_list}
@@ -267,13 +269,11 @@ Based on the focus areas ({focus_areas}), create a scenario that:
 
 ## RULES
 1. Use ONLY service_id values from the list above (lowercase, hyphenated)
-2. Each piece needs a contextual label specific to YOUR generated scenario
-3. **CRITICAL: The label MUST match the service_id!**
-   - If service_id is "iam", the label must describe an IAM use case (e.g., "Access Control Policies")
-   - If service_id is "ec2", the label must describe an EC2 use case (e.g., "Application Servers")
-   - NEVER use a label that mentions a different service than the service_id
-   - BAD: service_id="ec2" with label="IAM for Access Control" (WRONG - use service_id="iam")
-   - GOOD: service_id="iam" with label="Fine-Grained Access Control"
+2. **CRITICAL: The label MUST be the AWS service name!**
+   - Use the actual AWS service name as the label (e.g., "EC2", "RDS", "Lambda", "VPC")
+   - Do NOT use creative business names like "Brewery Internet Access" or "Orders Web Domain"
+   - The label should be the short AWS service name that users recognize
+   - Examples: "EC2", "RDS", "S3", "Lambda", "ALB", "CloudFront", "DynamoDB", "VPC", "NAT Gateway"
 4. Define hierarchy (what goes inside what) and connections
 5. PENALTIES must be ELUSIVE HINTS, not explicit answers!
    - BAD: "Placing EC2 in the public subnet" (gives away the answer)
@@ -291,7 +291,7 @@ Return JSON with this SCHEMA:
     {{
       "id": "<unique_id>",
       "service_id": "<MUST be from the service list above>",
-      "label": "<contextual name for YOUR scenario>",
+      "label": "<AWS service name e.g. EC2, RDS, Lambda>",
       "sublabel": "<optional technical detail>",
       "hint": "<helpful hint for placement>",
       "required": true,
@@ -368,6 +368,15 @@ async def generate_architect_arena_puzzle(
         }
         difficulty = difficulty_map.get(user_level, "medium")
     
+    # Determine piece count based on user skill level
+    piece_count_map = {
+        "beginner": 10,
+        "intermediate": 20,
+        "advanced": 30,
+        "expert": 40,
+    }
+    piece_count = piece_count_map.get(user_level, 20)
+    
     # Fetch AWS services from Cloud Academy (single source of truth)
     services_data = await _fetch_aws_services()
     
@@ -383,6 +392,7 @@ async def generate_architect_arena_puzzle(
         cert_name=cert_name,
         focus_areas=", ".join(focus_areas),
         difficulty=difficulty,
+        piece_count=piece_count,
         services_list=_format_services_for_prompt(services_data),
         request_id=request_id,
     )
@@ -397,13 +407,16 @@ Context:
 - Focus Areas: {', '.join(focus_areas)}
 - Request ID: {request_id}
 
+**MANDATORY: Generate EXACTLY {piece_count} pieces. This is non-negotiable.**
+
 Requirements:
 1. INVENT a unique business scenario - do not reuse common patterns
 2. Create a memorable company/situation that tests {cert_name} knowledge
 3. Select services that naturally fit YOUR invented scenario
 4. Ensure the puzzle teaches something specific about the focus areas
+5. Use AWS service names as labels (EC2, RDS, Lambda, etc.) - NOT creative business names
 
-Be creative. Be specific. Be unique."""
+Be creative with the scenario. Be specific. Generate exactly {piece_count} pieces."""
 
     result = await _chat_json(
         messages=[
@@ -432,17 +445,9 @@ Be creative. Be specific. Be unique."""
             logger.warning(f"Hallucinated service_id '{service_id}', falling back to 'ec2'")
             service_id = "ec2"
         
-        # Validate label-service coherence
-        # If label mentions a different AWS service, fix the label
-        if not _validate_label_service_coherence(label, service_id, service_names):
-            canonical_name = _get_service_canonical_name(service_id, service_names)
-            logger.warning(
-                f"Label-service mismatch: label='{label}' but service_id='{service_id}'. "
-                f"Fixing label to use canonical name."
-            )
-            # Extract the functional part of the label and prepend the correct service
-            # e.g., "IAM for Access Control" with service_id="ec2" -> "EC2 Instance"
-            label = f"{canonical_name} Service"
+        # Always use the canonical AWS service name as the label
+        canonical_name = _get_service_canonical_name(service_id, service_names)
+        label = canonical_name
         
         # Normalize category to lowercase
         category = p.get("category", "compute").lower()

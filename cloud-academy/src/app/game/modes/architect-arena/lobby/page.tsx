@@ -96,7 +96,7 @@ export default function ArchitectArenaLobby() {
   // Fetch user's skill level on mount
   useEffect(() => {
     if (authStatus === "authenticated") {
-      fetch("/api/user/profile")
+      fetch("/api/profile")
         .then((res) => res.json())
         .then((data) => {
           if (data.skillLevel) {
