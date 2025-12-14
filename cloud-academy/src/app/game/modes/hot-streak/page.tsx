@@ -63,41 +63,112 @@ function getTempTier(temp: number): { name: string; color: string } {
 
 function ThermometerDisplay({ temperature, multiplier }: { temperature: number; multiplier: number }) {
   const tier = getTempTier(temperature);
+  const isHot = temperature >= 70;
+  const isWarm = temperature >= 40;
   
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="text-sm font-bold flex items-center gap-1">
-        <span className={tier.color}>{tier.name}</span>
-        {multiplier > 1 && <span className="text-yellow-400 text-xs">×{multiplier}</span>}
+    <div className="flex flex-col items-center gap-3">
+      {/* Tier Label with Glow */}
+      <div className={`text-lg font-black flex items-center gap-2 ${isHot ? 'animate-pulse' : ''}`}>
+        <span className={`${tier.color} drop-shadow-lg`}>{tier.name}</span>
+        {multiplier > 1 && (
+          <span className="text-yellow-400 text-sm font-bold bg-yellow-400/20 px-2 py-0.5 rounded-full">
+            ×{multiplier}
+          </span>
+        )}
       </div>
-      <div className="relative w-8 h-48 bg-gray-800 rounded-full border-2 border-gray-600 overflow-hidden">
-        <div 
-          className="absolute bottom-0 left-0 right-0 transition-all duration-300 rounded-b-full"
-          style={{ 
-            height: `${temperature}%`,
-            background: temperature >= 70 
-              ? 'linear-gradient(to top, #ef4444, #f97316, #eab308)' 
-              : temperature >= 40 
-                ? 'linear-gradient(to top, #f97316, #eab308)' 
-                : 'linear-gradient(to top, #3b82f6, #60a5fa)',
-          }}
-        />
-        <div className="absolute inset-0 flex flex-col justify-between py-2">
-          {[100, 75, 50, 25, 0].map((mark) => (
-            <div key={mark} className="flex items-center justify-end pr-1">
-              <div className="w-2 h-0.5 bg-gray-500" />
-            </div>
-          ))}
-        </div>
-        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-gray-800 border-2 border-gray-600 flex items-center justify-center">
+      
+      {/* Main Thermometer */}
+      <div className="relative">
+        {/* Glow Effect */}
+        {isHot && (
           <div 
-            className="w-6 h-6 rounded-full transition-colors duration-300"
-            style={{ backgroundColor: temperature >= 70 ? '#ef4444' : temperature >= 40 ? '#f97316' : '#3b82f6' }}
+            className="absolute inset-0 blur-xl opacity-60 rounded-full animate-pulse"
+            style={{ 
+              background: 'radial-gradient(circle, #ef4444 0%, transparent 70%)',
+              transform: 'scale(1.5)',
+            }}
+          />
+        )}
+        
+        {/* Thermometer Body */}
+        <div className="relative w-16 h-72 bg-gradient-to-b from-gray-900 to-gray-800 rounded-full border-4 border-gray-600 overflow-hidden shadow-2xl">
+          {/* Glass Reflection */}
+          <div className="absolute top-0 left-1 w-3 h-full bg-gradient-to-b from-white/10 to-transparent rounded-full" />
+          
+          {/* Mercury/Fill */}
+          <div 
+            className="absolute bottom-0 left-1 right-1 transition-all duration-500 ease-out rounded-b-full"
+            style={{ 
+              height: `${Math.max(temperature, 5)}%`,
+              background: isHot 
+                ? 'linear-gradient(to top, #dc2626, #ef4444, #f97316, #fbbf24)' 
+                : isWarm 
+                  ? 'linear-gradient(to top, #ea580c, #f97316, #fbbf24)' 
+                  : 'linear-gradient(to top, #1d4ed8, #3b82f6, #60a5fa)',
+              boxShadow: isHot 
+                ? '0 0 30px rgba(239, 68, 68, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.3)' 
+                : isWarm 
+                  ? '0 0 20px rgba(249, 115, 22, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.2)' 
+                  : '0 0 15px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.2)',
+            }}
+          >
+            {/* Bubbles Animation for Hot */}
+            {isHot && (
+              <>
+                <div className="absolute bottom-4 left-2 w-2 h-2 bg-yellow-300/60 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                <div className="absolute bottom-8 right-2 w-1.5 h-1.5 bg-orange-300/60 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                <div className="absolute bottom-12 left-3 w-1 h-1 bg-red-300/60 rounded-full animate-bounce" style={{ animationDelay: '0.6s' }} />
+              </>
+            )}
+          </div>
+          
+          {/* Temperature Marks */}
+          <div className="absolute inset-0 flex flex-col justify-between py-4 px-1">
+            {[100, 75, 50, 25].map((mark) => (
+              <div key={mark} className="flex items-center justify-between w-full">
+                <div className="w-3 h-1 bg-gray-500/50 rounded" />
+                <span className="text-[10px] text-gray-500 font-mono">{mark}</span>
+                <div className="w-3 h-1 bg-gray-500/50 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Bulb at Bottom */}
+        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full bg-gradient-to-b from-gray-800 to-gray-900 border-4 border-gray-600 flex items-center justify-center shadow-2xl overflow-hidden">
+          <div 
+            className={`w-14 h-14 rounded-full transition-all duration-500 ${isHot ? 'animate-pulse' : ''}`}
+            style={{ 
+              background: isHot 
+                ? 'radial-gradient(circle, #fbbf24, #f97316, #dc2626)' 
+                : isWarm 
+                  ? 'radial-gradient(circle, #fbbf24, #f97316, #ea580c)' 
+                  : 'radial-gradient(circle, #93c5fd, #3b82f6, #1d4ed8)',
+              boxShadow: isHot 
+                ? '0 0 40px rgba(239, 68, 68, 0.9), inset 0 0 20px rgba(255, 255, 255, 0.4)' 
+                : isWarm 
+                  ? '0 0 25px rgba(249, 115, 22, 0.7), inset 0 0 15px rgba(255, 255, 255, 0.3)' 
+                  : '0 0 15px rgba(59, 130, 246, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2)',
+            }}
           />
         </div>
       </div>
-      <div className="text-2xl font-black mt-4">
-        <span className={tier.color}>{Math.round(temperature)}°</span>
+      
+      {/* Temperature Reading */}
+      <div className={`text-4xl font-black mt-8 ${isHot ? 'animate-pulse' : ''}`}>
+        <span 
+          className={tier.color}
+          style={{ 
+            textShadow: isHot 
+              ? '0 0 20px rgba(239, 68, 68, 0.8)' 
+              : isWarm 
+                ? '0 0 15px rgba(249, 115, 22, 0.6)' 
+                : '0 0 10px rgba(59, 130, 246, 0.5)',
+          }}
+        >
+          {Math.round(temperature)}°
+        </span>
       </div>
     </div>
   );
@@ -297,21 +368,106 @@ export default function HotStreakPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white overflow-hidden relative">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-t from-orange-950/30 via-transparent to-transparent" />
-        {gameState.temperature >= 30 && (
-          <div 
-            className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-orange-600/20 via-red-600/10 to-transparent transition-all duration-500"
-            style={{ height: `${Math.min(gameState.temperature * 0.6, 60)}%` }}
-          />
+      {/* Animated Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-[#0a0a0a] to-gray-950" />
+        
+        {/* Heat glow from bottom */}
+        <div 
+          className="absolute inset-x-0 bottom-0 transition-all duration-700 ease-out"
+          style={{ 
+            height: `${Math.min(gameState.temperature * 0.8, 80)}%`,
+            background: gameState.temperature >= 70
+              ? 'radial-gradient(ellipse at bottom, rgba(239, 68, 68, 0.4) 0%, rgba(249, 115, 22, 0.2) 30%, transparent 70%)'
+              : gameState.temperature >= 40
+                ? 'radial-gradient(ellipse at bottom, rgba(249, 115, 22, 0.3) 0%, rgba(234, 88, 12, 0.15) 30%, transparent 70%)'
+                : 'radial-gradient(ellipse at bottom, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 30%, transparent 70%)',
+          }}
+        />
+        
+        {/* Floating fire particles when hot */}
+        {gameState.temperature >= 50 && gameState.status === "playing" && (
+          <>
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 rounded-full opacity-60"
+                style={{
+                  left: `${10 + (i * 7)}%`,
+                  bottom: '-10px',
+                  background: gameState.temperature >= 70 
+                    ? `radial-gradient(circle, ${['#fbbf24', '#f97316', '#ef4444'][i % 3]}, transparent)`
+                    : `radial-gradient(circle, ${['#f97316', '#ea580c', '#dc2626'][i % 3]}, transparent)`,
+                  animation: `floatUp ${3 + (i % 3)}s ease-out infinite`,
+                  animationDelay: `${i * 0.3}s`,
+                  filter: 'blur(1px)',
+                }}
+              />
+            ))}
+          </>
         )}
-        {gameState.temperature >= 70 && (
-          <div 
-            className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-yellow-500/20 via-orange-500/10 to-transparent animate-pulse"
-            style={{ height: `${Math.min(gameState.temperature * 0.4, 40)}%` }}
-          />
+        
+        {/* Intense flames when blazing */}
+        {gameState.temperature >= 70 && gameState.status === "playing" && (
+          <>
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={`flame-${i}`}
+                className="absolute w-4 h-8 opacity-40"
+                style={{
+                  left: `${5 + (i * 12)}%`,
+                  bottom: '0',
+                  background: 'linear-gradient(to top, #ef4444, #f97316, #fbbf24, transparent)',
+                  borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
+                  animation: `flicker ${0.5 + (i % 3) * 0.2}s ease-in-out infinite alternate`,
+                  animationDelay: `${i * 0.1}s`,
+                  filter: 'blur(2px)',
+                }}
+              />
+            ))}
+          </>
         )}
+        
+        {/* Ember particles for inferno */}
+        {gameState.temperature >= 90 && gameState.status === "playing" && (
+          <>
+            {[...Array(20)].map((_, i) => (
+              <div
+                key={`ember-${i}`}
+                className="absolute w-1 h-1 bg-yellow-400 rounded-full"
+                style={{
+                  left: `${(i * 5) % 100}%`,
+                  bottom: '-5px',
+                  animation: `ember ${2 + (i % 3)}s ease-out infinite`,
+                  animationDelay: `${(i * 0.15)}s`,
+                  boxShadow: '0 0 6px #fbbf24, 0 0 12px #f97316',
+                }}
+              />
+            ))}
+          </>
+        )}
+        
+        {/* Vignette overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
       </div>
+      
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes floatUp {
+          0% { transform: translateY(0) scale(1); opacity: 0.6; }
+          50% { opacity: 0.8; }
+          100% { transform: translateY(-400px) scale(0.3); opacity: 0; }
+        }
+        @keyframes flicker {
+          0% { transform: scaleY(1) scaleX(1); opacity: 0.4; }
+          100% { transform: scaleY(1.3) scaleX(0.8); opacity: 0.6; }
+        }
+        @keyframes ember {
+          0% { transform: translateY(0) translateX(0) scale(1); opacity: 1; }
+          100% { transform: translateY(-300px) translateX(30px) scale(0); opacity: 0; }
+        }
+      `}</style>
 
       <nav className="relative z-50 border-b border-orange-900/30 bg-black/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">

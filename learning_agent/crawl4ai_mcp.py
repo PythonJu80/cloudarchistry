@@ -2628,6 +2628,135 @@ async def validate_slots_answer_endpoint(request: SlotsValidateRequest):
 
 
 # ============================================
+# SPEED DEPLOY ENDPOINTS
+# ============================================
+
+class SpeedDeployGenerateRequest(PydanticBaseModel):
+    user_level: str = "intermediate"
+    cert_code: Optional[str] = None
+    difficulty: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+class SpeedDeployValidateRequest(PydanticBaseModel):
+    brief_id: str
+    client_name: str
+    industry: str
+    requirements: List[Dict[str, Any]]
+    available_services: List[str]
+    optimal_solution: List[str]
+    acceptable_solutions: List[List[str]]
+    time_limit: int
+    difficulty: str
+    max_score: int
+    submitted_services: List[str]
+    time_remaining: int
+
+
+@app.post("/api/speed-deploy/brief/generate")
+async def generate_speed_deploy_brief(request: SpeedDeployGenerateRequest):
+    """Generate a Speed Deploy challenge brief."""
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.speed_deploy import generate_deploy_brief
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        brief = await generate_deploy_brief(
+            user_level=request.user_level,
+            cert_code=request.cert_code,
+            difficulty=request.difficulty,
+            api_key=request.openai_api_key,
+            model=request.preferred_model,
+        )
+        
+        return {
+            "id": brief.id,
+            "client_name": brief.client_name,
+            "industry": brief.industry,
+            "icon": brief.icon,
+            "requirements": [
+                {
+                    "category": req.category,
+                    "description": req.description,
+                    "priority": req.priority,
+                }
+                for req in brief.requirements
+            ],
+            "available_services": brief.available_services,
+            "optimal_solution": brief.optimal_solution,
+            "acceptable_solutions": brief.acceptable_solutions,
+            "time_limit": brief.time_limit,
+            "difficulty": brief.difficulty,
+            "max_score": brief.max_score,
+        }
+    except ApiKeyRequiredError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Speed Deploy brief generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate brief: {str(e)}")
+
+
+@app.post("/api/speed-deploy/validate")
+async def validate_speed_deploy(request: SpeedDeployValidateRequest):
+    """Validate the player's deployment against the brief requirements."""
+    try:
+        from generators.speed_deploy import validate_deployment, DeployBrief, ClientRequirement
+        
+        # Reconstruct brief from request
+        requirements = [
+            ClientRequirement(
+                category=req.get("category", "general"),
+                description=req.get("description", ""),
+                priority=req.get("priority", "important"),
+            )
+            for req in request.requirements
+        ]
+        
+        brief = DeployBrief(
+            id=request.brief_id,
+            client_name=request.client_name,
+            industry=request.industry,
+            icon="",
+            requirements=requirements,
+            available_services=request.available_services,
+            optimal_solution=request.optimal_solution,
+            acceptable_solutions=request.acceptable_solutions,
+            time_limit=request.time_limit,
+            difficulty=request.difficulty,
+            max_score=request.max_score,
+        )
+        
+        result = validate_deployment(
+            brief=brief,
+            submitted_services=request.submitted_services,
+            time_remaining=request.time_remaining,
+        )
+        
+        return {
+            "met_requirements": result.met_requirements,
+            "is_optimal": result.is_optimal,
+            "is_acceptable": result.is_acceptable,
+            "score": result.score,
+            "max_score": result.max_score,
+            "speed_bonus": result.speed_bonus,
+            "overengineering_penalty": result.overengineering_penalty,
+            "missing_services": result.missing_services,
+            "extra_services": result.extra_services,
+            "feedback": result.feedback,
+            "optimal_solution": result.optimal_solution,
+            "requirement_analysis": result.requirement_analysis,
+        }
+    except Exception as e:
+        logger.error(f"Speed Deploy validation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+
+
+# ============================================
 # MAIN
 # ============================================
 

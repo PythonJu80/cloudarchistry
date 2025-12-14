@@ -708,6 +708,8 @@ export default function GameModePage() {
                       router.push("/game/modes/cloud-tycoon");
                     } else if (mode.slug === "service_slots") {
                       router.push("/game/modes/service-slots");
+                    } else if (mode.slug === "speed_deploy") {
+                      router.push("/game/modes/speed-deploy");
                     }
                   } : undefined}
                 />
