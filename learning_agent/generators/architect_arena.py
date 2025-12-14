@@ -29,6 +29,131 @@ from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 # Cloud Academy API URL for fetching AWS services
 CLOUD_ACADEMY_URL = os.getenv("CLOUD_ACADEMY_URL", "http://cloud-academy:3000")
 
+# Service ID to canonical name mapping for label validation
+# This ensures labels match the actual AWS service
+SERVICE_CANONICAL_NAMES: Dict[str, str] = {
+    # Compute
+    "ec2": "EC2",
+    "lambda": "Lambda",
+    "ecs": "ECS",
+    "eks": "EKS",
+    "fargate": "Fargate",
+    "batch": "Batch",
+    "lightsail": "Lightsail",
+    "elastic-beanstalk": "Elastic Beanstalk",
+    "auto-scaling": "Auto Scaling",
+    # Networking
+    "vpc": "VPC",
+    "subnet-public": "Public Subnet",
+    "subnet-private": "Private Subnet",
+    "alb": "ALB",
+    "nlb": "NLB",
+    "elb": "ELB",
+    "cloudfront": "CloudFront",
+    "route53": "Route 53",
+    "api-gateway": "API Gateway",
+    "direct-connect": "Direct Connect",
+    "transit-gateway": "Transit Gateway",
+    "nat-gateway": "NAT Gateway",
+    "internet-gateway": "Internet Gateway",
+    "vpn": "VPN",
+    "global-accelerator": "Global Accelerator",
+    # Database
+    "rds": "RDS",
+    "aurora": "Aurora",
+    "dynamodb": "DynamoDB",
+    "elasticache": "ElastiCache",
+    "redshift": "Redshift",
+    "neptune": "Neptune",
+    "documentdb": "DocumentDB",
+    "keyspaces": "Keyspaces",
+    "timestream": "Timestream",
+    "memorydb": "MemoryDB",
+    # Storage
+    "s3": "S3",
+    "efs": "EFS",
+    "ebs": "EBS",
+    "fsx": "FSx",
+    "storage-gateway": "Storage Gateway",
+    "backup": "Backup",
+    "glacier": "Glacier",
+    # Security & Identity
+    "iam": "IAM",
+    "cognito": "Cognito",
+    "secrets-manager": "Secrets Manager",
+    "kms": "KMS",
+    "waf": "WAF",
+    "shield": "Shield",
+    "guardduty": "GuardDuty",
+    "inspector": "Inspector",
+    "macie": "Macie",
+    "security-hub": "Security Hub",
+    "security-group": "Security Group",
+    "acm": "ACM",
+    "firewall-manager": "Firewall Manager",
+    "network-firewall": "Network Firewall",
+    # Integration
+    "sqs": "SQS",
+    "sns": "SNS",
+    "eventbridge": "EventBridge",
+    "step-functions": "Step Functions",
+    "mq": "Amazon MQ",
+    "kinesis": "Kinesis",
+    "kinesis-firehose": "Kinesis Firehose",
+    "appsync": "AppSync",
+    # Analytics
+    "athena": "Athena",
+    "emr": "EMR",
+    "glue": "Glue",
+    "quicksight": "QuickSight",
+    "opensearch": "OpenSearch",
+    "msk": "MSK",
+    "lake-formation": "Lake Formation",
+    # Management
+    "cloudwatch": "CloudWatch",
+    "cloudtrail": "CloudTrail",
+    "config": "Config",
+    "systems-manager": "Systems Manager",
+    "cloudformation": "CloudFormation",
+    "organizations": "Organizations",
+    "control-tower": "Control Tower",
+    "trusted-advisor": "Trusted Advisor",
+    # ML/AI
+    "sagemaker": "SageMaker",
+    "rekognition": "Rekognition",
+    "comprehend": "Comprehend",
+    "textract": "Textract",
+    "polly": "Polly",
+    "lex": "Lex",
+    "bedrock": "Bedrock",
+}
+
+
+def _validate_label_service_coherence(label: str, service_id: str) -> bool:
+    """
+    Validate that a piece label is coherent with its service_id.
+    Returns True if valid, False if the label mentions a different AWS service.
+    """
+    label_lower = label.lower()
+    
+    # Check if label mentions a DIFFERENT service than the service_id
+    for sid, canonical in SERVICE_CANONICAL_NAMES.items():
+        if sid == service_id:
+            continue  # Skip the actual service
+        
+        # Check if label contains another service's name
+        canonical_lower = canonical.lower()
+        if canonical_lower in label_lower or sid.replace("-", " ") in label_lower:
+            # Label mentions a different service - this is a mismatch
+            return False
+    
+    return True
+
+
+def _get_service_canonical_name(service_id: str) -> str:
+    """Get the canonical AWS service name for a service_id."""
+    return SERVICE_CANONICAL_NAMES.get(service_id, service_id.upper())
+
 # Map cert codes to persona IDs (same as game_modes.py)
 CERT_CODE_TO_PERSONA = {
     "SAA": "solutions-architect-associate",
@@ -208,8 +333,14 @@ Based on the focus areas ({focus_areas}), create a scenario that:
 ## RULES
 1. Use ONLY service_id values from the list above (lowercase, hyphenated)
 2. Each piece needs a contextual label specific to YOUR generated scenario
-3. Define hierarchy (what goes inside what) and connections
-4. PENALTIES must be ELUSIVE HINTS, not explicit answers!
+3. **CRITICAL: The label MUST match the service_id!**
+   - If service_id is "iam", the label must describe an IAM use case (e.g., "Access Control Policies")
+   - If service_id is "ec2", the label must describe an EC2 use case (e.g., "Application Servers")
+   - NEVER use a label that mentions a different service than the service_id
+   - BAD: service_id="ec2" with label="IAM for Access Control" (WRONG - use service_id="iam")
+   - GOOD: service_id="iam" with label="Fine-Grained Access Control"
+4. Define hierarchy (what goes inside what) and connections
+5. PENALTIES must be ELUSIVE HINTS, not explicit answers!
    - BAD: "Placing EC2 in the public subnet" (gives away the answer)
    - GOOD: "Exposure risk" or "Security boundary violation"
    - Keep penalty text short (2-4 words) and cryptic
@@ -356,11 +487,24 @@ Be creative. Be specific. Be unique."""
     pieces = []
     for p in result.get("pieces", []):
         service_id = p.get("service_id", "ec2")
+        label = p.get("label", "Service")
         
         # Validate service_id against known services
         if service_id not in valid_service_ids:
             logger.warning(f"Hallucinated service_id '{service_id}', falling back to 'ec2'")
             service_id = "ec2"
+        
+        # Validate label-service coherence
+        # If label mentions a different AWS service, fix the label
+        if not _validate_label_service_coherence(label, service_id):
+            canonical_name = _get_service_canonical_name(service_id)
+            logger.warning(
+                f"Label-service mismatch: label='{label}' but service_id='{service_id}'. "
+                f"Fixing label to use canonical name."
+            )
+            # Extract the functional part of the label and prepend the correct service
+            # e.g., "IAM for Access Control" with service_id="ec2" -> "EC2 Instance"
+            label = f"{canonical_name} Service"
         
         # Normalize category to lowercase
         category = p.get("category", "compute").lower()
@@ -368,7 +512,7 @@ Be creative. Be specific. Be unique."""
         pieces.append(PuzzlePiece(
             id=p.get("id", f"piece_{uuid.uuid4().hex[:8]}"),
             service_id=service_id,
-            label=p.get("label", "Service"),
+            label=label,
             sublabel=p.get("sublabel"),
             hint=p.get("hint"),
             required=p.get("required", True),
