@@ -170,6 +170,7 @@ function ArchitectArenaGame() {
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(300);
+  const [timerStarted, setTimerStarted] = useState(false);
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
   const [finalScore, setFinalScore] = useState(0);
 
@@ -348,9 +349,9 @@ function ArchitectArenaGame() {
     }
   }, [authStatus, fetchPuzzle]);
 
-  // Timer effect
+  // Timer effect - only runs when timerStarted is true
   useEffect(() => {
-    if (gameStatus !== "playing") return;
+    if (gameStatus !== "playing" || !timerStarted) return;
 
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
@@ -365,7 +366,12 @@ function ArchitectArenaGame() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [gameStatus, submitPuzzle]);
+  }, [gameStatus, timerStarted, submitPuzzle]);
+
+  // Start the timer
+  const startTimer = useCallback(() => {
+    setTimerStarted(true);
+  }, []);
 
   // Format time
   const formatTime = (seconds: number) => {
@@ -444,11 +450,11 @@ function ArchitectArenaGame() {
               <div
                 className={cn(
                   "flex items-center gap-1.5 font-mono text-sm font-bold",
-                  timeLeft <= 30 ? "text-red-500 animate-pulse" : "text-white"
+                  !timerStarted ? "text-slate-500" : timeLeft <= 30 ? "text-red-500 animate-pulse" : "text-white"
                 )}
               >
                 <Clock className="w-4 h-4" />
-                {formatTime(timeLeft)}
+                {timerStarted ? formatTime(timeLeft) : "Paused"}
               </div>
             </div>
 
@@ -504,15 +510,25 @@ function ArchitectArenaGame() {
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* Start/Submit Button */}
             <div className="p-3 border-t border-slate-800">
-              <Button
-                onClick={submitPuzzle}
-                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Submit
-              </Button>
+              {!timerStarted ? (
+                <Button
+                  onClick={startTimer}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 gap-2"
+                >
+                  <Clock className="w-4 h-4" />
+                  Start Timer
+                </Button>
+              ) : (
+                <Button
+                  onClick={submitPuzzle}
+                  className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Submit
+                </Button>
+              )}
             </div>
           </div>
 

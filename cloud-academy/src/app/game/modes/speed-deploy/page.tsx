@@ -140,7 +140,6 @@ interface Opponent {
 // CONSTANTS
 // =============================================================================
 
-const BRIEFING_DURATION = 5;
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "text-green-400 bg-green-500/20 border-green-500/30",
@@ -451,7 +450,6 @@ export default function SpeedDeployPage() {
   const [selectedServices, setSelectedServices] = useState<(AWSService | null)[]>([]);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [briefingTimeLeft, setBriefingTimeLeft] = useState(BRIEFING_DURATION);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ValidationResult | null>(null);
   
@@ -462,7 +460,6 @@ export default function SpeedDeployPage() {
   const [myUserId, setMyUserId] = useState<string | null>(null);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const briefingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch team members for PvP
   const fetchTeamMembers = useCallback(async () => {
@@ -546,7 +543,6 @@ export default function SpeedDeployPage() {
         setBrief(data);
         setSelectedServices(new Array(6).fill(null)); // 6 slots for services
         setTimeLeft(data.time_limit);
-        setBriefingTimeLeft(BRIEFING_DURATION);
         setResult(null);
         return data;
       } else {
@@ -570,24 +566,7 @@ export default function SpeedDeployPage() {
     }
   }, [fetchBrief]);
 
-  // Handle briefing countdown
-  useEffect(() => {
-    if (gameState.status !== "briefing") return;
-    
-    briefingTimerRef.current = setInterval(() => {
-      setBriefingTimeLeft(prev => {
-        if (prev <= 1) {
-          setGameState(p => ({ ...p, status: "building" }));
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    return () => {
-      if (briefingTimerRef.current) clearInterval(briefingTimerRef.current);
-    };
-  }, [gameState.status]);
+  // Briefing no longer auto-transitions - user must click Skip & Start
 
   // Deploy and validate
   const handleDeploy = useCallback(async () => {
@@ -700,9 +679,8 @@ export default function SpeedDeployPage() {
   };
 
 
-  // Skip briefing
+  // Skip briefing - start building
   const skipBriefing = () => {
-    if (briefingTimerRef.current) clearInterval(briefingTimerRef.current);
     setGameState(prev => ({ ...prev, status: "building" }));
   };
 
@@ -1037,10 +1015,6 @@ export default function SpeedDeployPage() {
             className="max-w-2xl mx-auto"
           >
             <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 text-cyan-400 mb-4">
-                <Clock className="w-4 h-4" />
-                <span className="font-mono text-lg">{briefingTimeLeft}s</span>
-              </div>
               <h2 className="text-2xl font-bold">📋 Client Brief</h2>
             </div>
             
