@@ -15,7 +15,6 @@ The puzzle includes:
 import json
 import uuid
 import httpx
-import random
 from typing import List, Optional, Dict, Any, Set
 from pydantic import BaseModel
 from openai import AsyncOpenAI
@@ -29,36 +28,6 @@ from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
 # Cloud Academy API URL for fetching AWS services
 CLOUD_ACADEMY_URL = os.getenv("CLOUD_ACADEMY_URL", "http://cloud-academy:3000")
-
-# Scenario types for randomization - prevents repetitive puzzles
-SCENARIO_TYPES = [
-    "e-commerce platform with flash sales",
-    "healthcare patient portal with HIPAA compliance",
-    "fintech trading platform with low latency requirements",
-    "media streaming service with global CDN",
-    "IoT fleet management for logistics",
-    "SaaS multi-tenant application",
-    "government compliance reporting system",
-    "real-time gaming backend",
-    "ML inference pipeline for recommendations",
-    "social media feed aggregator",
-    "enterprise document management system",
-    "ride-sharing dispatch platform",
-    "online learning management system",
-    "supply chain tracking application",
-    "customer support ticketing system",
-]
-
-ARCHITECTURE_STYLES = [
-    "serverless-first with Lambda and API Gateway",
-    "container-based with ECS/Fargate",
-    "traditional 3-tier with EC2 and RDS",
-    "event-driven with SQS/SNS",
-    "microservices with service mesh",
-    "hybrid with on-premises connectivity",
-    "data lake architecture",
-    "real-time streaming with Kinesis",
-]
 
 # Map cert codes to persona IDs (same as game_modes.py)
 CERT_CODE_TO_PERSONA = {
@@ -198,52 +167,65 @@ def _format_services_for_prompt(by_category: Dict[str, List[str]]) -> str:
     return "\n".join(lines)
 
 
-ARCHITECT_ARENA_PROMPT = """You are generating an AWS architecture puzzle for the "Architect Arena" game.
+ARCHITECT_ARENA_PROMPT = """You are an expert AWS Solutions Architect generating architecture puzzles for the "Architect Arena" game.
 
 The user must assemble pre-generated AWS service "pieces" into a correct architecture diagram.
 Think of it like a jigsaw puzzle where each piece is an AWS service.
 
-⚠️ CRITICAL: Generate a UNIQUE puzzle every time! 
-- Pick a RANDOM business scenario based on the user's certification focus
-- Use DIFFERENT service combinations each time
-- Vary the architecture style based on the scenario
+## CRITICAL UNIQUENESS REQUIREMENTS
+You MUST generate a completely unique puzzle every single time. Never repeat scenarios.
 
-USER PROFILE:
+To ensure uniqueness, you will:
+1. INVENT a novel business scenario relevant to the certification focus areas
+2. CREATE a unique company name, industry context, and specific business problem
+3. SELECT services that match the scenario (not just common patterns)
+4. VARY the architecture style based on the business requirements
+
+Do NOT fall back to generic patterns like "3-tier web app" or "serverless API" unless the scenario specifically demands it.
+
+## USER PROFILE
 - Skill Level: {user_level}
 - Target Certification: {cert_name}
 - Focus Areas: {focus_areas}
+- Unique Request ID: {request_id}
 
-DIFFICULTY: {difficulty}
+## DIFFICULTY: {difficulty}
 - easy: 4-6 pieces, simple 2-tier architecture
-- medium: 6-8 pieces, 3-tier architecture
+- medium: 6-8 pieces, 3-tier architecture  
 - hard: 8-12 pieces, multi-AZ, security groups
 - expert: 12+ pieces, multi-region, complex networking
 
-AVAILABLE AWS SERVICES (by category):
+## AVAILABLE AWS SERVICES (use ONLY these service_id values)
 {services_list}
 
-RULES:
-1. Use service names from the list above (lowercase, hyphenated)
-2. Each piece needs a contextual label for the scenario
-3. Define hierarchy (what goes inside what) and connections
+## SCENARIO GENERATION GUIDELINES
+Based on the focus areas ({focus_areas}), create a scenario that:
+- Tests knowledge specific to {cert_name}
+- Involves a realistic business with a specific problem to solve
+- Requires the user to understand WHY services connect, not just memorize patterns
+- Has a creative, memorable title that reflects the business scenario
 
-5. PENALTIES must be ELUSIVE HINTS, not explicit answers!
+## RULES
+1. Use ONLY service_id values from the list above (lowercase, hyphenated)
+2. Each piece needs a contextual label specific to YOUR generated scenario
+3. Define hierarchy (what goes inside what) and connections
+4. PENALTIES must be ELUSIVE HINTS, not explicit answers!
    - BAD: "Placing EC2 in the public subnet" (gives away the answer)
    - GOOD: "Exposure risk" or "Security boundary violation"
    - Keep penalty text short (2-4 words) and cryptic
 
-Return JSON with this SCHEMA (generate your own unique content):
+Return JSON with this SCHEMA:
 {{
-  "title": "<creative title for this specific scenario>",
-  "brief": "<2-3 sentence business scenario - make it realistic and specific>",
+  "title": "<creative title reflecting YOUR unique scenario>",
+  "brief": "<2-3 sentence business scenario - include company name, industry, specific problem>",
   "difficulty": "{difficulty}",
   "time_limit_seconds": <180-600 based on difficulty>,
   "target_score": 100,
   "pieces": [
     {{
       "id": "<unique_id>",
-      "service_id": "<from the service list above>",
-      "label": "<contextual name for this scenario>",
+      "service_id": "<MUST be from the service list above>",
+      "label": "<contextual name for YOUR scenario>",
       "sublabel": "<optional technical detail>",
       "hint": "<helpful hint for placement>",
       "required": true,
@@ -323,6 +305,9 @@ async def generate_architect_arena_puzzle(
     # Fetch AWS services from Cloud Academy (single source of truth)
     services_by_category = await _fetch_aws_services()
     
+    # Generate a unique request ID to encourage LLM variation
+    request_id = uuid.uuid4().hex
+    
     # Build the prompt with dynamic services list
     system_prompt = ARCHITECT_ARENA_PROMPT.format(
         user_level=user_level,
@@ -330,24 +315,27 @@ async def generate_architect_arena_puzzle(
         focus_areas=", ".join(focus_areas),
         difficulty=difficulty,
         services_list=_format_services_for_prompt(services_by_category),
+        request_id=request_id,
     )
     
-    # Inject randomness to prevent repetitive puzzles
-    scenario_type = random.choice(SCENARIO_TYPES)
-    arch_style = random.choice(ARCHITECTURE_STYLES)
-    random_seed = random.randint(1000, 9999)
-    
-    user_prompt = f"""Generate an Architect Arena puzzle for:
-- Certification: {cert_name}
-- Skill Level: {user_level}
-- Difficulty: {difficulty}
-- Scenario Type: {scenario_type}
-- Architecture Style: {arch_style}
-- Variation Seed: {random_seed}
+    # User prompt focuses on what makes THIS request unique
+    # The LLM generates the scenario - we don't constrain it with hardcoded lists
+    user_prompt = f"""Generate a completely unique Architect Arena puzzle.
 
-Create a realistic business scenario matching the scenario type above.
-Use the architecture style as inspiration for service selection.
-Make sure the puzzle is solvable but challenging for this level."""
+Context:
+- Certification: {cert_name}
+- Skill Level: {user_level}  
+- Difficulty: {difficulty}
+- Focus Areas: {', '.join(focus_areas)}
+- Request ID: {request_id}
+
+Requirements:
+1. INVENT a unique business scenario - do not reuse common patterns
+2. Create a memorable company/situation that tests {cert_name} knowledge
+3. Select services that naturally fit YOUR invented scenario
+4. Ensure the puzzle teaches something specific about the focus areas
+
+Be creative. Be specific. Be unique."""
 
     result = await _chat_json(
         messages=[
