@@ -4,8 +4,17 @@ Speed Deploy Game Generator
 Generates architecture deployment challenges where players must select
 the correct AWS services to meet client requirements under time pressure.
 
-Players see a client brief with requirements and constraints, then
-select services from a palette to build the architecture.
+This is NOT trivia - it's architectural judgment under pressure.
+Players are graded on:
+- Correctness (meets requirements) - mandatory
+- Speed bonus - faster = more points
+- Cost efficiency - cheapest valid solution gets bonus
+- Overengineering penalty - unnecessary services cost points
+
+Difficulty scaling:
+- Beginner: Clear requirements, obvious optimal solution
+- Intermediate: Multiple valid solutions, optimization matters
+- Pro: Ambiguous requirements, cost vs latency tension, constraint traps
 """
 
 import json
@@ -31,6 +40,13 @@ class ClientRequirement(BaseModel):
     priority: str  # critical, important, nice-to-have
 
 
+class ServiceTrap(BaseModel):
+    """A service that works but is suboptimal - tests architectural judgment"""
+    service_id: str
+    why_suboptimal: str  # e.g., "RDS MySQL works but Aurora Serverless is better for variable traffic"
+    penalty: int  # Points deducted for using this
+
+
 class DeployBrief(BaseModel):
     """A client deployment brief - the challenge"""
     id: str
@@ -38,28 +54,46 @@ class DeployBrief(BaseModel):
     industry: str
     icon: str
     requirements: List[ClientRequirement]
-    available_services: List[str]  # 10-14 service IDs to choose from
+    available_services: List[str]  # 10-14 service IDs to choose from (curated palette)
     optimal_solution: List[str]  # The "best" answer (3-6 services)
-    acceptable_solutions: List[List[str]]  # Other valid solutions
-    time_limit: int  # seconds (45-60)
-    difficulty: str
+    acceptable_solutions: List[List[str]]  # Other valid solutions (work but suboptimal)
+    trap_services: List[ServiceTrap] = []  # Valid but suboptimal - penalty if used
+    time_limit: int  # seconds (45-90 based on difficulty)
+    difficulty: str  # beginner, intermediate, pro
     max_score: int
+    cost_optimal: bool = True  # Is the optimal solution also the cheapest?
+    learning_point: str = ""  # Key architectural lesson this round teaches
 
 
 class DeployResult(BaseModel):
-    """Result of validating a deployment"""
+    """Result of validating a deployment - GRADED, not pass/fail"""
+    # Core result
+    grade: str  # S, A, B, C, D, F
+    score: int
+    max_score: int
+    
+    # Score breakdown
+    correctness_score: int  # Base score for meeting requirements
+    speed_bonus: int  # Bonus for fast deployment
+    cost_efficiency_bonus: int  # Bonus for cost-optimal solution
+    overengineering_penalty: int  # Penalty for unnecessary services
+    trap_penalty: int  # Penalty for using trap services
+    missed_requirement_penalty: int  # Penalty for missing critical requirements
+    
+    # Analysis
     met_requirements: bool
     is_optimal: bool
     is_acceptable: bool
-    score: int
-    max_score: int
-    speed_bonus: int
-    overengineering_penalty: int
+    requirements_met: List[str]  # Which requirement categories were satisfied
+    requirements_missed: List[str]  # Which were missed
+    trap_services_used: List[Dict]  # Which traps they fell into and why
     missing_services: List[str]
     extra_services: List[str]
+    
+    # Feedback
     feedback: str
     optimal_solution: List[str]
-    requirement_analysis: List[Dict]  # Which requirements were met/missed
+    learning_point: str  # Key architectural lesson from this round
 
 
 # =============================================================================
@@ -67,35 +101,36 @@ class DeployResult(BaseModel):
 # =============================================================================
 
 SPEED_DEPLOY_PROMPT = """You are generating a Speed Deploy challenge for an AWS certification student.
-The player sees a client brief with requirements and must quickly select the right AWS services.
+This is NOT trivia - it's architectural judgment under pressure.
 
 USER PROFILE:
 - Skill Level: {user_level}
 - Target Certification: {cert_name}
 - Focus Areas: {focus_areas}
 
-Generate a realistic client deployment scenario that tests architectural decision-making.
+Generate a realistic client deployment scenario that tests TRADEOFFS, not memorization.
 
-RULES:
-1. Create a believable client with specific technical requirements
-2. Requirements should cover multiple categories (traffic, latency, cost, availability, compliance, data)
-3. The optimal solution should use 3-6 AWS services
-4. Include 1-2 acceptable alternative solutions
-5. Provide 10-14 services in the palette (including optimal + some distractors)
-6. Distractors should be plausible but suboptimal choices
+DIFFICULTY: {difficulty}
 
-DIFFICULTY LEVELS:
-- easy: Clear requirements, obvious optimal solution, few distractors
-- medium: Some trade-offs, multiple valid approaches, more distractors
-- hard: Ambiguous requirements, cost vs performance tension, subtle optimal choice
+DIFFICULTY RULES:
+- beginner: Clear requirements, obvious optimal solution, 10 services in palette, no traps
+- intermediate: Multiple valid solutions, optimization matters, 12 services, 1-2 traps
+- pro: Ambiguous requirements, cost vs latency tension, 14 services, 2-3 traps, hidden constraints
 
-REQUIREMENT CATEGORIES:
-- traffic: Request volume, scaling needs
-- latency: Response time requirements
-- cost: Budget constraints, optimization needs
-- availability: Uptime, disaster recovery, multi-region
-- compliance: HIPAA, PCI-DSS, SOC2, GDPR
-- data: Storage, processing, analytics needs
+REQUIREMENT CATEGORIES (use 4-6 per brief):
+- traffic: Request volume, scaling needs, burst handling
+- latency: Response time requirements, global users
+- cost: Budget constraints, pay-per-use preference
+- availability: Uptime SLA, disaster recovery, multi-region
+- compliance: HIPAA, PCI-DSS, SOC2, GDPR, encryption requirements
+- data: Storage volume, processing needs, analytics
+
+TRAP SERVICES (critical for learning):
+Include services that WORK but are SUBOPTIMAL. Examples:
+- RDS MySQL works → Aurora Serverless is better for variable traffic
+- EC2 + Auto Scaling works → ECS/Fargate is faster to deploy + cheaper
+- S3 alone works → S3 + CloudFront is better for global latency
+- Single-AZ RDS works → Multi-AZ is required for 99.9% SLA
 
 {services_reference}
 
@@ -105,28 +140,34 @@ Return JSON:
   "industry": "FinTech",
   "icon": "💳",
   "requirements": [
-    {{"category": "traffic", "description": "Handle 50K requests/second during peak", "priority": "critical"}},
-    {{"category": "latency", "description": "Sub-100ms response time for API calls", "priority": "critical"}},
-    {{"category": "compliance", "description": "PCI-DSS compliant for payment data", "priority": "critical"}},
-    {{"category": "cost", "description": "Minimize costs during off-peak hours", "priority": "important"}},
-    {{"category": "availability", "description": "99.9% uptime SLA", "priority": "important"}}
+    {{"category": "traffic", "description": "Handle 50K requests/second during peak with 10x burst capacity", "priority": "critical"}},
+    {{"category": "latency", "description": "Sub-100ms API response time for users in US and EU", "priority": "critical"}},
+    {{"category": "compliance", "description": "PCI-DSS Level 1 compliant - all payment data encrypted at rest and in transit", "priority": "critical"}},
+    {{"category": "cost", "description": "Pay-per-use model preferred - minimize idle costs", "priority": "important"}},
+    {{"category": "availability", "description": "99.9% uptime SLA with automatic failover", "priority": "important"}}
   ],
-  "available_services": ["lambda", "api-gateway", "dynamodb", "rds", "elasticache", "cloudfront", "waf", "kms", "ec2", "auto-scaling", "alb", "s3", "sqs", "sns"],
-  "optimal_solution": ["api-gateway", "lambda", "dynamodb", "elasticache", "waf", "kms"],
+  "available_services": ["lambda", "api-gateway", "dynamodb", "rds", "aurora", "elasticache", "cloudfront", "waf", "kms", "ec2", "auto-scaling", "alb", "ecs", "fargate"],
+  "optimal_solution": ["api-gateway", "lambda", "dynamodb", "elasticache", "cloudfront", "waf", "kms"],
   "acceptable_solutions": [
-    ["alb", "ec2", "auto-scaling", "rds", "elasticache", "waf", "kms"],
-    ["api-gateway", "lambda", "rds", "elasticache", "waf", "kms"]
+    ["alb", "ecs", "fargate", "aurora", "elasticache", "cloudfront", "waf", "kms"],
+    ["api-gateway", "lambda", "aurora", "elasticache", "waf", "kms"]
+  ],
+  "trap_services": [
+    {{"service_id": "rds", "why_suboptimal": "RDS MySQL requires capacity planning. Aurora Serverless auto-scales and is better for variable traffic patterns.", "penalty": 10}},
+    {{"service_id": "ec2", "why_suboptimal": "EC2 + Auto Scaling works but requires more management. Lambda or Fargate are better for pay-per-use requirements.", "penalty": 8}}
   ],
   "time_limit": 60,
-  "difficulty": "medium",
-  "max_score": 100
+  "learning_point": "For variable traffic with pay-per-use requirements, serverless (Lambda/Fargate + DynamoDB/Aurora Serverless) beats traditional EC2/RDS."
 }}
 
-IMPORTANT:
-- All service IDs must be from the valid list provided
-- optimal_solution should be the BEST choice for the requirements
-- acceptable_solutions should WORK but be suboptimal (more expensive, slower, etc.)
-- available_services must include all services from optimal + acceptable + some distractors
+CRITICAL RULES:
+1. All service IDs must be from the valid list provided
+2. optimal_solution = BEST choice (fastest, cheapest, most appropriate)
+3. acceptable_solutions = WORK but are suboptimal (more expensive, slower, harder to manage)
+4. trap_services = technically valid but WRONG choice - include WHY they're wrong
+5. available_services = optimal + acceptable + traps + 2-3 pure distractors
+6. learning_point = the key architectural lesson this round teaches
+7. Time limits: beginner=90s, intermediate=60s, pro=45s
 """
 
 
@@ -168,9 +209,14 @@ async def generate_deploy_brief(
         cert_name = persona.get("cert", cert_name)
         focus_areas = persona.get("focus", focus_areas)
     
+    # Map difficulty names (support both old and new naming)
+    difficulty_map = {"easy": "beginner", "medium": "intermediate", "hard": "pro"}
+    if difficulty in difficulty_map:
+        difficulty = difficulty_map[difficulty]
+    
     # Random difficulty if not specified
     if not difficulty:
-        weights = {"easy": 0.3, "medium": 0.5, "hard": 0.2}
+        weights = {"beginner": 0.3, "intermediate": 0.5, "pro": 0.2}
         difficulty = random.choices(
             list(weights.keys()), 
             weights=list(weights.values())
@@ -201,6 +247,7 @@ async def generate_deploy_brief(
         user_level=user_level,
         cert_name=cert_name,
         focus_areas=", ".join(focus_areas),
+        difficulty=difficulty,
         services_reference=AWS_SERVICES_REFERENCE,
     )
     
@@ -210,8 +257,13 @@ Target certification: {cert_name}
 Skill level: {user_level}
 Scenario theme: {theme}
 
-Create a realistic client brief that tests architectural decision-making.
-Focus on patterns relevant to {cert_name} certification."""
+Create a realistic client brief that tests architectural TRADEOFFS, not memorization.
+Focus on patterns relevant to {cert_name} certification.
+
+Remember:
+- {difficulty} difficulty rules apply
+- Include trap_services with why_suboptimal explanations
+- Include a learning_point that teaches the key architectural lesson"""
 
     # Call OpenAI
     model_to_use = model or get_request_model() or "gpt-4o"
@@ -262,13 +314,27 @@ Focus on patterns relevant to {cert_name} certification."""
             priority=req.get("priority", "important"),
         ))
     
-    # Time limit based on difficulty
-    time_limits = {"easy": 60, "medium": 50, "hard": 45}
+    # Time limit based on difficulty (beginner=90s, intermediate=60s, pro=45s)
+    time_limits = {"beginner": 90, "intermediate": 60, "pro": 45}
     time_limit = result.get("time_limit", time_limits.get(difficulty, 60))
     
     # Max score based on difficulty
-    max_scores = {"easy": 100, "medium": 150, "hard": 200}
+    max_scores = {"beginner": 100, "intermediate": 150, "pro": 200}
     max_score = result.get("max_score", max_scores.get(difficulty, 100))
+    
+    # Parse trap services
+    trap_services = []
+    for trap in result.get("trap_services", []):
+        service_id = trap.get("service_id", "").lower().strip()
+        if service_id in VALID_SERVICE_IDS:
+            trap_services.append(ServiceTrap(
+                service_id=service_id,
+                why_suboptimal=trap.get("why_suboptimal", "This service works but is not optimal."),
+                penalty=trap.get("penalty", 10),
+            ))
+    
+    # Get learning point
+    learning_point = result.get("learning_point", "Consider the tradeoffs between cost, performance, and complexity.")
     
     return DeployBrief(
         id=f"deploy_{uuid.uuid4().hex[:8]}",
@@ -279,9 +345,11 @@ Focus on patterns relevant to {cert_name} certification."""
         available_services=available[:14],  # Cap at 14
         optimal_solution=optimal,
         acceptable_solutions=acceptable,
+        trap_services=trap_services,
         time_limit=time_limit,
         difficulty=difficulty,
         max_score=max_score,
+        learning_point=learning_point,
     )
 
 
@@ -291,15 +359,17 @@ def validate_deployment(
     time_remaining: int,
 ) -> DeployResult:
     """
-    Validate a player's deployment against the brief requirements.
+    Validate a player's deployment with GRADED scoring (not pass/fail).
     
-    Args:
-        brief: The deployment brief
-        submitted_services: Services the player selected
-        time_remaining: Seconds remaining when they submitted
+    Scoring model:
+    - Correctness (base score) - mandatory
+    - Speed bonus - faster = more points
+    - Cost efficiency bonus - if using cost-optimal solution
+    - Overengineering penalty - unnecessary services
+    - Trap penalty - using suboptimal services
+    - Missed requirement penalty - missing critical requirements
     
-    Returns:
-        DeployResult with score and feedback
+    Grades: S (95%+), A (85%+), B (70%+), C (50%+), D (30%+), F (<30%)
     """
     submitted_set = set(s.lower().strip() for s in submitted_services)
     optimal_set = set(brief.optimal_solution)
@@ -309,157 +379,162 @@ def validate_deployment(
     
     # Check if it matches any acceptable solution
     is_acceptable = False
+    matched_acceptable = None
     for acceptable in brief.acceptable_solutions:
         if submitted_set == set(acceptable):
             is_acceptable = True
+            matched_acceptable = acceptable
             break
     
     # Calculate what's missing/extra compared to optimal
     missing = list(optimal_set - submitted_set)
     extra = list(submitted_set - optimal_set)
     
-    # Base score calculation
+    # =========================================================================
+    # SCORING BREAKDOWN
+    # =========================================================================
+    
+    # 1. CORRECTNESS SCORE (base: 0-60% of max)
     if is_optimal:
-        base_score = brief.max_score
-        feedback = "🎯 Perfect architecture! You selected the optimal solution."
+        correctness_score = int(brief.max_score * 0.60)
+        feedback = "🎯 Perfect architecture! Optimal solution selected."
     elif is_acceptable:
-        base_score = int(brief.max_score * 0.75)
-        feedback = "✅ Good architecture! This solution works but isn't optimal."
+        correctness_score = int(brief.max_score * 0.50)
+        feedback = "✅ Valid architecture. Works but not optimal."
     elif len(missing) == 0:
-        # Has all required services but some extra
-        base_score = int(brief.max_score * 0.6)
-        feedback = "⚠️ Overengineered. You have all required services but added unnecessary ones."
-    elif len(missing) <= 2:
-        # Missing a few services
-        base_score = int(brief.max_score * 0.4)
+        # Has all optimal services but some extra
+        correctness_score = int(brief.max_score * 0.45)
+        feedback = "⚠️ Overengineered. All required services present but with extras."
+    elif len(missing) == 1:
+        correctness_score = int(brief.max_score * 0.35)
+        feedback = f"❌ Almost there! Missing: {missing[0]}"
+    elif len(missing) == 2:
+        correctness_score = int(brief.max_score * 0.25)
         feedback = f"❌ Missing key services: {', '.join(missing)}"
     else:
-        # Missing too many
-        base_score = int(brief.max_score * 0.2)
-        feedback = "❌ This architecture doesn't meet the requirements."
+        correctness_score = int(brief.max_score * 0.15)
+        feedback = "❌ Architecture doesn't meet requirements."
     
-    # Speed bonus (up to 25% of max score)
-    speed_ratio = time_remaining / brief.time_limit
-    speed_bonus = int(brief.max_score * 0.25 * speed_ratio) if is_optimal or is_acceptable else 0
+    # 2. SPEED BONUS (up to 20% of max)
+    speed_ratio = time_remaining / brief.time_limit if brief.time_limit > 0 else 0
+    if is_optimal or is_acceptable or len(missing) <= 1:
+        speed_bonus = int(brief.max_score * 0.20 * speed_ratio)
+    else:
+        speed_bonus = 0  # No speed bonus for bad solutions
     
-    # Overengineering penalty
+    # 3. COST EFFICIENCY BONUS (up to 10% of max)
+    # Optimal solution is assumed to be cost-optimal
+    if is_optimal:
+        cost_efficiency_bonus = int(brief.max_score * 0.10)
+    elif is_acceptable:
+        cost_efficiency_bonus = int(brief.max_score * 0.05)
+    else:
+        cost_efficiency_bonus = 0
+    
+    # 4. OVERENGINEERING PENALTY (5 points per extra service)
     overengineering_penalty = len(extra) * 5 if not is_optimal else 0
     
-    # Final score
-    final_score = max(0, base_score + speed_bonus - overengineering_penalty)
+    # 5. TRAP PENALTY - check if they used any trap services
+    trap_services_used = []
+    trap_penalty = 0
+    trap_ids = {trap.service_id for trap in brief.trap_services}
+    for svc in submitted_set:
+        if svc in trap_ids:
+            trap = next(t for t in brief.trap_services if t.service_id == svc)
+            trap_services_used.append({
+                "service_id": svc,
+                "why_suboptimal": trap.why_suboptimal,
+                "penalty": trap.penalty,
+            })
+            trap_penalty += trap.penalty
     
-    # Analyze requirements - map services to requirement categories
-    # This maps common AWS services to the requirement categories they address
+    # 6. MISSED REQUIREMENT PENALTY (critical = 15pts, important = 8pts)
+    requirements_met = []
+    requirements_missed = []
+    missed_requirement_penalty = 0
+    
+    # Simple check: if missing services, check which requirement categories are affected
     SERVICE_CATEGORY_MAP = {
-        # Traffic/Scaling
-        "auto-scaling": ["traffic", "availability"],
-        "alb": ["traffic", "availability"],
-        "nlb": ["traffic", "availability"],
-        "cloudfront": ["traffic", "latency"],
-        "api-gateway": ["traffic", "latency"],
-        "lambda": ["traffic", "cost"],
-        "ecs": ["traffic"],
-        "eks": ["traffic"],
-        "ec2": ["traffic"],
-        
-        # Latency
-        "elasticache": ["latency", "data"],
-        "dynamodb": ["latency", "data", "availability"],
-        "global-accelerator": ["latency"],
-        
-        # Cost
-        "s3": ["cost", "data"],
-        "glacier": ["cost", "data"],
-        "spot-instances": ["cost"],
-        
-        # Availability/DR
-        "route53": ["availability", "latency"],
-        "rds": ["data", "availability"],
-        "aurora": ["data", "availability"],
-        "multi-az": ["availability"],
-        
-        # Compliance/Security
-        "waf": ["compliance", "traffic"],
-        "shield": ["compliance", "traffic"],
-        "kms": ["compliance", "data"],
-        "secrets-manager": ["compliance"],
-        "cognito": ["compliance"],
-        "iam": ["compliance"],
-        "guardduty": ["compliance"],
-        "macie": ["compliance", "data"],
-        "config": ["compliance"],
-        
-        # Data
-        "kinesis": ["data", "traffic"],
-        "kinesis-streams": ["data", "traffic"],
-        "sqs": ["data", "availability"],
-        "sns": ["data"],
-        "athena": ["data", "cost"],
-        "redshift": ["data"],
-        "glue": ["data"],
-        "emr": ["data"],
+        "auto-scaling": ["traffic", "availability"], "alb": ["traffic", "availability"],
+        "cloudfront": ["traffic", "latency"], "api-gateway": ["traffic", "latency"],
+        "lambda": ["traffic", "cost"], "ec2": ["traffic"], "ecs": ["traffic"], "fargate": ["traffic"],
+        "elasticache": ["latency", "data"], "dynamodb": ["latency", "data", "availability"],
+        "s3": ["cost", "data"], "rds": ["data", "availability"], "aurora": ["data", "availability"],
+        "waf": ["compliance", "traffic"], "kms": ["compliance", "data"],
+        "cognito": ["compliance"], "shield": ["compliance"],
+        "route53": ["availability"], "sqs": ["data", "availability"],
     }
     
-    requirement_analysis = []
     for req in brief.requirements:
-        # Check if any submitted service addresses this requirement category
-        category_services = [svc for svc, cats in SERVICE_CATEGORY_MAP.items() 
-                           if req.category in cats and svc in submitted_set]
-        
-        # Check optimal services for this category
-        optimal_for_category = [svc for svc, cats in SERVICE_CATEGORY_MAP.items() 
-                               if req.category in cats and svc in optimal_set]
-        
-        # Check which optimal services for this category are missing
-        missing_for_category = [svc for svc in optimal_for_category if svc not in submitted_set]
-        
-        # Requirement is fully met only if:
-        # 1. We match optimal/acceptable solution, OR
-        # 2. We have ALL the optimal services for this category (not just some)
-        if is_optimal or is_acceptable:
-            met = True
-            status = "optimal"
-        elif len(missing_for_category) == 0 and len(optimal_for_category) > 0:
-            # Have all optimal services for this category
-            met = True
-            status = "complete"
-        elif len(category_services) > 0 and len(missing_for_category) > 0:
-            # Have some but not all
-            met = False
-            status = "partial"
-        elif len(category_services) > 0:
-            # Have some services but optimal doesn't specify any for this category
-            met = True
-            status = "covered"
+        # Check if any submitted service covers this category
+        covered = any(
+            req.category in SERVICE_CATEGORY_MAP.get(svc, [])
+            for svc in submitted_set
+        )
+        if covered or is_optimal or is_acceptable:
+            requirements_met.append(req.category)
         else:
-            # No services for this category
-            met = False
-            status = "missing"
-        
-        requirement_analysis.append({
-            "category": req.category,
-            "description": req.description,
-            "priority": req.priority,
-            "met": met,
-            "status": status,
-            "your_services": category_services,
-            "recommended": optimal_for_category,
-            "missing": missing_for_category,
-        })
+            requirements_missed.append(req.category)
+            if req.priority == "critical":
+                missed_requirement_penalty += 15
+            else:
+                missed_requirement_penalty += 8
+    
+    # =========================================================================
+    # FINAL SCORE & GRADE
+    # =========================================================================
+    
+    final_score = max(0, (
+        correctness_score 
+        + speed_bonus 
+        + cost_efficiency_bonus 
+        - overengineering_penalty 
+        - trap_penalty 
+        - missed_requirement_penalty
+    ))
+    
+    # Calculate percentage for grade
+    percentage = (final_score / brief.max_score) * 100 if brief.max_score > 0 else 0
+    
+    if percentage >= 95:
+        grade = "S"
+    elif percentage >= 85:
+        grade = "A"
+    elif percentage >= 70:
+        grade = "B"
+    elif percentage >= 50:
+        grade = "C"
+    elif percentage >= 30:
+        grade = "D"
+    else:
+        grade = "F"
+    
+    # Build learning point
+    learning_point = brief.learning_point
+    if trap_services_used:
+        learning_point = trap_services_used[0]["why_suboptimal"]
     
     return DeployResult(
-        met_requirements=is_optimal or is_acceptable or len(missing) == 0,
-        is_optimal=is_optimal,
-        is_acceptable=is_acceptable,
+        grade=grade,
         score=final_score,
         max_score=brief.max_score,
+        correctness_score=correctness_score,
         speed_bonus=speed_bonus,
+        cost_efficiency_bonus=cost_efficiency_bonus,
         overengineering_penalty=overengineering_penalty,
+        trap_penalty=trap_penalty,
+        missed_requirement_penalty=missed_requirement_penalty,
+        met_requirements=len(requirements_missed) == 0,
+        is_optimal=is_optimal,
+        is_acceptable=is_acceptable,
+        requirements_met=requirements_met,
+        requirements_missed=requirements_missed,
+        trap_services_used=trap_services_used,
         missing_services=missing,
         extra_services=extra,
         feedback=feedback,
         optimal_solution=brief.optimal_solution,
-        requirement_analysis=requirement_analysis,
+        learning_point=learning_point,
     )
 
 

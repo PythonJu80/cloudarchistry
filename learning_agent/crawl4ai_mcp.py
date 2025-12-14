@@ -2647,9 +2647,11 @@ class SpeedDeployValidateRequest(PydanticBaseModel):
     available_services: List[str]
     optimal_solution: List[str]
     acceptable_solutions: List[List[str]]
+    trap_services: List[Dict[str, Any]] = []
     time_limit: int
     difficulty: str
     max_score: int
+    learning_point: str = ""
     submitted_services: List[str]
     time_remaining: int
 
@@ -2690,9 +2692,18 @@ async def generate_speed_deploy_brief(request: SpeedDeployGenerateRequest):
             "available_services": brief.available_services,
             "optimal_solution": brief.optimal_solution,
             "acceptable_solutions": brief.acceptable_solutions,
+            "trap_services": [
+                {
+                    "service_id": trap.service_id,
+                    "why_suboptimal": trap.why_suboptimal,
+                    "penalty": trap.penalty,
+                }
+                for trap in brief.trap_services
+            ],
             "time_limit": brief.time_limit,
             "difficulty": brief.difficulty,
             "max_score": brief.max_score,
+            "learning_point": brief.learning_point,
         }
     except ApiKeyRequiredError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -2703,9 +2714,9 @@ async def generate_speed_deploy_brief(request: SpeedDeployGenerateRequest):
 
 @app.post("/api/speed-deploy/validate")
 async def validate_speed_deploy(request: SpeedDeployValidateRequest):
-    """Validate the player's deployment against the brief requirements."""
+    """Validate the player's deployment with GRADED scoring."""
     try:
-        from generators.speed_deploy import validate_deployment, DeployBrief, ClientRequirement
+        from generators.speed_deploy import validate_deployment, DeployBrief, ClientRequirement, ServiceTrap
         
         # Reconstruct brief from request
         requirements = [
@@ -2717,6 +2728,16 @@ async def validate_speed_deploy(request: SpeedDeployValidateRequest):
             for req in request.requirements
         ]
         
+        # Reconstruct trap services
+        trap_services = [
+            ServiceTrap(
+                service_id=trap.get("service_id", ""),
+                why_suboptimal=trap.get("why_suboptimal", ""),
+                penalty=trap.get("penalty", 10),
+            )
+            for trap in request.trap_services
+        ]
+        
         brief = DeployBrief(
             id=request.brief_id,
             client_name=request.client_name,
@@ -2726,9 +2747,11 @@ async def validate_speed_deploy(request: SpeedDeployValidateRequest):
             available_services=request.available_services,
             optimal_solution=request.optimal_solution,
             acceptable_solutions=request.acceptable_solutions,
+            trap_services=trap_services,
             time_limit=request.time_limit,
             difficulty=request.difficulty,
             max_score=request.max_score,
+            learning_point=request.learning_point,
         )
         
         result = validate_deployment(
@@ -2738,18 +2761,33 @@ async def validate_speed_deploy(request: SpeedDeployValidateRequest):
         )
         
         return {
+            # Core result
+            "grade": result.grade,
+            "score": result.score,
+            "max_score": result.max_score,
+            
+            # Score breakdown
+            "correctness_score": result.correctness_score,
+            "speed_bonus": result.speed_bonus,
+            "cost_efficiency_bonus": result.cost_efficiency_bonus,
+            "overengineering_penalty": result.overengineering_penalty,
+            "trap_penalty": result.trap_penalty,
+            "missed_requirement_penalty": result.missed_requirement_penalty,
+            
+            # Analysis
             "met_requirements": result.met_requirements,
             "is_optimal": result.is_optimal,
             "is_acceptable": result.is_acceptable,
-            "score": result.score,
-            "max_score": result.max_score,
-            "speed_bonus": result.speed_bonus,
-            "overengineering_penalty": result.overengineering_penalty,
+            "requirements_met": result.requirements_met,
+            "requirements_missed": result.requirements_missed,
+            "trap_services_used": result.trap_services_used,
             "missing_services": result.missing_services,
             "extra_services": result.extra_services,
+            
+            # Feedback
             "feedback": result.feedback,
             "optimal_solution": result.optimal_solution,
-            "requirement_analysis": result.requirement_analysis,
+            "learning_point": result.learning_point,
         }
     except Exception as e:
         logger.error(f"Speed Deploy validation error: {e}")

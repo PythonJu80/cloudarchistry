@@ -52,6 +52,12 @@ interface Requirement {
   priority: string;
 }
 
+interface TrapService {
+  service_id: string;
+  why_suboptimal: string;
+  penalty: number;
+}
+
 interface Brief {
   id: string;
   client_name: string;
@@ -61,9 +67,11 @@ interface Brief {
   available_services: string[];
   optimal_solution: string[];
   acceptable_solutions: string[][];
+  trap_services: TrapService[];
   time_limit: number;
   difficulty: string;
   max_score: number;
+  learning_point: string;
 }
 
 interface MatchData {
@@ -198,10 +206,12 @@ function DroppableSlot({
 // =============================================================================
 
 function ServicePicker({
+  availableServiceIds,
   selectedServices,
   onDragStart,
   disabled,
 }: {
+  availableServiceIds: string[];
   selectedServices: (AWSService | null)[];
   onDragStart: (e: React.DragEvent, service: AWSService) => void;
   disabled?: boolean;
@@ -209,8 +219,8 @@ function ServicePicker({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Use ALL AWS services, not just a subset
-  const availableServices = AWS_SERVICES;
+  // Use CURATED service palette from brief (10-14 services)
+  const availableServices = AWS_SERVICES.filter(s => availableServiceIds.includes(s.id));
   const selectedIds = new Set(selectedServices.filter(Boolean).map(s => s!.id));
 
   const filteredServices = searchQuery
@@ -845,6 +855,7 @@ export default function SpeedDeployMatchPage() {
             
             {/* Service Picker */}
             <ServicePicker
+              availableServiceIds={brief.available_services}
               selectedServices={selectedServices}
               onDragStart={handleDragStart}
             />

@@ -148,9 +148,11 @@ export async function POST(
             available_services: string[];
             optimal_solution: string[];
             acceptable_solutions: string[][];
+            trap_services?: Array<{ service_id: string; why_suboptimal: string; penalty: number }>;
             time_limit: number;
             difficulty: string;
             max_score: number;
+            learning_point?: string;
           };
           player1Services?: string[] | null;
           player2Services?: string[] | null;
@@ -205,9 +207,11 @@ export async function POST(
               available_services: brief.available_services,
               optimal_solution: brief.optimal_solution,
               acceptable_solutions: brief.acceptable_solutions,
+              trap_services: brief.trap_services || [],
               time_limit: brief.time_limit,
               difficulty: brief.difficulty,
               max_score: brief.max_score,
+              learning_point: brief.learning_point || "",
               submitted_services: newMatchState.player1Services || [],
               time_remaining: newMatchState.player1TimeRemaining || 0,
             }),
@@ -226,9 +230,11 @@ export async function POST(
               available_services: brief.available_services,
               optimal_solution: brief.optimal_solution,
               acceptable_solutions: brief.acceptable_solutions,
+              trap_services: brief.trap_services || [],
               time_limit: brief.time_limit,
               difficulty: brief.difficulty,
               max_score: brief.max_score,
+              learning_point: brief.learning_point || "",
               submitted_services: newMatchState.player2Services || [],
               time_remaining: newMatchState.player2TimeRemaining || 0,
             }),

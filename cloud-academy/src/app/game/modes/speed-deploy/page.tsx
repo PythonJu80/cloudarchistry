@@ -47,6 +47,12 @@ interface Requirement {
   priority: string;
 }
 
+interface TrapService {
+  service_id: string;
+  why_suboptimal: string;
+  penalty: number;
+}
+
 interface Brief {
   id: string;
   client_name: string;
@@ -56,24 +62,44 @@ interface Brief {
   available_services: string[];
   optimal_solution: string[];
   acceptable_solutions: string[][];
+  trap_services: TrapService[];
   time_limit: number;
   difficulty: string;
   max_score: number;
+  learning_point: string;
 }
 
 interface ValidationResult {
+  // Core result
+  grade: string;
+  score: number;
+  max_score: number;
+  
+  // Score breakdown
+  correctness_score: number;
+  speed_bonus: number;
+  cost_efficiency_bonus: number;
+  overengineering_penalty: number;
+  trap_penalty: number;
+  missed_requirement_penalty: number;
+  
+  // Analysis
   met_requirements: boolean;
   is_optimal: boolean;
   is_acceptable: boolean;
-  score: number;
-  max_score: number;
-  speed_bonus: number;
-  overengineering_penalty: number;
+  requirements_met: string[];
+  requirements_missed: string[];
+  trap_services_used: TrapService[];
   missing_services: string[];
   extra_services: string[];
+  
+  // Feedback
   feedback: string;
   optimal_solution: string[];
-  requirement_analysis: { category: string; description: string; priority: string; met: boolean }[];
+  learning_point: string;
+  
+  // Legacy fields for backward compatibility
+  requirement_analysis?: { category: string; description: string; priority: string; met: boolean }[];
 }
 
 interface GameState {
@@ -233,10 +259,12 @@ function DroppableSlot({
 // =============================================================================
 
 function ServicePicker({
+  availableServiceIds,
   selectedServices,
   onDragStart,
   disabled,
 }: {
+  availableServiceIds: string[];
   selectedServices: (AWSService | null)[];
   onDragStart: (e: React.DragEvent, service: AWSService) => void;
   disabled?: boolean;
@@ -244,8 +272,8 @@ function ServicePicker({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Use ALL AWS services, not just a subset
-  const availableServices = AWS_SERVICES;
+  // Use CURATED service palette from brief (10-14 services)
+  const availableServices = AWS_SERVICES.filter(s => availableServiceIds.includes(s.id));
   const selectedIds = new Set(selectedServices.filter(Boolean).map(s => s!.id));
 
   const filteredServices = searchQuery
@@ -532,9 +560,11 @@ export default function SpeedDeployPage() {
           available_services: brief.available_services,
           optimal_solution: brief.optimal_solution,
           acceptable_solutions: brief.acceptable_solutions,
+          trap_services: brief.trap_services || [],
           time_limit: brief.time_limit,
           difficulty: brief.difficulty,
           max_score: brief.max_score,
+          learning_point: brief.learning_point || "",
           submitted_services: submittedServices,
           time_remaining: timeLeft,
         }),
@@ -958,6 +988,7 @@ export default function SpeedDeployPage() {
             
             {/* Service Picker */}
             <ServicePicker
+              availableServiceIds={brief.available_services}
               selectedServices={selectedServices}
               onDragStart={handleDragStart}
             />
@@ -984,38 +1015,104 @@ export default function SpeedDeployPage() {
             animate={{ opacity: 1, y: 0 }}
             className="max-w-2xl mx-auto"
           >
+            {/* Grade & Score Header */}
             <div className={cn(
               "text-center p-8 rounded-xl border mb-6",
-              result.is_optimal 
+              result.grade === "S" || result.grade === "A"
                 ? "bg-green-500/10 border-green-500/30" 
-                : result.met_requirements
+                : result.grade === "B" || result.grade === "C"
                   ? "bg-amber-500/10 border-amber-500/30"
                   : "bg-red-500/10 border-red-500/30"
             )}>
-              {result.is_optimal ? (
-                <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-              ) : result.met_requirements ? (
-                <Check className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              ) : (
-                <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-              )}
+              {/* Grade Badge */}
+              <div className={cn(
+                "w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center text-4xl font-bold",
+                result.grade === "S" ? "bg-yellow-500/20 text-yellow-400 ring-2 ring-yellow-500" :
+                result.grade === "A" ? "bg-green-500/20 text-green-400" :
+                result.grade === "B" ? "bg-cyan-500/20 text-cyan-400" :
+                result.grade === "C" ? "bg-amber-500/20 text-amber-400" :
+                result.grade === "D" ? "bg-orange-500/20 text-orange-400" :
+                "bg-red-500/20 text-red-400"
+              )}>
+                {result.grade || (result.is_optimal ? "S" : result.met_requirements ? "B" : "F")}
+              </div>
               
-              <h2 className="text-2xl font-bold mb-2">
-                {result.is_optimal ? "🎯 Perfect Deploy!" : result.met_requirements ? "✅ Deployed!" : "❌ Deploy Failed"}
-              </h2>
-              <p className="text-slate-400 mb-4">{result.feedback}</p>
+              <h2 className="text-2xl font-bold mb-2">{result.feedback}</h2>
               
-              <div className="text-4xl font-bold text-cyan-400 mb-2">
+              <div className="text-4xl font-bold text-cyan-400 mb-4">
                 {result.score} / {result.max_score}
               </div>
               
-              {result.speed_bonus > 0 && (
-                <div className="text-sm text-green-400">+{result.speed_bonus} speed bonus</div>
-              )}
-              {result.overengineering_penalty > 0 && (
-                <div className="text-sm text-red-400">-{result.overengineering_penalty} overengineering penalty</div>
-              )}
+              {/* Score Breakdown */}
+              <div className="flex flex-wrap justify-center gap-3 text-xs">
+                {(result.correctness_score || 0) > 0 && (
+                  <span className="px-2 py-1 rounded bg-slate-800 text-slate-300">
+                    Base: {result.correctness_score}
+                  </span>
+                )}
+                {(result.speed_bonus || 0) > 0 && (
+                  <span className="px-2 py-1 rounded bg-green-500/20 text-green-400">
+                    +{result.speed_bonus} speed
+                  </span>
+                )}
+                {(result.cost_efficiency_bonus || 0) > 0 && (
+                  <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-400">
+                    +{result.cost_efficiency_bonus} cost efficient
+                  </span>
+                )}
+                {(result.overengineering_penalty || 0) > 0 && (
+                  <span className="px-2 py-1 rounded bg-red-500/20 text-red-400">
+                    -{result.overengineering_penalty} overengineered
+                  </span>
+                )}
+                {(result.trap_penalty || 0) > 0 && (
+                  <span className="px-2 py-1 rounded bg-orange-500/20 text-orange-400">
+                    -{result.trap_penalty} suboptimal choice
+                  </span>
+                )}
+                {(result.missed_requirement_penalty || 0) > 0 && (
+                  <span className="px-2 py-1 rounded bg-red-500/20 text-red-400">
+                    -{result.missed_requirement_penalty} missed requirements
+                  </span>
+                )}
+              </div>
             </div>
+            
+            {/* Trap Services Used - Key Learning */}
+            {result.trap_services_used && result.trap_services_used.length > 0 && (
+              <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-medium text-orange-400 mb-3 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Suboptimal Choices (Trap Services)
+                </h4>
+                <div className="space-y-2">
+                  {result.trap_services_used.map((trap: { service_id: string; why_suboptimal: string; penalty: number }, i: number) => {
+                    const svc = AWS_SERVICES.find(s => s.id === trap.service_id);
+                    return (
+                      <div key={i} className="flex items-start gap-3 p-2 rounded bg-slate-900/50">
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {svc && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: svc.color }} />}
+                          <span className="text-sm font-medium text-orange-400">{svc?.shortName || trap.service_id}</span>
+                          <span className="text-xs text-red-400">-{trap.penalty}pts</span>
+                        </div>
+                        <p className="text-xs text-slate-400">{trap.why_suboptimal}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
+            {/* Learning Point */}
+            {result.learning_point && (
+              <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-medium text-cyan-400 mb-2 flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  Key Takeaway
+                </h4>
+                <p className="text-sm text-slate-300">{result.learning_point}</p>
+              </div>
+            )}
             
             {/* Requirement Analysis */}
             {result.requirement_analysis && result.requirement_analysis.length > 0 && (
