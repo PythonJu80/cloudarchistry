@@ -208,7 +208,7 @@ export const GAME_MODES: GameMode[] = [
   {
     slug: "speed_deploy",
     title: "Speed Deploy",
-    icon: "🏎️",
+    icon: "🚀",
     description: "Race to deploy the correct architecture faster than your opponent!",
     players: "1v1",
     gradient: "linear-gradient(135deg, #3b82f6, #1d4ed8)",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -163,6 +163,46 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
   data: Database,
   general: Server,
 };
+
+const RACE_IN_CONTAINER = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.16,
+      delayChildren: 0.12,
+    },
+  },
+} as const;
+
+const RACE_IN_UP = {
+  hidden: { opacity: 0, y: 44, filter: "blur(10px)" },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { type: "spring", stiffness: 260, damping: 26, mass: 0.9, bounce: 0.2 },
+  },
+} as const;
+
+const RACE_IN_LEFT = {
+  hidden: { opacity: 0, x: -220, filter: "blur(10px)" },
+  show: {
+    opacity: 1,
+    x: 0,
+    filter: "blur(0px)",
+    transition: { type: "spring", stiffness: 300, damping: 28, mass: 0.9, bounce: 0.2 },
+  },
+} as const;
+
+const RACE_IN_RIGHT = {
+  hidden: { opacity: 0, x: 220, filter: "blur(10px)" },
+  show: {
+    opacity: 1,
+    x: 0,
+    filter: "blur(0px)",
+    transition: { type: "spring", stiffness: 300, damping: 28, mass: 0.9, bounce: 0.2 },
+  },
+} as const;
 
 // =============================================================================
 // DRAGGABLE SERVICE COMPONENT
@@ -385,6 +425,18 @@ export default function SpeedDeployPage() {
   const router = useRouter();
   const { data: session, status: authStatus } = useSession();
   const { toast } = useToast();
+
+  const backgroundParticles = useMemo(
+    () =>
+      Array.from({ length: 20 }, () => ({
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        dx: Math.random() * 100 - 50,
+        duration: 3 + Math.random() * 4,
+        delay: Math.random() * 2,
+      })),
+    []
+  );
   
   const [gameState, setGameState] = useState<GameState>({
     status: "ready",
@@ -674,14 +726,63 @@ export default function SpeedDeployPage() {
   const filledSlots = selectedServices.filter(s => s !== null).length;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-hidden relative">
-      {/* Background */}
+    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-hidden relative flex flex-col">
+      {/* Enhanced Background with Animations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-[#0a0a0a] to-gray-950" />
+        
+        {/* Animated floating particles */}
+        <div className="absolute inset-0">
+          {backgroundParticles.map((p, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-cyan-400/30 rounded-full"
+              animate={{
+                y: [0, -100, 0],
+                x: [0, p.dx, 0],
+                opacity: [0, 1, 0],
+              }}
+              transition={{
+                duration: p.duration,
+                repeat: Infinity,
+                delay: p.delay,
+                ease: "easeInOut"
+              }}
+              style={{
+                left: `${p.left}%`,
+                top: `${p.top}%`,
+              }}
+            />
+          ))}
+        </div>
+        
+        {/* Radial gradient with animation */}
+        <motion.div 
+          className="absolute inset-0"
+          animate={{
+            background: [
+              'radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 50%)',
+              'radial-gradient(circle at 30% 70%, rgba(6, 182, 212, 0.15) 0%, transparent 50%)',
+              'radial-gradient(circle at 70% 30%, rgba(6, 182, 212, 0.1) 0%, transparent 50%)',
+              'radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 50%)',
+            ]
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        {/* Grid overlay */}
         <div 
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-5"
           style={{
-            backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 50%)',
+            backgroundImage: `
+              linear-gradient(rgba(6, 182, 212, 0.3) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(6, 182, 212, 0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '50px 50px'
           }}
         />
       </div>
@@ -716,54 +817,134 @@ export default function SpeedDeployPage() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+      <div className="relative z-10 flex-1 min-h-0 max-w-7xl mx-auto w-full px-4 py-4 overflow-y-auto">
+        
         {/* Ready State */}
         {gameState.status === "ready" && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16"
+            initial="hidden"
+            animate="show"
+            variants={RACE_IN_CONTAINER}
+            className="space-y-6"
           >
-            <Rocket className="w-24 h-24 text-cyan-400 mx-auto mb-6" />
-            <h1 className="text-4xl font-bold mb-4">Speed Deploy</h1>
-            <p className="text-slate-400 mb-8 max-w-md mx-auto">
-              Race against the clock to build the perfect AWS architecture for your client&apos;s requirements.
-            </p>
-            
-            {/* Mode Selection */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto">
-              {/* Solo Mode */}
-              <Button
-                onClick={startRound}
-                disabled={isLoading}
-                className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-6 text-lg gap-3 flex-col h-auto"
+            {/* Hero Section */}
+            <motion.div variants={RACE_IN_UP} className="text-center py-6">
+              <motion.div
+                animate={{
+                  scale: [1, 1.05, 1],
+                  rotate: [0, 1, -1, 0],
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="inline-block mb-4"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Generating...</span>
-                  </>
-                ) : (
-                  <>
-                    <User className="w-8 h-8" />
-                    <span className="font-bold">Solo Mode</span>
-                    <span className="text-xs text-cyan-200">Race the clock</span>
-                  </>
-                )}
-              </Button>
+                <Rocket className="w-24 h-24 text-cyan-400 drop-shadow-[0_0_30px_rgba(6,182,212,0.5)]" />
+              </motion.div>
+
+              <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                Speed Deploy
+              </h1>
+              <p className="text-lg text-slate-300 mb-1 max-w-2xl mx-auto">
+                Architectural Judgment Under Pressure
+              </p>
+              <p className="text-slate-400 mb-6 max-w-xl mx-auto">
+                Race against time (and opponents) to build the optimal AWS architecture.
+                Not just trivia - real architectural decision-making where every choice matters.
+              </p>
+            </motion.div>
+
+            {/* Game Features */}
+            <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-6">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                variants={RACE_IN_LEFT}
+                className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20 rounded-xl p-4"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                    <Target className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-cyan-400">Graded Scoring</h3>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Earn grades S-F based on correctness, speed, cost efficiency, and avoiding overengineering
+                </p>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                variants={RACE_IN_UP}
+                className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/20 rounded-xl p-4"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-amber-400">Trap Services</h3>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Learn why technically valid solutions might be suboptimal in real-world scenarios
+                </p>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                variants={RACE_IN_RIGHT}
+                className="bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20 rounded-xl p-4"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-green-400">Learning Points</h3>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Every round teaches key architectural lessons that apply to AWS certification exams
+                </p>
+              </motion.div>
+            </div>
+
+            {/* Mode Selection */}
+            <motion.div variants={RACE_IN_UP} className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto">
+              {/* Solo Mode */}
+              <motion.div variants={RACE_IN_LEFT} className="flex-1">
+                <Button
+                  onClick={startRound}
+                  disabled={isLoading}
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-6 text-lg gap-3 flex-col h-auto"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-8 h-8" />
+                      <span className="font-bold">Solo Mode</span>
+                      <span className="text-xs text-cyan-200">Race the clock</span>
+                    </>
+                  )}
+                </Button>
+              </motion.div>
               
               {/* PvP Mode */}
-              <Button
-                onClick={() => setShowChallengeModal(true)}
-                disabled={isLoading}
-                variant="outline"
-                className="flex-1 border-cyan-500/50 hover:bg-cyan-500/10 text-white px-6 py-6 text-lg gap-3 flex-col h-auto"
-              >
-                <Swords className="w-8 h-8 text-cyan-400" />
-                <span className="font-bold">Challenge</span>
-                <span className="text-xs text-slate-400">Race a teammate</span>
-              </Button>
-            </div>
+              <motion.div variants={RACE_IN_RIGHT} className="flex-1">
+                <Button
+                  onClick={() => setShowChallengeModal(true)}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="w-full border-cyan-500/50 hover:bg-cyan-500/10 text-white px-6 py-6 text-lg gap-3 flex-col h-auto"
+                >
+                  <Swords className="w-8 h-8 text-cyan-400" />
+                  <span className="font-bold">Challenge</span>
+                  <span className="text-xs text-slate-400">Race a teammate</span>
+                </Button>
+              </motion.div>
+            </motion.div>
           </motion.div>
         )}
 
