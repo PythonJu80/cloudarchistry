@@ -249,21 +249,11 @@ Do NOT fall back to generic patterns like "3-tier web app" or "serverless API" u
 - Focus Areas: {focus_areas}
 - Unique Request ID: {request_id}
 
-## PIECE COUNT (based on user skill level) - THIS IS MANDATORY, NOT OPTIONAL!
-You MUST generate EXACTLY this many pieces. No fewer!
-- beginner: EXACTLY 10 pieces
-- intermediate: EXACTLY 20 pieces  
-- advanced: EXACTLY 30 pieces
-- expert: EXACTLY 40 pieces
-
-Current user_level is: {user_level} - generate the correct number of pieces!
-
 ## DIFFICULTY: {difficulty}
-Difficulty controls the COMPLEXITY of the scenario, NOT the piece count. Scoring is always strict.
-- easy: clear business requirements, common architecture patterns, logical service groupings
-- medium: nuanced requirements, some ambiguous decisions, requires service relationship knowledge
-- hard: complex dependencies, security-first thinking, multi-AZ and failover considerations
-- expert: enterprise-grade scenarios, DR patterns, cost vs performance trade-offs, edge cases
+- easy: 10 pieces, simple 2-tier architecture, basic networking
+- medium: 20 pieces, 3-tier architecture, load balancing, caching
+- hard: 30 pieces, multi-AZ, security groups, DR considerations
+- expert: 40 pieces, multi-region, complex networking, full enterprise stack
 
 ## AVAILABLE AWS SERVICES (use ONLY these service_id values)
 {services_list}
@@ -277,22 +267,15 @@ Based on the focus areas ({focus_areas}), create a scenario that:
 
 ## RULES
 1. Use ONLY service_id values from the list above (lowercase, hyphenated)
-2. **VPC IS MANDATORY** - Every architecture MUST include at least one VPC (service_id: "vpc"). Subnets go INSIDE the VPC.
-3. **YOU CAN USE THE SAME SERVICE MULTIPLE TIMES!** Real architectures have:
-   - Multiple VPCs (for different environments or regions)
-   - Multiple public subnets (for multi-AZ deployments)
-   - Multiple private subnets (for app tier, data tier, etc.)
-   - Multiple EC2 instances, RDS replicas, Lambda functions, etc.
-   - For advanced/expert levels, use 2-4 subnets of each type across multiple AZs
-4. Each piece needs a UNIQUE id (e.g., "public-subnet-1", "public-subnet-2") and contextual label
-5. **CRITICAL: The label MUST match the service_id!**
+2. Each piece needs a contextual label specific to YOUR generated scenario
+3. **CRITICAL: The label MUST match the service_id!**
    - If service_id is "iam", the label must describe an IAM use case (e.g., "Access Control Policies")
    - If service_id is "ec2", the label must describe an EC2 use case (e.g., "Application Servers")
    - NEVER use a label that mentions a different service than the service_id
    - BAD: service_id="ec2" with label="IAM for Access Control" (WRONG - use service_id="iam")
    - GOOD: service_id="iam" with label="Fine-Grained Access Control"
-6. Define hierarchy (what goes inside what) and connections
-7. PENALTIES must be ELUSIVE HINTS, not explicit answers!
+4. Define hierarchy (what goes inside what) and connections
+5. PENALTIES must be ELUSIVE HINTS, not explicit answers!
    - BAD: "Placing EC2 in the public subnet" (gives away the answer)
    - GOOD: "Exposure risk" or "Security boundary violation"
    - Keep penalty text short (2-4 words) and cryptic
@@ -405,16 +388,6 @@ async def generate_architect_arena_puzzle(
     )
     
     # User prompt focuses on what makes THIS request unique
-    # The LLM generates the scenario - we don't constrain it with hardcoded lists
-    # Map user_level to required piece count
-    piece_count_map = {
-        "beginner": 10,
-        "intermediate": 20,
-        "advanced": 30,
-        "expert": 40,
-    }
-    required_pieces = piece_count_map.get(user_level, 20)
-    
     user_prompt = f"""Generate a completely unique Architect Arena puzzle.
 
 Context:
@@ -424,16 +397,13 @@ Context:
 - Focus Areas: {', '.join(focus_areas)}
 - Request ID: {request_id}
 
-**CRITICAL: You MUST generate EXACTLY {required_pieces} pieces. Not fewer, not more. Count them!**
-
 Requirements:
 1. INVENT a unique business scenario - do not reuse common patterns
 2. Create a memorable company/situation that tests {cert_name} knowledge
 3. Select services that naturally fit YOUR invented scenario
 4. Ensure the puzzle teaches something specific about the focus areas
-5. Generate EXACTLY {required_pieces} pieces - use multiple instances of services (multiple EC2s, multiple subnets, etc.)
 
-Be creative. Be specific. Be unique. And generate EXACTLY {required_pieces} pieces!"""
+Be creative. Be specific. Be unique."""
 
     result = await _chat_json(
         messages=[
