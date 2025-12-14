@@ -27,132 +27,42 @@ from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
 # Cloud Academy API URL for fetching AWS services
-CLOUD_ACADEMY_URL = os.getenv("CLOUD_ACADEMY_URL", "http://cloud-academy:3000")
+CLOUD_ACADEMY_URL = os.getenv("CLOUD_ACADEMY_URL", "http://cloud-academy:6060")
 
-# Service ID to canonical name mapping for label validation
-# This ensures labels match the actual AWS service
-SERVICE_CANONICAL_NAMES: Dict[str, str] = {
-    # Compute
-    "ec2": "EC2",
-    "lambda": "Lambda",
-    "ecs": "ECS",
-    "eks": "EKS",
-    "fargate": "Fargate",
-    "batch": "Batch",
-    "lightsail": "Lightsail",
-    "elastic-beanstalk": "Elastic Beanstalk",
-    "auto-scaling": "Auto Scaling",
-    # Networking
-    "vpc": "VPC",
-    "subnet-public": "Public Subnet",
-    "subnet-private": "Private Subnet",
-    "alb": "ALB",
-    "nlb": "NLB",
-    "elb": "ELB",
-    "cloudfront": "CloudFront",
-    "route53": "Route 53",
-    "api-gateway": "API Gateway",
-    "direct-connect": "Direct Connect",
-    "transit-gateway": "Transit Gateway",
-    "nat-gateway": "NAT Gateway",
-    "internet-gateway": "Internet Gateway",
-    "vpn": "VPN",
-    "global-accelerator": "Global Accelerator",
-    # Database
-    "rds": "RDS",
-    "aurora": "Aurora",
-    "dynamodb": "DynamoDB",
-    "elasticache": "ElastiCache",
-    "redshift": "Redshift",
-    "neptune": "Neptune",
-    "documentdb": "DocumentDB",
-    "keyspaces": "Keyspaces",
-    "timestream": "Timestream",
-    "memorydb": "MemoryDB",
-    # Storage
-    "s3": "S3",
-    "efs": "EFS",
-    "ebs": "EBS",
-    "fsx": "FSx",
-    "storage-gateway": "Storage Gateway",
-    "backup": "Backup",
-    "glacier": "Glacier",
-    # Security & Identity
-    "iam": "IAM",
-    "cognito": "Cognito",
-    "secrets-manager": "Secrets Manager",
-    "kms": "KMS",
-    "waf": "WAF",
-    "shield": "Shield",
-    "guardduty": "GuardDuty",
-    "inspector": "Inspector",
-    "macie": "Macie",
-    "security-hub": "Security Hub",
-    "security-group": "Security Group",
-    "acm": "ACM",
-    "firewall-manager": "Firewall Manager",
-    "network-firewall": "Network Firewall",
-    # Integration
-    "sqs": "SQS",
-    "sns": "SNS",
-    "eventbridge": "EventBridge",
-    "step-functions": "Step Functions",
-    "mq": "Amazon MQ",
-    "kinesis": "Kinesis",
-    "kinesis-firehose": "Kinesis Firehose",
-    "appsync": "AppSync",
-    # Analytics
-    "athena": "Athena",
-    "emr": "EMR",
-    "glue": "Glue",
-    "quicksight": "QuickSight",
-    "opensearch": "OpenSearch",
-    "msk": "MSK",
-    "lake-formation": "Lake Formation",
-    # Management
-    "cloudwatch": "CloudWatch",
-    "cloudtrail": "CloudTrail",
-    "config": "Config",
-    "systems-manager": "Systems Manager",
-    "cloudformation": "CloudFormation",
-    "organizations": "Organizations",
-    "control-tower": "Control Tower",
-    "trusted-advisor": "Trusted Advisor",
-    # ML/AI
-    "sagemaker": "SageMaker",
-    "rekognition": "Rekognition",
-    "comprehend": "Comprehend",
-    "textract": "Textract",
-    "polly": "Polly",
-    "lex": "Lex",
-    "bedrock": "Bedrock",
-}
+# Cache for service data fetched from Cloud Academy API
+_service_cache: Optional[Dict[str, Any]] = None
 
 
-def _validate_label_service_coherence(label: str, service_id: str) -> bool:
+def _validate_label_service_coherence(label: str, service_id: str, service_names: Dict[str, str]) -> bool:
     """
     Validate that a piece label is coherent with its service_id.
     Returns True if valid, False if the label mentions a different AWS service.
+    
+    Args:
+        label: The label text to validate
+        service_id: The service_id this label is supposed to represent
+        service_names: Dict mapping service_id -> shortName (from API)
     """
     label_lower = label.lower()
     
     # Check if label mentions a DIFFERENT service than the service_id
-    for sid, canonical in SERVICE_CANONICAL_NAMES.items():
+    for sid, short_name in service_names.items():
         if sid == service_id:
             continue  # Skip the actual service
         
         # Check if label contains another service's name
-        canonical_lower = canonical.lower()
-        if canonical_lower in label_lower or sid.replace("-", " ") in label_lower:
-            # Label mentions a different service - this is a mismatch
-            return False
+        short_name_lower = short_name.lower()
+        if len(short_name_lower) >= 3:  # Only check names with 3+ chars to avoid false positives
+            if short_name_lower in label_lower or sid.replace("-", " ") in label_lower:
+                # Label mentions a different service - this is a mismatch
+                return False
     
     return True
 
 
-def _get_service_canonical_name(service_id: str) -> str:
+def _get_service_canonical_name(service_id: str, service_names: Dict[str, str]) -> str:
     """Get the canonical AWS service name for a service_id."""
-    return SERVICE_CANONICAL_NAMES.get(service_id, service_id.upper())
+    return service_names.get(service_id, service_id.upper())
 
 # Map cert codes to persona IDs (same as game_modes.py)
 CERT_CODE_TO_PERSONA = {
@@ -264,32 +174,57 @@ async def _chat_json(
     return json.loads(response.choices[0].message.content)
 
 
-async def _fetch_aws_services() -> Dict[str, List[str]]:
-    """Fetch AWS services from Cloud Academy API (single source of truth)."""
+async def _fetch_aws_services() -> Dict[str, Any]:
+    """
+    Fetch AWS services from Cloud Academy API (single source of truth).
+    Returns full service data including names for validation.
+    """
+    global _service_cache
+    
+    # Return cached data if available
+    if _service_cache is not None:
+        return _service_cache
+    
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{CLOUD_ACADEMY_URL}/api/services/list", timeout=5.0)
             if response.status_code == 200:
                 data = response.json()
-                return data.get("byCategory", {})
+                _service_cache = data
+                return data
     except Exception as e:
-        print(f"Warning: Could not fetch AWS services from Cloud Academy: {e}")
+        logger.warning(f"Could not fetch AWS services from Cloud Academy: {e}")
     
-    # Fallback to basic list if API unavailable
+    # Fallback to basic structure if API unavailable
     return {
-        "Compute": ["ec2", "lambda", "ecs", "eks"],
-        "Database": ["rds", "dynamodb", "aurora"],
-        "Storage": ["s3", "efs", "ebs"],
-        "Networking": ["vpc", "alb", "cloudfront"],
+        "services": [],
+        "byCategory": {
+            "compute": ["ec2", "lambda", "ecs", "eks"],
+            "database": ["rds", "dynamodb", "aurora"],
+            "storage": ["s3", "efs", "ebs"],
+            "networking": ["vpc", "alb", "cloudfront"],
+        },
     }
 
 
-def _format_services_for_prompt(by_category: Dict[str, List[str]]) -> str:
+def _build_service_names_map(services_data: Dict[str, Any]) -> Dict[str, str]:
+    """Build a mapping of service_id -> shortName from API response."""
+    service_names = {}
+    for svc in services_data.get("services", []):
+        service_names[svc["id"]] = svc.get("shortName", svc.get("name", svc["id"].upper()))
+    return service_names
+
+
+def _format_services_for_prompt(services_data: Dict[str, Any]) -> str:
     """Format services by category for the prompt."""
+    by_category = services_data.get("byCategory", {})
     lines = []
-    for category, services in sorted(by_category.items()):
-        lines.append(f"   - {category}: {', '.join(services[:10])}")
+    for category, service_ids in sorted(by_category.items()):
+        # Show all services, not just first 10
+        lines.append(f"   - {category}: {', '.join(service_ids)}")
     return "\n".join(lines)
+
+
 
 
 ARCHITECT_ARENA_PROMPT = """You are an expert AWS Solutions Architect generating architecture puzzles for the "Architect Arena" game.
@@ -315,10 +250,10 @@ Do NOT fall back to generic patterns like "3-tier web app" or "serverless API" u
 - Unique Request ID: {request_id}
 
 ## DIFFICULTY: {difficulty}
-- easy: 4-6 pieces, simple 2-tier architecture
-- medium: 6-8 pieces, 3-tier architecture  
-- hard: 8-12 pieces, multi-AZ, security groups
-- expert: 12+ pieces, multi-region, complex networking
+- easy: 10 pieces, simple 2-tier architecture, basic networking
+- medium: 20 pieces, 3-tier architecture, load balancing, caching
+- hard: 30 pieces, multi-AZ, security groups, DR considerations
+- expert: 40 pieces, multi-region, complex networking, full enterprise stack
 
 ## AVAILABLE AWS SERVICES (use ONLY these service_id values)
 {services_list}
@@ -434,7 +369,10 @@ async def generate_architect_arena_puzzle(
         difficulty = difficulty_map.get(user_level, "medium")
     
     # Fetch AWS services from Cloud Academy (single source of truth)
-    services_by_category = await _fetch_aws_services()
+    services_data = await _fetch_aws_services()
+    
+    # Build service names map for validation
+    service_names = _build_service_names_map(services_data)
     
     # Generate a unique request ID to encourage LLM variation
     request_id = uuid.uuid4().hex
@@ -445,7 +383,7 @@ async def generate_architect_arena_puzzle(
         cert_name=cert_name,
         focus_areas=", ".join(focus_areas),
         difficulty=difficulty,
-        services_list=_format_services_for_prompt(services_by_category),
+        services_list=_format_services_for_prompt(services_data),
         request_id=request_id,
     )
     
@@ -477,9 +415,10 @@ Be creative. Be specific. Be unique."""
     )
     
     # Build set of valid service IDs for validation
-    valid_service_ids: Set[str] = set()
-    for services in services_by_category.values():
-        valid_service_ids.update(services)
+    valid_service_ids: Set[str] = set(service_names.keys())
+    # Also add from byCategory in case services list is empty
+    for service_ids in services_data.get("byCategory", {}).values():
+        valid_service_ids.update(service_ids)
     # Add common container types that may not be in the list
     valid_service_ids.update(["vpc", "subnet-public", "subnet-private", "security-group", "auto-scaling"])
     
@@ -496,8 +435,8 @@ Be creative. Be specific. Be unique."""
         
         # Validate label-service coherence
         # If label mentions a different AWS service, fix the label
-        if not _validate_label_service_coherence(label, service_id):
-            canonical_name = _get_service_canonical_name(service_id)
+        if not _validate_label_service_coherence(label, service_id, service_names):
+            canonical_name = _get_service_canonical_name(service_id, service_names)
             logger.warning(
                 f"Label-service mismatch: label='{label}' but service_id='{service_id}'. "
                 f"Fixing label to use canonical name."
