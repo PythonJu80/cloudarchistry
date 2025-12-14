@@ -28,3 +28,11 @@ from .game_modes import (
     GameQuestion,
     SniperQuizQuestions,
 )
+from .architect_arena import (
+    generate_architect_arena_puzzle,
+    ArchitectArenaPuzzle,
+    PuzzlePiece,
+    ExpectedConnection,
+    PuzzleObjective,
+    PuzzlePenalty,
+)

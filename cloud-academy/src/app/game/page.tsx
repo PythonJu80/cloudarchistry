@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PlayerStatsSidebar } from "./components";
 import {
   GAME_MODES,
+  type GameModeSlug,
   type Team,
   type TeamMember,
   type Match,
@@ -493,6 +494,22 @@ export default function GameModePage() {
   // Separate featured game from others
   const otherGames = GAME_MODES.filter(m => m.slug !== "quiz_battle");
 
+  const navigateToMode = (slug: GameModeSlug) => {
+    if (slug === "service_sniper") {
+      router.push("/game/modes/service-sniper");
+    } else if (slug === "hot_streak") {
+      router.push("/game/modes/hot-streak");
+    } else if (slug === "cloud_tycoon") {
+      router.push("/game/modes/cloud-tycoon");
+    } else if (slug === "service_slots") {
+      router.push("/game/modes/service-slots");
+    } else if (slug === "speed_deploy") {
+      router.push("/game/modes/speed-deploy");
+    } else if (slug === "architect_arena") {
+      router.push("/game/modes/architect-arena/lobby");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050508] text-white overflow-hidden">
       {/* Layered animated background */}
@@ -688,7 +705,7 @@ export default function GameModePage() {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {otherGames.map((mode, index) => (
+              {otherGames.map((mode) => (
                 <GameModeCard
                   key={mode.slug}
                   title={mode.title}
@@ -698,20 +715,8 @@ export default function GameModePage() {
                   isLive={mode.isLive}
                   comingSoon={mode.comingSoon}
                   gradient={mode.gradient}
-                  index={index}
-                  onClick={mode.isLive ? () => {
-                    if (mode.slug === "service_sniper") {
-                      router.push("/game/modes/service-sniper");
-                    } else if (mode.slug === "hot_streak") {
-                      router.push("/game/modes/hot-streak");
-                    } else if (mode.slug === "cloud_tycoon") {
-                      router.push("/game/modes/cloud-tycoon");
-                    } else if (mode.slug === "service_slots") {
-                      router.push("/game/modes/service-slots");
-                    } else if (mode.slug === "speed_deploy") {
-                      router.push("/game/modes/speed-deploy");
-                    }
-                  } : undefined}
+                  index={0}
+                  onClick={mode.isLive ? () => navigateToMode(mode.slug) : undefined}
                 />
               ))}
             </div>

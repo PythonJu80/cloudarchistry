@@ -262,7 +262,7 @@ export const GAME_MODES: GameMode[] = [
     description: "Design architectures under pressure. AI judges your solution.",
     players: "1v1",
     gradient: "linear-gradient(135deg, #06b6d4, #0891b2)",
-    isLive: false,
-    comingSoon: true,
+    isLive: true,
+    comingSoon: false,
   },
 ];

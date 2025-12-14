@@ -249,11 +249,18 @@ Do NOT fall back to generic patterns like "3-tier web app" or "serverless API" u
 - Focus Areas: {focus_areas}
 - Unique Request ID: {request_id}
 
+## PIECE COUNT (based on user skill level)
+- beginner: minimum 10 pieces
+- intermediate: minimum 20 pieces
+- advanced: minimum 30 pieces
+- expert: minimum 40 pieces
+
 ## DIFFICULTY: {difficulty}
-- easy: 10 pieces, simple 2-tier architecture, basic networking
-- medium: 20 pieces, 3-tier architecture, load balancing, caching
-- hard: 30 pieces, multi-AZ, security groups, DR considerations
-- expert: 40 pieces, multi-region, complex networking, full enterprise stack
+Difficulty controls the COMPLEXITY of the scenario, NOT the piece count. Scoring is always strict.
+- easy: clear business requirements, common architecture patterns, logical service groupings
+- medium: nuanced requirements, some ambiguous decisions, requires service relationship knowledge
+- hard: complex dependencies, security-first thinking, multi-AZ and failover considerations
+- expert: enterprise-grade scenarios, DR patterns, cost vs performance trade-offs, edge cases
 
 ## AVAILABLE AWS SERVICES (use ONLY these service_id values)
 {services_list}

@@ -177,6 +177,7 @@ from generators import (
     validate_cli_challenge,
     get_session_stats as get_cli_session_stats,
 )
+from generators.architect_arena import generate_architect_arena_puzzle
 from generators.scenario import CompanyInfo as GenCompanyInfo
 import random
 
@@ -2070,6 +2071,151 @@ async def generate_hot_streak_endpoint(request: GenerateContentRequest):
             "topics_covered": result.topics_covered,
             "certification": short_code,
         }
+    finally:
+        set_request_api_key(None)
+        set_request_model(None)
+
+
+@app.post("/api/architect-arena/generate")
+async def generate_architect_arena_endpoint(request: GenerateContentRequest):
+    """Generate Architect Arena puzzle payload."""
+    from utils import set_request_api_key, set_request_model
+
+    try:
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+
+        short_code = (request.certification_code or "SAA").upper()
+        difficulty = request.options.get("difficulty") if request.options else None
+
+        puzzle = await generate_architect_arena_puzzle(
+            user_level=request.user_level or "intermediate",
+            cert_code=short_code,
+            difficulty=difficulty,
+        )
+
+        return {
+            "success": True,
+            "puzzle": puzzle.model_dump(),
+            "certification": short_code,
+        }
+    except ApiKeyRequiredError as e:
+        raise HTTPException(status_code=402, detail=str(e))
+    except Exception as e:
+        logger.error(f"Architect Arena generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate puzzle: {str(e)}")
+    finally:
+        set_request_api_key(None)
+        set_request_model(None)
+
+
+ARCHITECT_ARENA_AUDIT_PROMPT = """You are auditing an AWS architecture PUZZLE submission.
+
+## CRITICAL: This is a PUZZLE game, NOT a free-form design!
+The user was given PRE-GENERATED puzzle pieces (AWS services) scattered randomly on a canvas.
+Their job was to:
+1. PLACE pieces correctly (drag into proper containers - e.g., EC2 into private subnet, ALB into public subnet)
+2. CONNECT pieces correctly (draw edges between related services)
+
+## DO NOT give credit for:
+- Having the services present (they were pre-generated, not chosen by the user)
+- The types of services used (the puzzle defined these)
+
+## DO give credit/penalties for:
+- Correct PLACEMENT: Is EC2 inside a private subnet? Is ALB in public subnet? Are subnets inside VPC?
+- Correct CONNECTIONS: Did user connect ALB -> EC2 -> RDS? Are there logical data flows?
+- Correct HIERARCHY: Proper nesting of containers
+
+## Puzzle Context
+Title: {puzzle_title}
+Brief: {puzzle_brief}
+Expected Hierarchy: {expected_hierarchy}
+Expected Connections: {expected_connections}
+
+## User's Submission
+Placement (parent_id shows what container each piece is inside):
+{placement_data}
+
+Connections drawn by user:
+{connections_data}
+
+## Scoring Guide (out of 100)
+- 0-30: Pieces not placed in containers, no connections
+- 31-50: Some correct placements, few connections
+- 51-70: Most placements correct, most connections made
+- 71-90: All placements correct, all connections, good hierarchy
+- 91-100: Perfect placement, connections, and hierarchy
+
+Return ONLY valid JSON:
+{{"score": <0-100>, "correct": ["placement/connection achievements"], "missing": ["placement/connection issues - describe as risks"], "suggestions": ["hints about placement/connections"], "feedback": "encouraging message about their puzzle-solving"}}"""
+
+
+@app.post("/api/architect-arena/audit")
+async def audit_architect_arena_endpoint(request: dict):
+    """Audit Architect Arena puzzle - judges PLACEMENT and CONNECTIONS, not presence of pieces."""
+    from utils import set_request_api_key, set_request_model, get_request_api_key, get_request_model
+    
+    try:
+        if request.get("openai_api_key"):
+            set_request_api_key(request["openai_api_key"])
+        if request.get("preferred_model"):
+            set_request_model(request["preferred_model"])
+        
+        nodes = request.get("nodes", [])
+        connections = request.get("connections", [])
+        
+        # Build placement data - focus on parent_id (what container each piece is in)
+        placement_data = []
+        for node in nodes:
+            parent = node.get("parent_id") or "canvas (not in any container)"
+            placement_data.append(f"- {node.get('label', node.get('id'))} ({node.get('type')}) is inside: {parent}")
+        
+        # Build connections data
+        connections_data = []
+        for conn in connections:
+            connections_data.append(f"- {conn.get('source')} -> {conn.get('target')}")
+        if not connections_data:
+            connections_data.append("- No connections drawn by user")
+        
+        system_prompt = ARCHITECT_ARENA_AUDIT_PROMPT.format(
+            puzzle_title=request.get("puzzle_title", "Architecture Puzzle"),
+            puzzle_brief=request.get("puzzle_brief", "Build the architecture"),
+            expected_hierarchy=request.get("expected_hierarchy", "Not specified"),
+            expected_connections=request.get("expected_connections", "Not specified"),
+            placement_data="\n".join(placement_data),
+            connections_data="\n".join(connections_data),
+        )
+        
+        # Use OpenAI client directly (not _chat_json which doesn't exist here)
+        api_key = get_request_api_key()
+        if not api_key:
+            raise HTTPException(status_code=402, detail="OpenAI API key required")
+        
+        client = AsyncOpenAI(api_key=api_key)
+        response = await client.chat.completions.create(
+            model=get_request_model() or "gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": "Evaluate this puzzle submission."}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        
+        return {
+            "score": result.get("score", 0),
+            "correct": result.get("correct", []),
+            "missing": result.get("missing", []),
+            "suggestions": result.get("suggestions", []),
+            "feedback": result.get("feedback", ""),
+        }
+    except Exception as e:
+        logger.error(f"Architect Arena audit error: {e}")
+        raise HTTPException(status_code=500, detail=f"Audit failed: {str(e)}")
     finally:
         set_request_api_key(None)
         set_request_model(None)

@@ -10,7 +10,7 @@
  * the sidebar and toolbar - just the canvas.
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import {
   ReactFlow,
   Background,
@@ -26,7 +26,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { nodeTypes } from "@/components/diagram/aws-nodes";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -124,13 +124,13 @@ function puzzlePiecesToNodes(pieces: PuzzlePiece[]): Node[] {
     const nodeType = getNodeType(piece.service_id);
     const size = containerSizes[nodeType];
     
-    // Determine label based on service type
-    let label = piece.service_id.toUpperCase().replace(/-/g, " ");
+    // For subnets, use simple labels
+    let displayLabel = piece.label;
     if (piece.service_id === "vpc") {
-      label = "VPC";
+      displayLabel = "VPC";
     } else if (piece.service_id.startsWith("subnet-")) {
       const subnetType = getSubnetType(piece.service_id);
-      label = subnetType === "public" ? "Public" : "Private";
+      displayLabel = subnetType === "public" ? "Public" : "Private";
     }
     
     // Calculate height for this piece
@@ -143,8 +143,8 @@ function puzzlePiecesToNodes(pieces: PuzzlePiece[]): Node[] {
       style: size ? { width: size.width, height: size.height } : undefined,
       data: {
         serviceId: piece.service_id,
-        label: label,
-        sublabel: piece.sublabel,
+        label: displayLabel, // Use the contextual label from the puzzle
+        // No sublabel - keeps nodes clean and readable
         color: getCategoryColor(piece.category),
         subnetType: piece.service_id.startsWith("subnet-") ? getSubnetType(piece.service_id) : undefined,
       },
@@ -176,7 +176,11 @@ function getCategoryColor(category: string): string {
 
 function ArchitectArenaGame() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status: authStatus } = useSession();
+  
+  // Get difficulty from URL query param (from lobby)
+  const difficulty = searchParams.get("difficulty") || "medium";
 
   // Game state - start loading immediately
   const [gameStatus, setGameStatus] = useState<GameStatus>("loading");
@@ -220,7 +224,7 @@ function ArchitectArenaGame() {
       const response = await fetch("/api/gaming/architect-arena/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ difficulty }),
       });
 
       if (!response.ok) {
@@ -256,7 +260,7 @@ function ArchitectArenaGame() {
       setLoadError("Network error. Please try again.");
       setGameStatus("idle");
     }
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, difficulty]);
 
   // Submit for AI audit
   const submitPuzzle = useCallback(async () => {
@@ -609,11 +613,13 @@ function ArchitectArenaGame() {
   );
 }
 
-// Wrap with ReactFlowProvider
+// Wrap with ReactFlowProvider and Suspense for useSearchParams
 export default function ArchitectArenaPage() {
   return (
-    <ReactFlowProvider>
-      <ArchitectArenaGame />
-    </ReactFlowProvider>
+    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-12 h-12 text-cyan-500 animate-spin" /></div>}>
+      <ReactFlowProvider>
+        <ArchitectArenaGame />
+      </ReactFlowProvider>
+    </Suspense>
   );
 }
