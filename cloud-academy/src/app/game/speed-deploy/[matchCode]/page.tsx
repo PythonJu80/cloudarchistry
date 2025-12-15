@@ -69,9 +69,43 @@ interface Brief {
   acceptable_solutions: string[][];
   trap_services: TrapService[];
   time_limit: number;
-  difficulty: string;
+  user_level: string;
+  target_cert?: string;
   max_score: number;
   learning_point: string;
+}
+
+interface ValidationResult {
+  grade: string;
+  score: number;
+  max_score: number;
+  correctness_score: number;
+  speed_bonus: number;
+  cost_efficiency_bonus: number;
+  overengineering_penalty: number;
+  trap_penalty: number;
+  missed_requirement_penalty: number;
+  met_requirements: boolean;
+  is_optimal: boolean;
+  is_acceptable: boolean;
+  requirements_met: string[];
+  requirements_missed: string[];
+  trap_services_used: Array<{ service_id: string; why_suboptimal: string; penalty: number }>;
+  missing_services: string[];
+  extra_services: string[];
+  feedback: string;
+  optimal_solution: string[];
+  learning_point: string;
+  requirement_analysis?: Array<{
+    category: string;
+    description: string;
+    priority: string;
+    met: boolean;
+    status?: string;
+    your_services?: string[];
+    recommended?: string[];
+    missing?: string[];
+  }>;
 }
 
 interface MatchData {
@@ -97,6 +131,8 @@ interface MatchData {
     player2Submitted?: boolean;
     player1TimeRemaining?: number;
     player2TimeRemaining?: number;
+    player1Result?: ValidationResult;
+    player2Result?: ValidationResult;
   };
 }
 
@@ -104,10 +140,11 @@ interface MatchData {
 // CONSTANTS
 // =============================================================================
 
-const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: "text-green-400 bg-green-500/20 border-green-500/30",
-  medium: "text-amber-400 bg-amber-500/20 border-amber-500/30",
-  hard: "text-red-400 bg-red-500/20 border-red-500/30",
+const USER_LEVEL_COLORS: Record<string, string> = {
+  beginner: "text-green-400 bg-green-500/20 border-green-500/30",
+  intermediate: "text-amber-400 bg-amber-500/20 border-amber-500/30",
+  advanced: "text-orange-400 bg-orange-500/20 border-orange-500/30",
+  expert: "text-red-400 bg-red-500/20 border-red-500/30",
 };
 
 
@@ -340,6 +377,8 @@ export default function SpeedDeployMatchPage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [opponentSubmitted, setOpponentSubmitted] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isRematchLoading, setIsRematchLoading] = useState(false);
   
   // Connection status
   const [opponentOnline, setOpponentOnline] = useState(false);
@@ -443,6 +482,46 @@ export default function SpeedDeployMatchPage() {
     }
   }, [authStatus, matchCode, router, fetchMatch]);
 
+  // Poll for match updates when pending (waiting for opponent to accept)
+  useEffect(() => {
+    if (match?.status !== "pending") return;
+    
+    const pollInterval = setInterval(() => {
+      fetchMatch();
+    }, 2000); // Poll every 2 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [match?.status, fetchMatch]);
+
+  // Poll for brief when Player 2 is waiting for Player 1 to generate
+  useEffect(() => {
+    if (match?.status !== "active" || match?.isPlayer1 || match?.matchState?.brief) return;
+    
+    const pollInterval = setInterval(() => {
+      fetchMatch();
+    }, 2000); // Poll every 2 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [match?.status, match?.isPlayer1, match?.matchState?.brief, fetchMatch]);
+
+  // Poll for opponent submission when waiting after submitting
+  useEffect(() => {
+    if (match?.status !== "active" || !hasSubmitted || showResults) return;
+    
+    const pollInterval = setInterval(() => {
+      fetchMatch();
+    }, 2000); // Poll every 2 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [match?.status, hasSubmitted, showResults, fetchMatch]);
+
+  // Show results when match is completed
+  useEffect(() => {
+    if (match?.status === "completed" && !showResults) {
+      setShowResults(true);
+    }
+  }, [match?.status, showResults]);
+
   // Timer countdown
   useEffect(() => {
     if (match?.status !== "active" || hasSubmitted || !match?.matchState?.brief) return;
@@ -505,6 +584,7 @@ export default function SpeedDeployMatchPage() {
 
   // Generate brief and start
   const handleStartGame = async () => {
+    setIsGenerating(true);
     try {
       const res = await fetch(`/api/versus/${matchCode}/speed-deploy`, {
         method: "POST",
@@ -517,6 +597,8 @@ export default function SpeedDeployMatchPage() {
       }
     } catch (err) {
       console.error("Failed to start game:", err);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -754,17 +836,27 @@ export default function SpeedDeployMatchPage() {
           <Card className="bg-slate-900 border-slate-800">
             <CardContent className="pt-6 text-center">
               {match.isPlayer1 ? (
-                <>
-                  <Play className="w-12 h-12 text-cyan-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2 text-white">Ready to Start?</h3>
-                  <p className="text-slate-400 mb-4">
-                    Click below to generate the client brief and begin the race!
-                  </p>
-                  <Button onClick={handleStartGame} size="lg" className="gap-2 bg-cyan-600 hover:bg-cyan-700">
-                    <Rocket className="w-5 h-5" />
-                    Generate Brief
-                  </Button>
-                </>
+                isGenerating ? (
+                  <>
+                    <Loader2 className="w-12 h-12 animate-spin text-cyan-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2 text-white">Generating Brief...</h3>
+                    <p className="text-slate-400">
+                      Creating your client scenario. This may take a few seconds...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-12 h-12 text-cyan-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2 text-white">Ready to Start?</h3>
+                    <p className="text-slate-400 mb-4">
+                      Click below to generate the client brief and begin the race!
+                    </p>
+                    <Button onClick={handleStartGame} size="lg" className="gap-2 bg-cyan-600 hover:bg-cyan-700">
+                      <Rocket className="w-5 h-5" />
+                      Generate Brief
+                    </Button>
+                  </>
+                )
               ) : (
                 <>
                   <Loader2 className="w-12 h-12 animate-spin text-cyan-500 mx-auto mb-4" />
@@ -791,9 +883,14 @@ export default function SpeedDeployMatchPage() {
                     <h3 className="font-bold text-white">{brief.client_name}</h3>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-slate-500">{brief.industry}</span>
-                      <span className={cn("text-xs px-2 py-0.5 rounded border", DIFFICULTY_COLORS[brief.difficulty])}>
-                        {brief.difficulty}
+                      <span className={cn("text-xs px-2 py-0.5 rounded border", USER_LEVEL_COLORS[brief.user_level])}>
+                        {brief.user_level}
                       </span>
+                      {brief.target_cert && (
+                        <span className="text-xs px-2 py-0.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+                          {brief.target_cert}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {opponentSubmitted && (
@@ -809,11 +906,12 @@ export default function SpeedDeployMatchPage() {
                     <div 
                       key={i}
                       className={cn(
-                        "text-xs px-2 py-1 rounded",
+                        "text-xs px-2 py-1 rounded max-w-md",
                         req.priority === "critical" ? "bg-red-500/20 text-red-400" : "bg-slate-800 text-slate-400"
                       )}
+                      title={req.description}
                     >
-                      {req.description.slice(0, 50)}...
+                      {req.description.length > 80 ? `${req.description.slice(0, 80)}...` : req.description}
                     </div>
                   ))}
                 </div>
@@ -879,45 +977,216 @@ export default function SpeedDeployMatchPage() {
         )}
 
         {/* Completed State */}
-        {match.status === "completed" && (
-          <Card className={cn(
-            "border",
-            match.winnerId === match.myPlayerId 
-              ? "bg-green-500/10 border-green-500/30" 
-              : match.winnerId
-                ? "bg-red-500/10 border-red-500/30"
-                : "bg-slate-900 border-slate-800"
-          )}>
-            <CardContent className="pt-6 text-center">
+        {match.status === "completed" && (() => {
+          const p1Result = match.matchState.player1Result;
+          const p2Result = match.matchState.player2Result;
+          const myResult = match.isPlayer1 ? p1Result : p2Result;
+          
+          // Helper to render a player's result card
+          const renderPlayerResult = (result: ValidationResult | undefined, playerName: string, isMe: boolean, isWinner: boolean) => {
+            if (!result) return null;
+            return (
+              <div className={cn(
+                "flex-1 p-4 rounded-xl border",
+                isWinner ? "border-yellow-500/30 bg-yellow-500/5" : "border-slate-700 bg-slate-900/50"
+              )}>
+                {/* Player Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("text-sm font-medium", isMe ? "text-cyan-400" : "text-red-400")}>
+                      {playerName} {isMe && "(You)"}
+                    </span>
+                    {isWinner && <Crown className="w-4 h-4 text-yellow-400" />}
+                  </div>
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold",
+                    result.grade === "S" ? "bg-yellow-500/20 text-yellow-400" :
+                    result.grade === "A" ? "bg-green-500/20 text-green-400" :
+                    result.grade === "B" ? "bg-cyan-500/20 text-cyan-400" :
+                    result.grade === "C" ? "bg-amber-500/20 text-amber-400" :
+                    result.grade === "D" ? "bg-orange-500/20 text-orange-400" :
+                    "bg-red-500/20 text-red-400"
+                  )}>
+                    {result.grade}
+                  </div>
+                </div>
+                
+                {/* Score */}
+                <div className="text-2xl font-bold text-center mb-2">
+                  <span className="text-cyan-400">{result.score}</span>
+                  <span className="text-slate-500 text-sm">/{result.max_score}</span>
+                </div>
+                
+                {/* Score Breakdown - Compact */}
+                <div className="flex flex-wrap justify-center gap-1 text-xs mb-3">
+                  {(result.speed_bonus || 0) > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">+{result.speed_bonus}</span>
+                  )}
+                  {(result.trap_penalty || 0) > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">-{result.trap_penalty}</span>
+                  )}
+                  {(result.missed_requirement_penalty || 0) > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">-{result.missed_requirement_penalty}</span>
+                  )}
+                </div>
+                
+                {/* Feedback */}
+                <p className="text-xs text-slate-400">{result.feedback}</p>
+                
+                {/* Trap Services - Compact */}
+                {result.trap_services_used && result.trap_services_used.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-700">
+                    <div className="text-xs text-orange-400 mb-1">Trap services used:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {result.trap_services_used.map((trap, i) => {
+                        const svc = AWS_SERVICES.find(s => s.id === trap.service_id);
+                        return (
+                          <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300">
+                            {svc?.shortName || trap.service_id}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          };
+          
+          return (
+          <div className="space-y-4">
+            {/* Business Requirements - For Reference */}
+            {brief && (
+              <Card className="bg-slate-900/50 border-slate-800">
+                <CardContent className="pt-4">
+                  <h4 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    Business Requirements
+                  </h4>
+                  <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
+                    {brief.requirements.map((req: { description: string }, i: number) => (
+                      <li key={i}>{req.description}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Win/Lose Header */}
+            <div className={cn(
+              "text-center p-6 rounded-xl border",
+              match.winnerId === match.myPlayerId 
+                ? "bg-green-500/10 border-green-500/30" 
+                : match.winnerId
+                  ? "bg-red-500/10 border-red-500/30"
+                  : "bg-slate-900 border-slate-800"
+            )}>
               {match.winnerId === match.myPlayerId ? (
-                <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
               ) : match.winnerId ? (
-                <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-2" />
               ) : (
-                <Target className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <Target className="w-12 h-12 text-slate-400 mx-auto mb-2" />
               )}
-              
-              <h3 className="text-2xl font-bold mb-2 text-white">
+              <h3 className="text-xl font-bold text-white">
                 {match.winnerId === match.myPlayerId ? "🎉 Victory!" : 
                  match.winnerId ? "Better luck next time!" : "It's a Draw!"}
               </h3>
-              <p className="text-slate-400 mb-4">
-                Final Score: {match.player1Score} - {match.player2Score}
-              </p>
-              <div className="flex gap-3 justify-center">
-                <Link href="/game">
-                  <Button variant="outline">Back to Arena</Button>
-                </Link>
-                <Link href="/game/modes/speed-deploy">
-                  <Button className="gap-2 bg-cyan-600 hover:bg-cyan-700">
-                    <Zap className="w-4 h-4" />
-                    Play Again
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+
+            {/* Side-by-Side Comparison */}
+            <div className="grid grid-cols-2 gap-4">
+              {renderPlayerResult(
+                p1Result, 
+                match.player1.name || match.player1.username || "Player 1",
+                match.isPlayer1,
+                match.winnerId === match.player1.id
+              )}
+              {renderPlayerResult(
+                p2Result,
+                match.player2.name || match.player2.username || "Player 2", 
+                !match.isPlayer1,
+                match.winnerId === match.player2.id
+              )}
+            </div>
+
+            {/* Your Detailed Feedback - Full */}
+            {myResult && (
+              <>
+                {/* Learning Point */}
+                {myResult.learning_point && (
+                  <Card className="bg-cyan-500/10 border-cyan-500/20">
+                    <CardContent className="pt-4">
+                      <h4 className="text-sm font-medium text-cyan-400 mb-2 flex items-center gap-2">
+                        <Zap className="w-4 h-4" />
+                        Key Takeaway
+                      </h4>
+                      <p className="text-sm text-slate-300">{myResult.learning_point}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Optimal Solution */}
+                {myResult.optimal_solution && myResult.optimal_solution.length > 0 && (
+                  <Card className="bg-slate-900 border-slate-800">
+                    <CardContent className="pt-4">
+                      <h4 className="text-sm font-medium text-slate-400 mb-3">Optimal Solution</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {myResult.optimal_solution.map((svcId, i) => {
+                          const svc = AWS_SERVICES.find(s => s.id === svcId);
+                          return (
+                            <div key={i} className="flex items-center gap-2 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                              {svc && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: svc.color }} />}
+                              <span className="text-xs text-green-400">{svc?.shortName || svcId}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-center">
+              <Link href="/game">
+                <Button variant="outline">Back to Arena</Button>
+              </Link>
+              <Button 
+                className="gap-2 bg-cyan-600 hover:bg-cyan-700"
+                disabled={isRematchLoading}
+                onClick={async () => {
+                  setIsRematchLoading(true);
+                  try {
+                    const opponentId = match.isPlayer1 ? match.player2.id : match.player1.id;
+                    const res = await fetch("/api/versus", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ opponentId, matchType: "speed_deploy" }),
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.match) {
+                      router.push(`/game/speed-deploy/${data.match.matchCode}`);
+                    }
+                  } catch (err) {
+                    console.error("Failed to create rematch:", err);
+                  } finally {
+                    setIsRematchLoading(false);
+                  }
+                }}
+              >
+                {isRematchLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Zap className="w-4 h-4" />
+                )}
+                {isRematchLoading ? "Creating..." : "Rematch"}
+              </Button>
+            </div>
+          </div>
+          );
+        })()}
       </main>
     </div>
   );

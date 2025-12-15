@@ -1,17 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 
 const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
 
 export async function POST(request: NextRequest) {
   try {
-    // Validation is a simple comparison, no auth needed
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
 
-    // Validation doesn't need AI - just pass through
+    // Get user's API key for AI-powered validation
+    const aiConfig = await getAiConfigForRequest(session.user.academyProfileId || session.user.id);
+
+    // AI-powered validation for cert-specific feedback
     const response = await fetch(`${LEARNING_AGENT_URL}/api/speed-deploy/validate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        ...body,
+        openai_api_key: aiConfig?.key || null,
+        preferred_model: aiConfig?.preferredModel || null,
+      }),
     });
 
     if (!response.ok) {

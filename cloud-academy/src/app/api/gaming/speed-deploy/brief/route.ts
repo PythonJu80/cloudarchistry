@@ -6,14 +6,12 @@ import { prisma } from "@/lib/db";
 
 const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const body = await request.json();
 
     // Get user's profile for certification and skill level
     const profile = await prisma.academyUserProfile.findFirst({
@@ -38,13 +36,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Call learning agent to generate a deployment brief
+    // user_level from profile drives challenge complexity (difficulty param is deprecated)
     const response = await fetch(`${LEARNING_AGENT_URL}/api/speed-deploy/brief/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         user_level: profile.skillLevel || "intermediate",
         cert_code: profile.targetCertification || "SAA-C03",
-        difficulty: body.difficulty || null, // null = random
         openai_api_key: aiConfig.key,
         preferred_model: aiConfig.preferredModel,
       }),

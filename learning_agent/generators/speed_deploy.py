@@ -11,10 +11,10 @@ Players are graded on:
 - Cost efficiency - cheapest valid solution gets bonus
 - Overengineering penalty - unnecessary services cost points
 
-Difficulty scaling:
+Skill level scaling:
 - Beginner: Clear requirements, obvious optimal solution
 - Intermediate: Multiple valid solutions, optimization matters
-- Pro: Ambiguous requirements, cost vs latency tension, constraint traps
+- Advanced/Expert: Ambiguous requirements, cost vs latency tension, constraint traps
 """
 
 import json
@@ -27,6 +27,30 @@ from openai import AsyncOpenAI
 from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 from generators.cloud_tycoon import VALID_SERVICE_IDS, AWS_SERVICES_REFERENCE
+
+# Map cert codes (e.g., "SAA-C03" from DB) to persona IDs
+CERT_CODE_TO_PERSONA = {
+    "SAA": "solutions-architect-associate",
+    "SAA-C03": "solutions-architect-associate",
+    "SAP": "solutions-architect-professional",
+    "SAP-C02": "solutions-architect-professional",
+    "DVA": "developer-associate",
+    "DVA-C02": "developer-associate",
+    "SOA": "sysops-administrator-associate",
+    "SOA-C02": "sysops-administrator-associate",
+    "DOP": "devops-engineer-professional",
+    "DOP-C02": "devops-engineer-professional",
+    "CLF": "cloud-practitioner",
+    "CLF-C02": "cloud-practitioner",
+    "ANS": "advanced-networking-specialty",
+    "ANS-C01": "advanced-networking-specialty",
+    "SCS": "security-specialty",
+    "SCS-C02": "security-specialty",
+    "DBS": "database-specialty",
+    "DBS-C01": "database-specialty",
+    "MLS": "machine-learning-specialty",
+    "MLS-C01": "machine-learning-specialty",
+}
 
 
 # =============================================================================
@@ -58,8 +82,9 @@ class DeployBrief(BaseModel):
     optimal_solution: List[str]  # The "best" answer (3-6 services)
     acceptable_solutions: List[List[str]]  # Other valid solutions (work but suboptimal)
     trap_services: List[ServiceTrap] = []  # Valid but suboptimal - penalty if used
-    time_limit: int  # seconds (45-90 based on difficulty)
-    difficulty: str  # beginner, intermediate, pro
+    time_limit: int  # seconds (60-180 based on user_level)
+    user_level: str  # beginner, intermediate, advanced, expert
+    target_cert: str  # e.g., "AWS Solutions Architect Associate"
     max_score: int
     cost_optimal: bool = True  # Is the optimal solution also the cheapest?
     learning_point: str = ""  # Key architectural lesson this round teaches
@@ -110,12 +135,13 @@ USER PROFILE:
 
 Generate a realistic client deployment scenario that tests TRADEOFFS, not memorization.
 
-DIFFICULTY: {difficulty}
+USER SKILL LEVEL: {user_level}
 
-DIFFICULTY RULES:
+SKILL LEVEL RULES:
 - beginner: Clear requirements, obvious optimal solution, 10 services in palette, no traps
 - intermediate: Multiple valid solutions, optimization matters, 12 services, 1-2 traps
-- pro: Ambiguous requirements, cost vs latency tension, 14 services, 2-3 traps, hidden constraints
+- advanced: Ambiguous requirements, cost vs latency tension, 14 services, 2-3 traps, hidden constraints
+- expert: Complex multi-service architectures, subtle tradeoffs, 14 services, 3-4 traps, edge cases
 
 REQUIREMENT CATEGORIES (use 4-6 per brief):
 - traffic: Request volume, scaling needs, burst handling
@@ -167,7 +193,7 @@ CRITICAL RULES:
 4. trap_services = technically valid but WRONG choice - include WHY they're wrong
 5. available_services = optimal + acceptable + traps + 2-3 pure distractors
 6. learning_point = the key architectural lesson this round teaches
-7. Time limits: beginner=90s, intermediate=60s, pro=45s
+7. Time limits: beginner=180s, intermediate=160s, advanced=90s, expert=60s
 """
 
 
@@ -178,7 +204,7 @@ CRITICAL RULES:
 async def generate_deploy_brief(
     user_level: str = "intermediate",
     cert_code: Optional[str] = None,
-    difficulty: Optional[str] = None,
+    _difficulty: Optional[str] = None,  # DEPRECATED - ignored, kept for backward compat
     api_key: Optional[str] = None,
     model: Optional[str] = None,
 ) -> DeployBrief:
@@ -186,9 +212,9 @@ async def generate_deploy_brief(
     Generate a Speed Deploy challenge brief.
     
     Args:
-        user_level: User's skill level
+        user_level: User's skill level from profile - this drives challenge complexity
         cert_code: Target certification code
-        difficulty: Optional difficulty override (random if not provided)
+        _difficulty: DEPRECATED - ignored, user_level is used instead
         api_key: OpenAI API key
         model: Preferred model
     
@@ -204,23 +230,23 @@ async def generate_deploy_brief(
     cert_name = "AWS Cloud Practitioner"
     focus_areas = ["Core AWS Services", "Cloud Concepts", "Security"]
     
-    if cert_code and cert_code in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[cert_code]
+    # Map cert code (e.g., "SAA-C03") to persona ID (e.g., "solutions-architect-associate")
+    persona_id = None
+    if cert_code:
+        upper_code = cert_code.upper()
+        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
+        if not persona_id:
+            # Try without version (e.g., "SAA-C03" -> "SAA")
+            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    
+    if persona_id and persona_id in CERTIFICATION_PERSONAS:
+        persona = CERTIFICATION_PERSONAS[persona_id]
         cert_name = persona.get("cert", cert_name)
         focus_areas = persona.get("focus", focus_areas)
     
-    # Map difficulty names (support both old and new naming)
-    difficulty_map = {"easy": "beginner", "medium": "intermediate", "hard": "pro"}
-    if difficulty in difficulty_map:
-        difficulty = difficulty_map[difficulty]
-    
-    # Random difficulty if not specified
-    if not difficulty:
-        weights = {"beginner": 0.3, "intermediate": 0.5, "pro": 0.2}
-        difficulty = random.choices(
-            list(weights.keys()), 
-            weights=list(weights.values())
-        )[0]
+    # Normalize user_level for lookups
+    user_level = user_level.lower()
     
     # Random scenario theme for variety
     themes = [
@@ -247,11 +273,10 @@ async def generate_deploy_brief(
         user_level=user_level,
         cert_name=cert_name,
         focus_areas=", ".join(focus_areas),
-        difficulty=difficulty,
         services_reference=AWS_SERVICES_REFERENCE,
     )
     
-    user_prompt = f"""Generate a {difficulty} difficulty Speed Deploy challenge.
+    user_prompt = f"""Generate a {user_level} skill level Speed Deploy challenge.
 
 Target certification: {cert_name}
 Skill level: {user_level}
@@ -261,7 +286,7 @@ Create a realistic client brief that tests architectural TRADEOFFS, not memoriza
 Focus on patterns relevant to {cert_name} certification.
 
 Remember:
-- {difficulty} difficulty rules apply
+- {user_level} skill level rules apply
 - Include trap_services with why_suboptimal explanations
 - Include a learning_point that teaches the key architectural lesson"""
 
@@ -314,13 +339,13 @@ Remember:
             priority=req.get("priority", "important"),
         ))
     
-    # Time limit based on difficulty (beginner=90s, intermediate=60s, pro=45s)
-    time_limits = {"beginner": 90, "intermediate": 60, "pro": 45}
-    time_limit = result.get("time_limit", time_limits.get(difficulty, 60))
+    # Time limit based on user_level (beginner=180s, intermediate=160s, advanced=90s, expert=60s)
+    time_limits = {"beginner": 180, "intermediate": 160, "advanced": 90, "expert": 60}
+    time_limit = result.get("time_limit", time_limits.get(user_level, 160))
     
-    # Max score based on difficulty
-    max_scores = {"beginner": 100, "intermediate": 150, "pro": 200}
-    max_score = result.get("max_score", max_scores.get(difficulty, 100))
+    # Max score based on user_level
+    max_scores = {"beginner": 100, "intermediate": 150, "advanced": 200, "expert": 250}
+    max_score = result.get("max_score", max_scores.get(user_level, 100))
     
     # Parse trap services
     trap_services = []
@@ -347,134 +372,166 @@ Remember:
         acceptable_solutions=acceptable,
         trap_services=trap_services,
         time_limit=time_limit,
-        difficulty=difficulty,
+        user_level=user_level,
+        target_cert=cert_name,
         max_score=max_score,
         learning_point=learning_point,
     )
 
 
-def validate_deployment(
+async def validate_deployment_with_ai(
     brief: DeployBrief,
     submitted_services: List[str],
     time_remaining: int,
+    api_key: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> DeployResult:
     """
-    Validate a player's deployment with GRADED scoring (not pass/fail).
+    AI-powered validation that evaluates the submission in context of the 
+    target certification and user skill level.
+    
+    The AI evaluates:
+    - Does this architecture meet the requirements for THIS certification?
+    - What's missing or suboptimal for THIS cert's exam focus?
+    - Cert-specific feedback (e.g., "For SAA, Multi-AZ is required for 99.9% SLA")
     
     Scoring model:
-    - Correctness (base score) - mandatory
-    - Speed bonus - faster = more points
-    - Cost efficiency bonus - if using cost-optimal solution
-    - Overengineering penalty - unnecessary services
-    - Trap penalty - using suboptimal services
-    - Missed requirement penalty - missing critical requirements
+    - AI correctness score (0-60% of max)
+    - Speed bonus (up to 20% of max)
+    - Cost efficiency bonus (up to 10% of max)
+    - Penalties from AI evaluation
     
     Grades: S (95%+), A (85%+), B (70%+), C (50%+), D (30%+), F (<30%)
     """
+    key = api_key or get_request_api_key()
+    if not key:
+        # Fallback to deterministic validation if no API key
+        return validate_deployment_deterministic(brief, submitted_services, time_remaining)
+    
     submitted_set = set(s.lower().strip() for s in submitted_services)
     optimal_set = set(brief.optimal_solution)
     
-    # Check if it matches optimal
+    # Quick checks for exact matches (no AI needed)
     is_optimal = submitted_set == optimal_set
-    
-    # Check if it matches any acceptable solution
-    is_acceptable = False
-    matched_acceptable = None
-    for acceptable in brief.acceptable_solutions:
-        if submitted_set == set(acceptable):
-            is_acceptable = True
-            matched_acceptable = acceptable
-            break
+    is_acceptable = any(submitted_set == set(acc) for acc in brief.acceptable_solutions)
     
     # Calculate what's missing/extra compared to optimal
     missing = list(optimal_set - submitted_set)
     extra = list(submitted_set - optimal_set)
     
+    # Build the AI evaluation prompt
+    requirements_text = "\n".join([
+        f"- [{req.priority.upper()}] {req.category}: {req.description}"
+        for req in brief.requirements
+    ])
+    
+    trap_info = ""
+    if brief.trap_services:
+        trap_info = "\nKnown suboptimal services in palette:\n" + "\n".join([
+            f"- {t.service_id}: {t.why_suboptimal}"
+            for t in brief.trap_services
+        ])
+    
+    eval_prompt = f"""You are an AWS certification exam grader evaluating a Speed Deploy architecture challenge.
+
+TARGET CERTIFICATION: {brief.target_cert or "AWS Solutions Architect"}
+USER SKILL LEVEL: {brief.user_level}
+CLIENT: {brief.client_name} ({brief.industry})
+
+REQUIREMENTS:
+{requirements_text}
+
+OPTIMAL SOLUTION: {', '.join(brief.optimal_solution)}
+ACCEPTABLE ALTERNATIVES: {brief.acceptable_solutions}
+{trap_info}
+
+SUBMITTED ARCHITECTURE: {', '.join(submitted_services) if submitted_services else "EMPTY (no services selected)"}
+
+Evaluate this submission specifically for the {brief.target_cert or "AWS Solutions Architect"} certification exam context.
+
+Return JSON:
+{{
+  "correctness_percent": <0-100, how well does this meet requirements for THIS cert>,
+  "requirements_met": ["list", "of", "requirement", "categories", "satisfied"],
+  "requirements_missed": ["list", "of", "requirement", "categories", "NOT", "satisfied"],
+  "is_valid_solution": <true if it would work, even if not optimal>,
+  "is_cost_efficient": <true if cost-optimized for the requirements>,
+  "trap_services_used": [
+    {{"service_id": "...", "why_suboptimal": "cert-specific reason why this is wrong"}}
+  ],
+  "missing_critical": ["services that are REQUIRED for this cert's focus areas"],
+  "unnecessary_services": ["services that add cost/complexity without benefit"],
+  "feedback": "2-3 sentence cert-specific feedback explaining the grade",
+  "learning_point": "Key architectural lesson for THIS certification"
+}}
+
+Be strict but fair. Consider what the {brief.target_cert or "AWS"} exam would expect."""
+
+    # Call OpenAI for evaluation
+    model_to_use = model or get_request_model() or "gpt-4o"
+    client = AsyncOpenAI(api_key=key)
+    
+    try:
+        response = await client.chat.completions.create(
+            model=model_to_use,
+            messages=[
+                {"role": "system", "content": "You are an AWS certification exam grader. Return only valid JSON."},
+                {"role": "user", "content": eval_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,  # Lower temperature for more consistent grading
+        )
+        
+        eval_result = json.loads(response.choices[0].message.content or "{}")
+    except Exception as e:
+        # Fallback to deterministic if AI fails
+        print(f"AI validation failed, using deterministic: {e}")
+        return validate_deployment_deterministic(brief, submitted_services, time_remaining)
+    
     # =========================================================================
-    # SCORING BREAKDOWN
+    # SCORING BREAKDOWN (using AI evaluation)
     # =========================================================================
     
-    # 1. CORRECTNESS SCORE (base: 0-60% of max)
+    # 1. CORRECTNESS SCORE (base: 0-60% of max) - from AI
+    ai_correctness = eval_result.get("correctness_percent", 50)
+    correctness_score = int(brief.max_score * 0.60 * (ai_correctness / 100))
+    
+    # Override for exact matches
     if is_optimal:
         correctness_score = int(brief.max_score * 0.60)
-        feedback = "🎯 Perfect architecture! Optimal solution selected."
     elif is_acceptable:
-        correctness_score = int(brief.max_score * 0.50)
-        feedback = "✅ Valid architecture. Works but not optimal."
-    elif len(missing) == 0:
-        # Has all optimal services but some extra
-        correctness_score = int(brief.max_score * 0.45)
-        feedback = "⚠️ Overengineered. All required services present but with extras."
-    elif len(missing) == 1:
-        correctness_score = int(brief.max_score * 0.35)
-        feedback = f"❌ Almost there! Missing: {missing[0]}"
-    elif len(missing) == 2:
-        correctness_score = int(brief.max_score * 0.25)
-        feedback = f"❌ Missing key services: {', '.join(missing)}"
-    else:
-        correctness_score = int(brief.max_score * 0.15)
-        feedback = "❌ Architecture doesn't meet requirements."
+        correctness_score = max(correctness_score, int(brief.max_score * 0.50))
     
     # 2. SPEED BONUS (up to 20% of max)
     speed_ratio = time_remaining / brief.time_limit if brief.time_limit > 0 else 0
-    if is_optimal or is_acceptable or len(missing) <= 1:
+    is_valid = eval_result.get("is_valid_solution", False) or is_optimal or is_acceptable
+    if is_valid:
         speed_bonus = int(brief.max_score * 0.20 * speed_ratio)
     else:
-        speed_bonus = 0  # No speed bonus for bad solutions
+        speed_bonus = 0
     
     # 3. COST EFFICIENCY BONUS (up to 10% of max)
-    # Optimal solution is assumed to be cost-optimal
-    if is_optimal:
+    if is_optimal or eval_result.get("is_cost_efficient", False):
         cost_efficiency_bonus = int(brief.max_score * 0.10)
     elif is_acceptable:
         cost_efficiency_bonus = int(brief.max_score * 0.05)
     else:
         cost_efficiency_bonus = 0
     
-    # 4. OVERENGINEERING PENALTY (5 points per extra service)
-    overengineering_penalty = len(extra) * 5 if not is_optimal else 0
+    # 4. OVERENGINEERING PENALTY
+    unnecessary = eval_result.get("unnecessary_services", [])
+    overengineering_penalty = len(unnecessary) * 5 if not is_optimal else 0
     
-    # 5. TRAP PENALTY - check if they used any trap services
-    trap_services_used = []
-    trap_penalty = 0
-    trap_ids = {trap.service_id for trap in brief.trap_services}
-    for svc in submitted_set:
-        if svc in trap_ids:
-            trap = next(t for t in brief.trap_services if t.service_id == svc)
-            trap_services_used.append({
-                "service_id": svc,
-                "why_suboptimal": trap.why_suboptimal,
-                "penalty": trap.penalty,
-            })
-            trap_penalty += trap.penalty
+    # 5. TRAP PENALTY - from AI evaluation
+    trap_services_used = eval_result.get("trap_services_used", [])
+    trap_penalty = len(trap_services_used) * 10
     
-    # 6. MISSED REQUIREMENT PENALTY (critical = 15pts, important = 8pts)
-    requirements_met = []
-    requirements_missed = []
+    # 6. MISSED REQUIREMENT PENALTY
+    requirements_met = eval_result.get("requirements_met", [])
+    requirements_missed = eval_result.get("requirements_missed", [])
     missed_requirement_penalty = 0
-    
-    # Simple check: if missing services, check which requirement categories are affected
-    SERVICE_CATEGORY_MAP = {
-        "auto-scaling": ["traffic", "availability"], "alb": ["traffic", "availability"],
-        "cloudfront": ["traffic", "latency"], "api-gateway": ["traffic", "latency"],
-        "lambda": ["traffic", "cost"], "ec2": ["traffic"], "ecs": ["traffic"], "fargate": ["traffic"],
-        "elasticache": ["latency", "data"], "dynamodb": ["latency", "data", "availability"],
-        "s3": ["cost", "data"], "rds": ["data", "availability"], "aurora": ["data", "availability"],
-        "waf": ["compliance", "traffic"], "kms": ["compliance", "data"],
-        "cognito": ["compliance"], "shield": ["compliance"],
-        "route53": ["availability"], "sqs": ["data", "availability"],
-    }
-    
     for req in brief.requirements:
-        # Check if any submitted service covers this category
-        covered = any(
-            req.category in SERVICE_CATEGORY_MAP.get(svc, [])
-            for svc in submitted_set
-        )
-        if covered or is_optimal or is_acceptable:
-            requirements_met.append(req.category)
-        else:
-            requirements_missed.append(req.category)
+        if req.category in requirements_missed:
             if req.priority == "critical":
                 missed_requirement_penalty += 15
             else:
@@ -493,7 +550,6 @@ def validate_deployment(
         - missed_requirement_penalty
     ))
     
-    # Calculate percentage for grade
     percentage = (final_score / brief.max_score) * 100 if brief.max_score > 0 else 0
     
     if percentage >= 95:
@@ -509,10 +565,110 @@ def validate_deployment(
     else:
         grade = "F"
     
-    # Build learning point
-    learning_point = brief.learning_point
-    if trap_services_used:
-        learning_point = trap_services_used[0]["why_suboptimal"]
+    # Get feedback from AI
+    feedback = eval_result.get("feedback", "Architecture evaluated.")
+    learning_point = eval_result.get("learning_point", brief.learning_point)
+    
+    return DeployResult(
+        grade=grade,
+        score=final_score,
+        max_score=brief.max_score,
+        correctness_score=correctness_score,
+        speed_bonus=speed_bonus,
+        cost_efficiency_bonus=cost_efficiency_bonus,
+        overengineering_penalty=overengineering_penalty,
+        trap_penalty=trap_penalty,
+        missed_requirement_penalty=missed_requirement_penalty,
+        met_requirements=len(requirements_missed) == 0,
+        is_optimal=is_optimal,
+        is_acceptable=is_acceptable or eval_result.get("is_valid_solution", False),
+        requirements_met=requirements_met,
+        requirements_missed=requirements_missed,
+        trap_services_used=trap_services_used,
+        missing_services=eval_result.get("missing_critical", missing),
+        extra_services=eval_result.get("unnecessary_services", extra),
+        feedback=feedback,
+        optimal_solution=brief.optimal_solution,
+        learning_point=learning_point,
+    )
+
+
+def validate_deployment_deterministic(
+    brief: DeployBrief,
+    submitted_services: List[str],
+    time_remaining: int,
+) -> DeployResult:
+    """
+    Deterministic validation fallback (no AI).
+    Used when API key is not available or AI call fails.
+    """
+    submitted_set = set(s.lower().strip() for s in submitted_services)
+    optimal_set = set(brief.optimal_solution)
+    
+    is_optimal = submitted_set == optimal_set
+    is_acceptable = any(submitted_set == set(acc) for acc in brief.acceptable_solutions)
+    
+    missing = list(optimal_set - submitted_set)
+    extra = list(submitted_set - optimal_set)
+    
+    # Correctness score
+    if is_optimal:
+        correctness_score = int(brief.max_score * 0.60)
+        feedback = "🎯 Perfect architecture! Optimal solution selected."
+    elif is_acceptable:
+        correctness_score = int(brief.max_score * 0.50)
+        feedback = "✅ Valid architecture. Works but not optimal."
+    elif len(missing) == 0:
+        correctness_score = int(brief.max_score * 0.45)
+        feedback = "⚠️ Overengineered. All required services present but with extras."
+    elif len(missing) == 1:
+        correctness_score = int(brief.max_score * 0.35)
+        feedback = f"❌ Almost there! Missing: {missing[0]}"
+    elif len(missing) == 2:
+        correctness_score = int(brief.max_score * 0.25)
+        feedback = f"❌ Missing key services: {', '.join(missing)}"
+    else:
+        correctness_score = int(brief.max_score * 0.15)
+        feedback = "❌ Architecture doesn't meet requirements."
+    
+    # Speed bonus
+    speed_ratio = time_remaining / brief.time_limit if brief.time_limit > 0 else 0
+    speed_bonus = int(brief.max_score * 0.20 * speed_ratio) if is_optimal or is_acceptable or len(missing) <= 1 else 0
+    
+    # Cost efficiency bonus
+    cost_efficiency_bonus = int(brief.max_score * 0.10) if is_optimal else (int(brief.max_score * 0.05) if is_acceptable else 0)
+    
+    # Overengineering penalty
+    overengineering_penalty = len(extra) * 5 if not is_optimal else 0
+    
+    # Trap penalty
+    trap_services_used = []
+    trap_penalty = 0
+    trap_ids = {trap.service_id for trap in brief.trap_services}
+    for svc in submitted_set:
+        if svc in trap_ids:
+            trap = next(t for t in brief.trap_services if t.service_id == svc)
+            trap_services_used.append({
+                "service_id": svc,
+                "why_suboptimal": trap.why_suboptimal,
+                "penalty": trap.penalty,
+            })
+            trap_penalty += trap.penalty
+    
+    # Requirements check (simplified - just check if optimal/acceptable)
+    requirements_met = [req.category for req in brief.requirements] if is_optimal or is_acceptable else []
+    requirements_missed = [] if is_optimal or is_acceptable else [req.category for req in brief.requirements if req.priority == "critical"]
+    missed_requirement_penalty = len(requirements_missed) * 15
+    
+    final_score = max(0, correctness_score + speed_bonus + cost_efficiency_bonus - overengineering_penalty - trap_penalty - missed_requirement_penalty)
+    percentage = (final_score / brief.max_score) * 100 if brief.max_score > 0 else 0
+    
+    if percentage >= 95: grade = "S"
+    elif percentage >= 85: grade = "A"
+    elif percentage >= 70: grade = "B"
+    elif percentage >= 50: grade = "C"
+    elif percentage >= 30: grade = "D"
+    else: grade = "F"
     
     return DeployResult(
         grade=grade,
@@ -534,8 +690,21 @@ def validate_deployment(
         extra_services=extra,
         feedback=feedback,
         optimal_solution=brief.optimal_solution,
-        learning_point=learning_point,
+        learning_point=brief.learning_point,
     )
+
+
+def validate_deployment(
+    brief: DeployBrief,
+    submitted_services: List[str],
+    time_remaining: int,
+) -> DeployResult:
+    """
+    Synchronous wrapper for backward compatibility.
+    Uses deterministic validation (no AI).
+    For AI-powered validation, use validate_deployment_with_ai().
+    """
+    return validate_deployment_deterministic(brief, submitted_services, time_remaining)
 
 
 # =============================================================================
@@ -549,10 +718,10 @@ if __name__ == "__main__":
         brief = await generate_deploy_brief(
             user_level="intermediate",
             cert_code="SAA-C03",
-            difficulty="medium",
+            # difficulty param deprecated - user_level drives everything
         )
         print(f"Client: {brief.icon} {brief.client_name} ({brief.industry})")
-        print(f"Difficulty: {brief.difficulty}")
+        print(f"Skill Level: {brief.user_level}")
         print(f"Time Limit: {brief.time_limit}s")
         print(f"\nRequirements:")
         for req in brief.requirements:

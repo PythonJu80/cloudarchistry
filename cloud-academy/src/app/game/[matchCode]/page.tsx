@@ -70,6 +70,18 @@ export default function GameMatchPage() {
         return;
       }
       
+      // Redirect to game-specific PvP page based on matchType
+      const gameRoutes: Record<string, string> = {
+        speed_deploy: "speed-deploy",
+        service_slots: "service-slots",
+        architect_arena: "architect-arena",
+      };
+      const matchType = data.match.matchType;
+      if (matchType && matchType !== "quiz" && gameRoutes[matchType]) {
+        router.replace(`/game/${gameRoutes[matchType]}/${matchCode}`);
+        return;
+      }
+      
       setMatch(data.match);
       // Initialize chat messages from match data
       if (data.match.chatMessages) {
@@ -85,7 +97,7 @@ export default function GameMatchPage() {
     } finally {
       setLoading(false);
     }
-  }, [matchCode]);
+  }, [matchCode, router]);
 
   // Fetch current question
   const fetchQuestion = useCallback(async () => {

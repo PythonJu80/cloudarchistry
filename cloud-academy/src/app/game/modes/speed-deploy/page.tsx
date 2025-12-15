@@ -64,7 +64,8 @@ interface Brief {
   acceptable_solutions: string[][];
   trap_services: TrapService[];
   time_limit: number;
-  difficulty: string;
+  user_level: string;
+  target_cert: string;
   max_score: number;
   learning_point: string;
 }
@@ -141,10 +142,11 @@ interface Opponent {
 // =============================================================================
 
 
-const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: "text-green-400 bg-green-500/20 border-green-500/30",
-  medium: "text-amber-400 bg-amber-500/20 border-amber-500/30",
-  hard: "text-red-400 bg-red-500/20 border-red-500/30",
+const USER_LEVEL_COLORS: Record<string, string> = {
+  beginner: "text-green-400 bg-green-500/20 border-green-500/30",
+  intermediate: "text-amber-400 bg-amber-500/20 border-amber-500/30",
+  advanced: "text-orange-400 bg-orange-500/20 border-orange-500/30",
+  expert: "text-red-400 bg-red-500/20 border-red-500/30",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -593,7 +595,8 @@ export default function SpeedDeployPage() {
           acceptable_solutions: brief.acceptable_solutions,
           trap_services: brief.trap_services || [],
           time_limit: brief.time_limit,
-          difficulty: brief.difficulty,
+          user_level: brief.user_level,
+          target_cert: brief.target_cert || "",
           max_score: brief.max_score,
           learning_point: brief.learning_point || "",
           submitted_services: submittedServices,
@@ -1023,10 +1026,13 @@ export default function SpeedDeployPage() {
                 <span className="text-4xl">{brief.icon}</span>
                 <div>
                   <h3 className="text-xl font-bold">{brief.client_name}</h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm text-slate-500">{brief.industry}</span>
-                    <span className={cn("text-xs px-2 py-0.5 rounded border", DIFFICULTY_COLORS[brief.difficulty])}>
-                      {brief.difficulty}
+                    <span className={cn("text-xs px-2 py-0.5 rounded border", USER_LEVEL_COLORS[brief.user_level])}>
+                      {brief.user_level}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+                      {brief.target_cert}
                     </span>
                   </div>
                 </div>
@@ -1170,6 +1176,19 @@ export default function SpeedDeployPage() {
             animate={{ opacity: 1, y: 0 }}
             className="max-w-2xl mx-auto"
           >
+            {/* Original Business Requirements - For Reference */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4 mb-6">
+              <h4 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Business Requirements
+              </h4>
+              <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
+                {brief.requirements.map((req, i) => (
+                  <li key={i}>{req.description}</li>
+                ))}
+              </ul>
+            </div>
+
             {/* Grade & Score Header */}
             <div className={cn(
               "text-center p-8 rounded-xl border mb-6",
@@ -1439,9 +1458,22 @@ export default function SpeedDeployPage() {
             
             {/* Actions */}
             <div className="flex gap-4 justify-center">
-              <Button onClick={startRound} className="bg-cyan-600 hover:bg-cyan-700 gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Next Round
+              <Button 
+                onClick={startRound} 
+                disabled={isLoading}
+                className="bg-cyan-600 hover:bg-cyan-700 gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    Next Round
+                  </>
+                )}
               </Button>
               <Link href="/game">
                 <Button variant="outline" className="gap-2">

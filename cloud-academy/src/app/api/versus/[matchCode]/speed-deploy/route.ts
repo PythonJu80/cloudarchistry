@@ -97,7 +97,6 @@ export async function POST(
           body: JSON.stringify({
             user_level: profile?.skillLevel || "intermediate",
             cert_code: profile?.targetCertification || "SAA-C03",
-            difficulty: null, // Random
             openai_api_key: aiConfig.key,
             preferred_model: aiConfig.preferredModel,
           }),
@@ -150,7 +149,8 @@ export async function POST(
             acceptable_solutions: string[][];
             trap_services?: Array<{ service_id: string; why_suboptimal: string; penalty: number }>;
             time_limit: number;
-            difficulty: string;
+            user_level: string;
+            target_cert?: string;
             max_score: number;
             learning_point?: string;
           };
@@ -195,7 +195,11 @@ export async function POST(
           // Validate both submissions and calculate scores
           const brief = submitMatchState.brief;
           
-          // Validate player 1
+          // Get API key for AI-powered validation
+          const aiConfig = await getAiConfigForRequest(session.user.academyProfileId || session.user.id);
+          
+          // Validate player 1 with AI
+          console.log("[PvP Speed Deploy] Validating player 1 submission:", newMatchState.player1Services);
           const p1Response = await fetch(`${LEARNING_AGENT_URL}/api/speed-deploy/validate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -209,16 +213,21 @@ export async function POST(
               acceptable_solutions: brief.acceptable_solutions,
               trap_services: brief.trap_services || [],
               time_limit: brief.time_limit,
-              difficulty: brief.difficulty,
+              user_level: brief.user_level,
+              target_cert: brief.target_cert || "",
               max_score: brief.max_score,
               learning_point: brief.learning_point || "",
               submitted_services: newMatchState.player1Services || [],
               time_remaining: newMatchState.player1TimeRemaining || 0,
+              openai_api_key: aiConfig?.key || null,
+              preferred_model: aiConfig?.preferredModel || null,
             }),
           });
           const p1Result = await p1Response.json();
+          console.log("[PvP Speed Deploy] Player 1 result:", p1Result);
 
-          // Validate player 2
+          // Validate player 2 with AI
+          console.log("[PvP Speed Deploy] Validating player 2 submission:", newMatchState.player2Services);
           const p2Response = await fetch(`${LEARNING_AGENT_URL}/api/speed-deploy/validate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -232,17 +241,22 @@ export async function POST(
               acceptable_solutions: brief.acceptable_solutions,
               trap_services: brief.trap_services || [],
               time_limit: brief.time_limit,
-              difficulty: brief.difficulty,
+              user_level: brief.user_level,
+              target_cert: brief.target_cert || "",
               max_score: brief.max_score,
               learning_point: brief.learning_point || "",
               submitted_services: newMatchState.player2Services || [],
               time_remaining: newMatchState.player2TimeRemaining || 0,
+              openai_api_key: aiConfig?.key || null,
+              preferred_model: aiConfig?.preferredModel || null,
             }),
           });
           const p2Result = await p2Response.json();
+          console.log("[PvP Speed Deploy] Player 2 result:", p2Result);
 
           const player1Score = p1Result.score || 0;
           const player2Score = p2Result.score || 0;
+          console.log("[PvP Speed Deploy] Final scores - P1:", player1Score, "P2:", player2Score);
 
           // Determine winner
           let winnerId = null;

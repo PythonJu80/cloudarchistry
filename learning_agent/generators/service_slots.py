@@ -18,6 +18,30 @@ from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 from generators.cloud_tycoon import VALID_SERVICE_IDS, AWS_SERVICES_REFERENCE
 
+# Map cert codes (e.g., "SAA-C03" from DB) to persona IDs
+CERT_CODE_TO_PERSONA = {
+    "SAA": "solutions-architect-associate",
+    "SAA-C03": "solutions-architect-associate",
+    "SAP": "solutions-architect-professional",
+    "SAP-C02": "solutions-architect-professional",
+    "DVA": "developer-associate",
+    "DVA-C02": "developer-associate",
+    "SOA": "sysops-administrator-associate",
+    "SOA-C02": "sysops-administrator-associate",
+    "DOP": "devops-engineer-professional",
+    "DOP-C02": "devops-engineer-professional",
+    "CLF": "cloud-practitioner",
+    "CLF-C02": "cloud-practitioner",
+    "ANS": "advanced-networking-specialty",
+    "ANS-C01": "advanced-networking-specialty",
+    "SCS": "security-specialty",
+    "SCS-C02": "security-specialty",
+    "DBS": "database-specialty",
+    "DBS-C01": "database-specialty",
+    "MLS": "machine-learning-specialty",
+    "MLS-C01": "machine-learning-specialty",
+}
+
 
 # =============================================================================
 # DATA MODELS
@@ -45,7 +69,7 @@ class SlotChallenge(BaseModel):
     pattern_name: str
     pattern_description: str
     options: List[AnswerOption]
-    difficulty: str
+    user_level: str  # beginner, intermediate, advanced, expert
     base_payout: float  # How much you win if correct (multiplied by bet) - e.g. 1.5x, 2x, 3x
 
 
@@ -104,10 +128,11 @@ RULES:
 6. VARY the service combinations - use different services each time
 7. Focus on patterns relevant to the user's TARGET CERTIFICATION
 
-DIFFICULTY LEVELS:
-- easy: Common patterns but still varied
-- medium: Less obvious combos, requires thinking about the certification focus
-- hard: Advanced patterns specific to the certification, edge cases
+SKILL LEVEL RULES:
+- beginner: Common patterns but still varied
+- intermediate: Less obvious combos, requires thinking about the certification focus
+- advanced: Advanced patterns specific to the certification, edge cases
+- expert: Complex multi-service patterns, subtle distinctions, certification deep-dives
 
 {services_reference}
 
@@ -129,7 +154,7 @@ Return JSON:
     {{"id": "c", "text": "Event-driven serverless processing pipeline", "is_correct": true, "explanation": "SQS queues messages, Lambda processes them, DynamoDB stores results - classic decoupled pattern"}},
     {{"id": "d", "text": "Machine learning inference endpoint", "is_correct": false, "explanation": "ML inference typically uses SageMaker, not this combination"}}
   ],
-  "difficulty": "easy",
+  "user_level": "beginner",
   "base_payout": 2
 }}
 
@@ -147,7 +172,7 @@ BASE PAYOUT GUIDE:
 async def generate_slot_challenge(
     user_level: str = "intermediate",
     cert_code: Optional[str] = None,
-    difficulty: Optional[str] = None,
+    _difficulty: Optional[str] = None,  # DEPRECATED - ignored, kept for backward compat
     api_key: Optional[str] = None,
     model: Optional[str] = None,
 ) -> SlotChallenge:
@@ -155,9 +180,9 @@ async def generate_slot_challenge(
     Generate a single slot machine challenge.
     
     Args:
-        user_level: User's skill level
+        user_level: User's skill level from profile - this drives challenge complexity
         cert_code: Target certification code
-        difficulty: Optional difficulty override (random if not provided)
+        _difficulty: DEPRECATED - ignored, user_level is used instead
         api_key: OpenAI API key
     
     Returns:
@@ -172,18 +197,23 @@ async def generate_slot_challenge(
     cert_name = "AWS Cloud Practitioner"
     focus_areas = ["Core AWS Services", "Cloud Concepts", "Security"]
     
-    if cert_code and cert_code in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[cert_code]
+    # Map cert code (e.g., "SAA-C03") to persona ID (e.g., "solutions-architect-associate")
+    persona_id = None
+    if cert_code:
+        upper_code = cert_code.upper()
+        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
+        if not persona_id:
+            # Try without version (e.g., "SAA-C03" -> "SAA")
+            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    
+    if persona_id and persona_id in CERTIFICATION_PERSONAS:
+        persona = CERTIFICATION_PERSONAS[persona_id]
         cert_name = persona.get("cert", cert_name)
         focus_areas = persona.get("focus", focus_areas)
     
-    # Random difficulty if not specified
-    if not difficulty:
-        weights = {"easy": 0.4, "medium": 0.4, "hard": 0.2}
-        difficulty = random.choices(
-            list(weights.keys()), 
-            weights=list(weights.values())
-        )[0]
+    # Normalize user_level for lookups
+    user_level = user_level.lower()
     
     # Random theme to force variety
     themes = [
@@ -228,7 +258,7 @@ async def generate_slot_challenge(
         services_reference=AWS_SERVICES_REFERENCE,
     )
     
-    user_prompt = f"""Generate a {difficulty} difficulty Service Slots challenge.
+    user_prompt = f"""Generate a {user_level} skill level Service Slots challenge.
 
 Target certification: {cert_name}
 Skill level: {user_level}
@@ -301,7 +331,7 @@ Be creative and avoid the most common/obvious combinations."""
         pattern_name=result.get("pattern_name", "Architecture Pattern"),
         pattern_description=result.get("pattern_description", ""),
         options=options,
-        difficulty=result.get("difficulty", difficulty),
+        user_level=result.get("user_level", user_level),
         base_payout=result.get("base_payout", 2),
     )
 
@@ -410,11 +440,11 @@ if __name__ == "__main__":
         challenge = await generate_slot_challenge(
             user_level="intermediate",
             cert_code="SAA-C03",
-            difficulty="medium",
+            # difficulty param deprecated - user_level drives everything
         )
         print(f"Services: {[s.service_name for s in challenge.services]}")
         print(f"Pattern: {challenge.pattern_name}")
-        print(f"Difficulty: {challenge.difficulty}")
+        print(f"Skill Level: {challenge.user_level}")
         print(f"Payout: {challenge.base_payout}x")
         print("\nOptions:")
         for opt in challenge.options:

@@ -2677,7 +2677,6 @@ async def get_tycoon_themes():
 class SlotsGenerateRequest(PydanticBaseModel):
     user_level: str = "intermediate"
     cert_code: Optional[str] = None
-    difficulty: Optional[str] = None
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
 
@@ -2687,7 +2686,7 @@ class SlotsValidateRequest(PydanticBaseModel):
     services: List[Dict[str, Any]]
     pattern_name: str
     options: List[Dict[str, Any]]
-    difficulty: str
+    user_level: str
     base_payout: float
     selected_option_id: str
     bet_amount: int
@@ -2708,7 +2707,6 @@ async def generate_slots_challenge_endpoint(request: SlotsGenerateRequest):
         challenge = await generate_slot_challenge(
             user_level=request.user_level,
             cert_code=request.cert_code,
-            difficulty=request.difficulty,
             api_key=request.openai_api_key,
             model=request.preferred_model,
         )
@@ -2734,7 +2732,7 @@ async def generate_slots_challenge_endpoint(request: SlotsGenerateRequest):
                 }
                 for opt in challenge.options
             ],
-            "difficulty": challenge.difficulty,
+            "user_level": challenge.user_level,
             "base_payout": challenge.base_payout,
         }
     except ApiKeyRequiredError as e:
@@ -2772,7 +2770,7 @@ async def validate_slots_answer_endpoint(request: SlotsValidateRequest):
                 )
                 for opt in request.options
             ],
-            difficulty=request.difficulty,
+            user_level=request.user_level,
             base_payout=request.base_payout,
         )
         
@@ -2795,7 +2793,6 @@ async def validate_slots_answer_endpoint(request: SlotsValidateRequest):
 class SpeedDeployGenerateRequest(PydanticBaseModel):
     user_level: str = "intermediate"
     cert_code: Optional[str] = None
-    difficulty: Optional[str] = None
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
 
@@ -2810,11 +2807,14 @@ class SpeedDeployValidateRequest(PydanticBaseModel):
     acceptable_solutions: List[List[str]]
     trap_services: List[Dict[str, Any]] = []
     time_limit: int
-    difficulty: str
+    user_level: str
+    target_cert: str = ""  # For AI-powered validation context
     max_score: int
     learning_point: str = ""
     submitted_services: List[str]
     time_remaining: int
+    openai_api_key: Optional[str] = None  # For AI-powered validation
+    preferred_model: Optional[str] = None
 
 
 @app.post("/api/speed-deploy/brief/generate")
@@ -2832,7 +2832,6 @@ async def generate_speed_deploy_brief(request: SpeedDeployGenerateRequest):
         brief = await generate_deploy_brief(
             user_level=request.user_level,
             cert_code=request.cert_code,
-            difficulty=request.difficulty,
             api_key=request.openai_api_key,
             model=request.preferred_model,
         )
@@ -2862,7 +2861,8 @@ async def generate_speed_deploy_brief(request: SpeedDeployGenerateRequest):
                 for trap in brief.trap_services
             ],
             "time_limit": brief.time_limit,
-            "difficulty": brief.difficulty,
+            "user_level": brief.user_level,
+            "target_cert": brief.target_cert,
             "max_score": brief.max_score,
             "learning_point": brief.learning_point,
         }
@@ -2875,9 +2875,16 @@ async def generate_speed_deploy_brief(request: SpeedDeployGenerateRequest):
 
 @app.post("/api/speed-deploy/validate")
 async def validate_speed_deploy(request: SpeedDeployValidateRequest):
-    """Validate the player's deployment with GRADED scoring."""
+    """Validate the player's deployment with AI-powered GRADED scoring."""
     try:
-        from generators.speed_deploy import validate_deployment, DeployBrief, ClientRequirement, ServiceTrap
+        from utils import set_request_api_key, set_request_model
+        from generators.speed_deploy import validate_deployment_with_ai, DeployBrief, ClientRequirement, ServiceTrap
+        
+        # Set API key for AI validation
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
         
         # Reconstruct brief from request
         requirements = [
@@ -2910,15 +2917,19 @@ async def validate_speed_deploy(request: SpeedDeployValidateRequest):
             acceptable_solutions=request.acceptable_solutions,
             trap_services=trap_services,
             time_limit=request.time_limit,
-            difficulty=request.difficulty,
+            user_level=request.user_level,
+            target_cert=request.target_cert,
             max_score=request.max_score,
             learning_point=request.learning_point,
         )
         
-        result = validate_deployment(
+        # Use AI-powered validation for cert-specific feedback
+        result = await validate_deployment_with_ai(
             brief=brief,
             submitted_services=request.submitted_services,
             time_remaining=request.time_remaining,
+            api_key=request.openai_api_key,
+            model=request.preferred_model,
         )
         
         return {

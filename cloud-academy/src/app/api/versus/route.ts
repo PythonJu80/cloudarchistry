@@ -158,8 +158,26 @@ export async function POST(req: NextRequest) {
     emitVersusUpdate(opponentId, [match]);
 
     // Send challenge email to opponent
-    const gameUrl = `${APP_URL}/game/${matchCode}`;
+    // Route to correct game mode based on matchType
+    // Note: PvP pages are at /game/{game-name}/[matchCode] (not /game/modes/)
+    const gameRoutes: Record<string, string> = {
+      quiz: "quiz-battle",
+      speed_deploy: "speed-deploy",
+      service_slots: "service-slots",
+      architect_arena: "architect-arena",
+    };
+    const gameRoute = gameRoutes[matchType] || "quiz-battle";
+    const gameUrl = `${APP_URL}/game/${gameRoute}/${matchCode}`;
     const challengerName = academyUser.name || "A teammate";
+    
+    // Game mode display names
+    const gameModeNames: Record<string, string> = {
+      quiz: "Quiz Battle",
+      speed_deploy: "Speed Deploy",
+      service_slots: "Service Slots",
+      architect_arena: "Architect Arena",
+    };
+    const gameModeName = gameModeNames[matchType] || "Quiz Battle";
     
     try {
       await resend.emails.send({
@@ -184,7 +202,7 @@ export async function POST(req: NextRequest) {
                 </p>
                 
                 <p style="color: #a1a1aa; line-height: 1.6; text-align: center; margin-bottom: 24px;">
-                  Think you can beat them in a quiz battle? Prove it!
+                  Think you can beat them in <strong style="color: #f97316;">${gameModeName}</strong>? Prove it!
                 </p>
                 
                 <div style="text-align: center; margin: 32px 0;">
