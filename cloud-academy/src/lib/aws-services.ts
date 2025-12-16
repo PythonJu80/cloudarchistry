@@ -1211,6 +1211,16 @@ export const AWS_SERVICES: AWSService[] = [
     color: "#E7157B",
     description: "Elastic Map Reduce",
   },
+
+  // Custom service added via API
+  {
+    id: "ebsk",
+    name: "Elastic Beanstalk",
+    shortName: "EBSK",
+    category: "compute",
+    color: "#ED7100",
+    description: "Custom compute service",
+  },
 ];
 
 // Helper functions

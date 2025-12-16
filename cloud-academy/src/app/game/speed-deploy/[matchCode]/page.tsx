@@ -16,7 +16,6 @@ import {
   Clock,
   CheckCircle,
   Crown,
-  Users,
   Play,
   X,
   GripVertical,
@@ -29,8 +28,7 @@ import {
   Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { AWS_SERVICES, AWS_CATEGORIES, type AWSService } from "@/lib/aws-services";
@@ -146,6 +144,75 @@ const USER_LEVEL_COLORS: Record<string, string> = {
   advanced: "text-orange-400 bg-orange-500/20 border-orange-500/30",
   expert: "text-red-400 bg-red-500/20 border-red-500/30",
 };
+
+// =============================================================================
+// ANIMATED BACKGROUND COMPONENTS (matching main lobby)
+// =============================================================================
+
+const AnimatedGrid = () => (
+  <div className="absolute inset-0 overflow-hidden opacity-20">
+    <div
+      className="absolute inset-0"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px)
+        `,
+        backgroundSize: "50px 50px",
+        animation: "gridMove 20s linear infinite",
+      }}
+    />
+    <style jsx>{`
+      @keyframes gridMove {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(50px, 50px); }
+      }
+    `}</style>
+  </div>
+);
+
+const FloatingOrbs = () => {
+  const orbs = [
+    { color: "#06b6d4", size: 800, x: -20, y: -20, duration: 25 },
+    { color: "#8b5cf6", size: 600, x: 80, y: 60, duration: 30 },
+    { color: "#22c55e", size: 500, x: 50, y: 30, duration: 20 },
+    { color: "#f97316", size: 400, x: 20, y: 70, duration: 35 },
+  ];
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {orbs.map((orb, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full blur-[100px] opacity-30"
+          style={{
+            background: `radial-gradient(circle, ${orb.color} 0%, transparent 70%)`,
+            width: orb.size,
+            height: orb.size,
+            left: `${orb.x}%`,
+            top: `${orb.y}%`,
+            animation: `float${i} ${orb.duration}s ease-in-out infinite`,
+          }}
+        />
+      ))}
+      <style jsx>{`
+        @keyframes float0 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, -30px) scale(1.1); } }
+        @keyframes float1 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-40px, 20px) scale(0.9); } }
+        @keyframes float2 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(20px, 40px) scale(1.05); } }
+        @keyframes float3 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-30px, -20px) scale(1.1); } }
+      `}</style>
+    </div>
+  );
+};
+
+const ScanLines = () => (
+  <div
+    className="absolute inset-0 pointer-events-none opacity-[0.03]"
+    style={{
+      background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)",
+    }}
+  />
+);
 
 
 // =============================================================================
@@ -672,10 +739,24 @@ export default function SpeedDeployMatchPage() {
 
   if (loading || authStatus === "loading") {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" />
-          <p className="text-slate-400">Loading match...</p>
+      <div className="min-h-screen bg-[#050508] flex items-center justify-center">
+        {/* Animated background */}
+        <div className="fixed inset-0 pointer-events-none">
+          <FloatingOrbs />
+          <AnimatedGrid />
+          <ScanLines />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#050508_70%)]" />
+        </div>
+        
+        <div className="relative z-10 text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 border-4 border-cyan-500/20 rounded-full" />
+            <div className="absolute inset-0 border-4 border-transparent border-t-cyan-500 rounded-full animate-spin" />
+            <div className="absolute inset-4 bg-cyan-500/20 rounded-full animate-pulse" />
+            <Rocket className="absolute inset-0 m-auto w-8 h-8 text-cyan-500" />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-2">LOADING MATCH</h2>
+          <p className="text-gray-500 animate-pulse">Preparing the battlefield...</p>
         </div>
       </div>
     );
@@ -683,17 +764,27 @@ export default function SpeedDeployMatchPage() {
 
   if (error || !match) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <Card className="max-w-md bg-slate-900 border-slate-800">
-          <CardContent className="pt-6 text-center">
-            <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2 text-white">Match Not Found</h2>
-            <p className="text-slate-400 mb-4">{error || "This match doesn't exist or you don't have access."}</p>
-            <Link href="/game">
-              <Button>Back to Arena</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-[#050508] flex items-center justify-center">
+        {/* Animated background */}
+        <div className="fixed inset-0 pointer-events-none">
+          <FloatingOrbs />
+          <AnimatedGrid />
+          <ScanLines />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#050508_70%)]" />
+        </div>
+        
+        <div className="relative z-10">
+          <Card className="max-w-md bg-gray-900/80 border-gray-700 backdrop-blur-xl">
+            <CardContent className="pt-6 text-center">
+              <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-black mb-2 text-white">Match Not Found</h2>
+              <p className="text-gray-400 mb-4">{error || "This match doesn't exist or you don't have access."}</p>
+              <Link href="/game">
+                <Button className="bg-cyan-600 hover:bg-cyan-500">Back to Arena</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -702,172 +793,283 @@ export default function SpeedDeployMatchPage() {
   const filledSlots = selectedServices.filter(s => s !== null).length;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#050508] text-white overflow-hidden">
+      {/* Animated background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <FloatingOrbs />
+        <AnimatedGrid />
+        <ScanLines />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#050508_70%)]" />
+      </div>
+
       {/* Header */}
-      <nav className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/game" className="flex items-center gap-2 text-slate-400 hover:text-white">
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
+      <nav className="relative z-20 border-b border-white/5 bg-black/50 backdrop-blur-xl sticky top-0">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/game" className="flex items-center gap-2 text-white hover:text-gray-400 transition-colors group">
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm">Exit Match</span>
           </Link>
           
-          <div className="flex items-center gap-3">
-            <Rocket className="w-5 h-5 text-cyan-400" />
-            <span className="font-bold">Speed Deploy</span>
+          {/* Center Logo */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg blur-lg opacity-50 animate-pulse" />
+              <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                <Rocket className="w-5 h-5 text-white" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                SPEED DEPLOY
+              </h1>
+            </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-1 text-xs ${isConnected ? "text-green-500" : "text-red-500"}`}>
-              {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-              {isConnected ? "Live" : "Reconnecting..."}
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${isConnected ? "bg-green-500/20 border border-green-500/30" : "bg-red-500/20 border border-red-500/30"}`}>
+              {isConnected ? <Wifi className="w-3 h-3 text-green-400" /> : <WifiOff className="w-3 h-3 text-red-400" />}
+              <span className={`text-xs font-bold ${isConnected ? "text-green-400" : "text-red-400"}`}>
+                {isConnected ? "LIVE" : "RECONNECTING"}
+              </span>
             </div>
-            <Badge variant={match.status === "active" ? "default" : "secondary"}>
-              {match.status === "pending" && "Waiting..."}
-              {match.status === "active" && "LIVE"}
-              {match.status === "completed" && "Finished"}
-              {match.status === "cancelled" && "Cancelled"}
-            </Badge>
+            {match.status === "active" && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/30">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="text-xs font-bold text-cyan-400">IN MATCH</span>
+              </div>
+            )}
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto p-4">
+      <main className="relative z-10 max-w-7xl mx-auto px-6 py-8">
         {/* Scoreboard */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Player 1 */}
-          <Card className={cn("bg-slate-900 border-slate-800", match.isPlayer1 && "ring-2 ring-cyan-500")}>
-            <CardContent className="pt-4 text-center">
-              <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center mx-auto mb-2">
-                <Users className="w-6 h-6 text-cyan-500" />
-              </div>
-              <p className="font-semibold truncate text-white">
-                {match.player1.name || match.player1.username || "Player 1"}
-                {match.isPlayer1 && " (You)"}
-              </p>
-              <p className="text-3xl font-bold text-cyan-500 mt-2">{match.player1Score}</p>
-              {match.winnerId === match.player1.id && (
-                <Crown className="w-6 h-6 text-yellow-500 mx-auto mt-2" />
-              )}
-            </CardContent>
-          </Card>
+          <div className={cn(
+            "relative group",
+            match.isPlayer1 && "scale-105"
+          )}>
+            {/* Glow effect for current player */}
+            {match.isPlayer1 && (
+              <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity" />
+            )}
+            <div className={cn(
+              "relative rounded-xl border overflow-hidden transition-all duration-300 bg-gray-900/80 backdrop-blur-xl",
+              match.isPlayer1 ? "border-cyan-500/50" : "border-gray-700"
+            )}>
+              <CardContent className="pt-6 pb-4 text-center">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center mx-auto mb-3 text-white font-bold text-xl">
+                  {(match.player1.name || match.player1.username || "P")[0].toUpperCase()}
+                </div>
+                <p className="font-black truncate text-white text-lg">
+                  {match.player1.name || match.player1.username || "Player 1"}
+                </p>
+                {match.isPlayer1 && <span className="text-xs text-cyan-400">(You)</span>}
+                <p className="text-4xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent mt-3">{match.player1Score}</p>
+                {match.winnerId === match.player1.id && (
+                  <Crown className="w-6 h-6 text-yellow-400 mx-auto mt-2 animate-bounce" />
+                )}
+              </CardContent>
+            </div>
+          </div>
 
           {/* VS / Status */}
-          <Card className="flex items-center justify-center bg-slate-900 border-slate-800">
-            <CardContent className="text-center py-4">
-              {match.status === "active" && brief && (
-                <>
-                  <p className="text-sm text-slate-400">Time Left</p>
-                  <p className={cn(
-                    "text-2xl font-bold font-mono",
-                    timeLeft <= 10 ? "text-red-400 animate-pulse" : "text-white"
-                  )}>{timeLeft}s</p>
-                </>
-              )}
-              {match.status === "pending" && (
-                <p className="text-xl font-bold text-slate-400">VS</p>
-              )}
-              {match.status === "completed" && (
-                <>
-                  <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-white">
-                    {match.winnerId === match.myPlayerId ? "You Win!" : 
-                     match.winnerId ? "You Lose" : "Draw!"}
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <div className="relative">
+            <div className="absolute -inset-2 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-2xl blur-xl opacity-30" />
+            <div className="relative h-full rounded-xl border border-gray-700 overflow-hidden bg-gray-900/80 backdrop-blur-xl flex items-center justify-center">
+              <div className="text-center py-6">
+                {match.status === "active" && brief && (
+                  <>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Time Left</p>
+                    <p className={cn(
+                      "text-4xl font-black font-mono",
+                      timeLeft <= 10 ? "text-red-400 animate-pulse" : "bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent"
+                    )}>{timeLeft}s</p>
+                  </>
+                )}
+                {match.status === "pending" && (
+                  <div className="text-5xl font-black text-gray-600 animate-pulse">VS</div>
+                )}
+                {match.status === "completed" && (
+                  <>
+                    <Trophy className="w-10 h-10 text-yellow-400 mx-auto mb-2 animate-bounce" />
+                    <p className="text-lg font-black text-white">
+                      {match.winnerId === match.myPlayerId ? "Victory!" : 
+                       match.winnerId ? "Defeat" : "Draw!"}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Player 2 */}
-          <Card className={cn("bg-slate-900 border-slate-800", !match.isPlayer1 && "ring-2 ring-cyan-500")}>
-            <CardContent className="pt-4 text-center">
-              <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-2">
-                <Users className="w-6 h-6 text-orange-500" />
-              </div>
-              <p className="font-semibold truncate text-white">
-                {match.player2.name || match.player2.username || "Player 2"}
-                {!match.isPlayer1 && " (You)"}
-              </p>
-              <p className="text-3xl font-bold text-orange-500 mt-2">{match.player2Score}</p>
-              {match.winnerId === match.player2.id && (
-                <Crown className="w-6 h-6 text-yellow-500 mx-auto mt-2" />
-              )}
-            </CardContent>
-          </Card>
+          <div className={cn(
+            "relative group",
+            !match.isPlayer1 && "scale-105"
+          )}>
+            {/* Glow effect for current player */}
+            {!match.isPlayer1 && (
+              <div className="absolute -inset-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity" />
+            )}
+            <div className={cn(
+              "relative rounded-xl border overflow-hidden transition-all duration-300 bg-gray-900/80 backdrop-blur-xl",
+              !match.isPlayer1 ? "border-orange-500/50" : "border-gray-700"
+            )}>
+              <CardContent className="pt-6 pb-4 text-center">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mx-auto mb-3 text-white font-bold text-xl">
+                  {(match.player2.name || match.player2.username || "P")[0].toUpperCase()}
+                </div>
+                <p className="font-black truncate text-white text-lg">
+                  {match.player2.name || match.player2.username || "Player 2"}
+                </p>
+                {!match.isPlayer1 && <span className="text-xs text-orange-400">(You)</span>}
+                <p className="text-4xl font-black bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent mt-3">{match.player2Score}</p>
+                {match.winnerId === match.player2.id && (
+                  <Crown className="w-6 h-6 text-yellow-400 mx-auto mt-2 animate-bounce" />
+                )}
+              </CardContent>
+            </div>
+          </div>
         </div>
 
         {/* Pending State */}
         {match.status === "pending" && (
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Clock className="w-5 h-5" />
-                {match.isPlayer1 ? "Waiting for opponent..." : "You've been challenged!"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="relative">
+            {/* Glow effect */}
+            <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 via-purple-500 to-orange-500 rounded-2xl blur-xl opacity-30 animate-pulse" />
+            
+            <div className="relative bg-gray-900/80 backdrop-blur-xl border border-gray-700 rounded-2xl p-8">
               {match.isPlayer1 ? (
-                <p className="text-slate-400">
-                  Waiting for {match.opponent.name || match.opponent.username} to accept the Speed Deploy challenge.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-slate-400">
-                    {match.player1.name || match.player1.username} wants to race you in Speed Deploy!
+                <div className="text-center">
+                  {/* Animated waiting indicator */}
+                  <div className="relative w-24 h-24 mx-auto mb-6">
+                    <div className="absolute inset-0 border-4 border-cyan-500/20 rounded-full" />
+                    <div className="absolute inset-0 border-4 border-transparent border-t-cyan-500 rounded-full animate-spin" />
+                    <div className="absolute inset-4 bg-cyan-500/20 rounded-full animate-pulse" />
+                    <Clock className="absolute inset-0 m-auto w-8 h-8 text-cyan-400" />
+                  </div>
+                  
+                  <h3 className="text-2xl font-black text-white mb-2">WAITING FOR OPPONENT</h3>
+                  <p className="text-gray-400 mb-4">
+                    Waiting for <span className="text-cyan-400 font-bold">{match.opponent.name || match.opponent.username}</span> to accept the challenge
                   </p>
-                  <div className="flex gap-3">
-                    <Button onClick={handleAccept} className="gap-2 bg-cyan-600 hover:bg-cyan-700">
-                      <CheckCircle className="w-4 h-4" />
-                      Accept Challenge
+                  
+                  {/* Match code display */}
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 border border-gray-700">
+                    <span className="text-xs text-gray-500">Match Code:</span>
+                    <span className="font-mono font-bold text-cyan-400">{match.matchCode}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center">
+                  {/* Challenge icon with animation */}
+                  <div className="relative w-24 h-24 mx-auto mb-6">
+                    <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500 to-orange-500 rounded-full blur-2xl opacity-40 animate-pulse" />
+                    <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500 to-orange-500 flex items-center justify-center animate-bounce">
+                      <Rocket className="w-10 h-10 text-white" />
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-2xl font-black bg-gradient-to-r from-cyan-400 to-orange-400 bg-clip-text text-transparent mb-2">
+                    YOU&apos;VE BEEN CHALLENGED!
+                  </h3>
+                  <p className="text-gray-400 mb-6">
+                    <span className="text-white font-bold">{match.player1.name || match.player1.username}</span> wants to race you in Speed Deploy!
+                  </p>
+                  
+                  <div className="flex gap-4 justify-center">
+                    <Button 
+                      onClick={handleAccept} 
+                      size="lg"
+                      className="relative overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-black text-lg px-8 py-6 rounded-xl group"
+                    >
+                      <span className="relative z-10 flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5" />
+                        ACCEPT BATTLE
+                      </span>
+                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                     </Button>
-                    <Button variant="outline" onClick={handleDecline} className="gap-2">
-                      <X className="w-4 h-4" />
+                    <Button 
+                      variant="outline" 
+                      size="lg"
+                      onClick={handleDecline} 
+                      className="border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 px-6"
+                    >
+                      <X className="w-5 h-5 mr-2" />
                       Decline
                     </Button>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Active - No brief yet */}
         {match.status === "active" && !brief && (
-          <Card className="bg-slate-900 border-slate-800">
-            <CardContent className="pt-6 text-center">
+          <div className="relative">
+            <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-2xl blur-xl opacity-30" />
+            
+            <div className="relative bg-gray-900/80 backdrop-blur-xl border border-gray-700 rounded-2xl p-8">
               {match.isPlayer1 ? (
                 isGenerating ? (
-                  <>
-                    <Loader2 className="w-12 h-12 animate-spin text-cyan-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2 text-white">Generating Brief...</h3>
-                    <p className="text-slate-400">
+                  <div className="text-center">
+                    <div className="relative w-24 h-24 mx-auto mb-6">
+                      <div className="absolute inset-0 border-4 border-cyan-500/20 rounded-full" />
+                      <div className="absolute inset-0 border-4 border-transparent border-t-cyan-500 rounded-full animate-spin" />
+                      <div className="absolute inset-4 bg-cyan-500/20 rounded-full animate-pulse" />
+                      <Rocket className="absolute inset-0 m-auto w-8 h-8 text-cyan-400" />
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-2">GENERATING BRIEF</h3>
+                    <p className="text-gray-400">
                       Creating your client scenario. This may take a few seconds...
                     </p>
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <Play className="w-12 h-12 text-cyan-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2 text-white">Ready to Start?</h3>
-                    <p className="text-slate-400 mb-4">
+                  <div className="text-center">
+                    <div className="relative w-24 h-24 mx-auto mb-6">
+                      <div className="absolute -inset-4 bg-gradient-to-r from-green-500 to-cyan-500 rounded-full blur-2xl opacity-40 animate-pulse" />
+                      <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-cyan-500 flex items-center justify-center">
+                        <Play className="w-10 h-10 text-white fill-current" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black bg-gradient-to-r from-green-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+                      READY TO START?
+                    </h3>
+                    <p className="text-gray-400 mb-6">
                       Click below to generate the client brief and begin the race!
                     </p>
-                    <Button onClick={handleStartGame} size="lg" className="gap-2 bg-cyan-600 hover:bg-cyan-700">
-                      <Rocket className="w-5 h-5" />
-                      Generate Brief
+                    <Button 
+                      onClick={handleStartGame} 
+                      size="lg" 
+                      className="relative overflow-hidden bg-gradient-to-r from-green-500 to-cyan-500 hover:from-green-400 hover:to-cyan-400 text-white font-black text-lg px-10 py-6 rounded-xl group"
+                    >
+                      <span className="relative z-10 flex items-center gap-3">
+                        <Rocket className="w-6 h-6" />
+                        GENERATE BRIEF
+                      </span>
+                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                     </Button>
-                  </>
+                  </div>
                 )
               ) : (
-                <>
-                  <Loader2 className="w-12 h-12 animate-spin text-cyan-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2 text-white">Get Ready!</h3>
-                  <p className="text-slate-400">
-                    Waiting for {match.player1.name || match.player1.username} to generate the brief...
+                <div className="text-center">
+                  <div className="relative w-24 h-24 mx-auto mb-6">
+                    <div className="absolute inset-0 border-4 border-cyan-500/20 rounded-full" />
+                    <div className="absolute inset-0 border-4 border-transparent border-t-cyan-500 rounded-full animate-spin" />
+                    <div className="absolute inset-4 bg-cyan-500/20 rounded-full animate-pulse" />
+                    <Zap className="absolute inset-0 m-auto w-8 h-8 text-cyan-400" />
+                  </div>
+                  <h3 className="text-2xl font-black text-white mb-2">GET READY!</h3>
+                  <p className="text-gray-400">
+                    Waiting for <span className="text-cyan-400 font-bold">{match.player1.name || match.player1.username}</span> to generate the brief...
                   </p>
-                </>
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Active - Building */}
@@ -962,18 +1164,38 @@ export default function SpeedDeployMatchPage() {
 
         {/* Submitted - Waiting */}
         {match.status === "active" && hasSubmitted && !showResults && (
-          <Card className="bg-slate-900 border-slate-800">
-            <CardContent className="pt-6 text-center">
-              <Loader2 className="w-12 h-12 animate-spin text-cyan-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2 text-white">Deployed! 🚀</h3>
-              <p className="text-slate-400">
-                {opponentSubmitted 
-                  ? "Calculating results..." 
-                  : `Waiting for ${match.opponent.name || match.opponent.username} to submit...`
-                }
-              </p>
-            </CardContent>
-          </Card>
+          <div className="relative">
+            <div className="absolute -inset-2 bg-gradient-to-r from-green-500 via-cyan-500 to-blue-500 rounded-2xl blur-xl opacity-30 animate-pulse" />
+            
+            <div className="relative bg-gray-900/80 backdrop-blur-xl border border-gray-700 rounded-2xl p-8">
+              <div className="text-center">
+                {/* Success animation */}
+                <div className="relative w-24 h-24 mx-auto mb-6">
+                  <div className="absolute -inset-4 bg-gradient-to-r from-green-500 to-cyan-500 rounded-full blur-2xl opacity-40 animate-pulse" />
+                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-cyan-500 flex items-center justify-center">
+                    <Rocket className="w-10 h-10 text-white animate-bounce" />
+                  </div>
+                </div>
+                
+                <h3 className="text-2xl font-black bg-gradient-to-r from-green-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+                  DEPLOYED!
+                </h3>
+                <p className="text-gray-400 mb-4">
+                  {opponentSubmitted 
+                    ? "Calculating results..." 
+                    : <>Waiting for <span className="text-orange-400 font-bold">{match.opponent.name || match.opponent.username}</span> to submit...</>
+                  }
+                </p>
+                
+                {/* Progress indicator */}
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Completed State */}
