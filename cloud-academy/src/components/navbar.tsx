@@ -71,18 +71,11 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
     <nav className={navClass}>
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatar}
-              alt="Profile"
-              className="w-10 h-10 rounded-xl object-cover"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-              <Globe className="w-6 h-6 text-white" />
-            </div>
-          )}
+          <img
+            src="/logo.png"
+            alt="Cloud Archistry"
+            className="w-10 h-10 rounded-xl object-contain"
+          />
           <span className={`text-xl font-bold ${isTransparent ? "text-white" : ""}`}>Cloud Archistry</span>
         </Link>
         

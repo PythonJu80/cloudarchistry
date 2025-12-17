@@ -64,9 +64,11 @@ function LoginContent() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="p-3 bg-terminal-green/10 rounded-xl mb-4">
-            <Cloud className="w-10 h-10 text-terminal-green" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Cloud Archistry"
+            className="w-16 h-16 rounded-xl mb-4 object-contain"
+          />
           <h1 className="text-2xl font-bold text-foreground font-mono">Cloud Archistry</h1>
           <p className="text-muted-foreground text-sm mt-1">Master AWS Architecture</p>
         </div>
