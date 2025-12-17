@@ -122,8 +122,8 @@ export default function LandingPage() {
             <Image
               src="/branding/cloudfabric-icon.svg"
               alt="CloudFabric"
-              width={40}
-              height={40}
+              width={56}
+              height={56}
               className="shrink-0"
             />
             <span className="text-lg font-bold text-terminal-cyan font-mono">CloudFabric</span>

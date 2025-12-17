@@ -131,7 +131,7 @@ export default function ChallengesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar activePath="/challenges" />
+      <Navbar activePath="/challenges" variant="transparent" />
 
       {/* Header */}
       <section className="pt-24 pb-8 px-6">

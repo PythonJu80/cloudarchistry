@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     });
     
     // Add user's attempt stats if logged in
-    let userStats: Record<string, { attempts: number; bestScore: number; passed: boolean }> = {};
+    const userStats: Record<string, { attempts: number; bestScore: number; passed: boolean }> = {};
     if (profileId) {
       const attempts = await prisma.examAttempt.groupBy({
         by: ["examId"],

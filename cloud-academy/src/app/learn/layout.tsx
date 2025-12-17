@@ -40,7 +40,7 @@ export default function LearnLayout({ children }: LearnLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Main App Navbar */}
-      <Navbar activePath="/learn" />
+      <Navbar activePath="/learn" variant="transparent" />
 
       {/* Learning Centre Sub-navigation */}
       <div className="fixed top-16 left-0 right-0 z-40 border-b border-border/50 bg-background/95 backdrop-blur-sm">

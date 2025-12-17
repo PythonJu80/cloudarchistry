@@ -137,7 +137,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar activePath="/leaderboard" />
+      <Navbar activePath="/leaderboard" variant="transparent" />
 
       {/* Header */}
       <section className="pt-24 pb-8 px-6">

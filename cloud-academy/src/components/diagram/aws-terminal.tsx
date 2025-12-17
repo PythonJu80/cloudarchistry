@@ -114,7 +114,7 @@ export function AwsTerminal({
   }, [lines]);
 
   // Add initial welcome message (only on mount)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     addLine("info", "AWS CLI Terminal - Cloud Archistry");
     addLine("info", "Type 'help' for available commands or start with 'aws ...'");
@@ -124,7 +124,7 @@ export function AwsTerminal({
   }, []);
 
   // Run initial commands (only when they change)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     if (initialCommands.length > 0) {
       initialCommands.forEach((cmd) => {

@@ -8,7 +8,7 @@ import { Server as SocketIOServer } from "socket.io";
 
 // Store the socket server globally
 declare global {
-  // eslint-disable-next-line no-var
+   
   var socketIO: SocketIOServer | undefined;
 }
 

@@ -35,7 +35,6 @@ import { cn } from "@/lib/utils";
 import { type SubscriptionTier, getTierFeatures, getUpgradeMessage } from "@/lib/academy/services/subscription";
 import { ScenarioGenerationModal } from "@/components/world/scenario-generation-modal";
 import { ChallengeWorkspaceModal } from "@/components/world/challenge-workspace-modal";
-import { NavbarAvatar } from "@/components/navbar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Dynamically import map components to avoid SSR issues
@@ -779,8 +778,7 @@ export default function WorldPage() {
               <div className="flex items-center justify-between mb-4">
                 <Link href="/" className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg overflow-hidden">
-                    <NavbarAvatar />
-                  </div>
+                                      </div>
                   <span className="font-bold">Cloud Archistry</span>
                 </Link>
                 <Link href="/guide">

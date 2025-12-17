@@ -111,7 +111,7 @@ export default function ExamsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar activePath="/exams" />
+      <Navbar activePath="/exams" variant="transparent" />
 
       {/* Hero Section */}
       <section className="pt-24 pb-12 px-6 bg-gradient-to-b from-primary/5 to-transparent">

@@ -78,8 +78,8 @@ export function Sidebar({ onConfigClick }: SidebarProps) {
           <Image
             src="/branding/cloudfabric-icon.svg"
             alt="CloudFabric"
-            width={36}
-            height={36}
+            width={48}
+            height={48}
             className="shrink-0"
           />
           <span className="text-base font-bold text-terminal-cyan font-mono">

@@ -118,7 +118,7 @@ const faqs = [
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Navbar activePath="/pricing" />
+      <Navbar activePath="/pricing" variant="transparent" />
 
       {/* Header */}
       <section className="pt-32 pb-16 px-6 text-center">

@@ -71,7 +71,7 @@ export async function POST(
     }
     
     // Get questions for this attempt
-    let questionQuery: any = {
+    const questionQuery: any = {
       where: {
         examId: exam.id,
         isActive: true,

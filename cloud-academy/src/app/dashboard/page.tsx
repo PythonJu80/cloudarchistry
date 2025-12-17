@@ -327,7 +327,7 @@ export default function DashboardPage() {
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar activePath="/dashboard" />
+        <Navbar activePath="/dashboard" variant="transparent" />
         <main className="pt-24 pb-12 px-6">
           <div className="max-w-7xl mx-auto">
             {/* Header Skeleton */}
@@ -451,7 +451,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar activePath="/dashboard" />
+      <Navbar activePath="/dashboard" variant="transparent" />
 
       {/* Main Content */}
       <main className="pt-24 pb-12 px-6">

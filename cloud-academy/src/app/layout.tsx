@@ -18,7 +18,10 @@ export const metadata: Metadata = {
   description: "The world's first AI-powered cloud architecture training simulator. Learn AWS, GCP, and Azure through real-world scenarios.",
   keywords: ["AWS", "cloud", "training", "solutions architect", "certification", "learning", "simulator"],
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.png?v=3", type: "image/png" },
+      { url: "/favicon.ico?v=3", type: "image/x-icon" },
+    ],
   },
 };
 

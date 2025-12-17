@@ -1,9 +1,9 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { Globe, Swords, Brain } from "lucide-react";
+import { Swords, Brain } from "lucide-react";
 import { UserNav } from "@/components/user-nav";
 
 interface NavbarProps {
@@ -13,31 +13,8 @@ interface NavbarProps {
   children?: React.ReactNode;
 }
 
-// Use useSyncExternalStore for localStorage - the recommended React 18 pattern
-function subscribeToAvatar(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
-}
-
-function getAvatarSnapshot() {
-  return localStorage.getItem("academy-avatar");
-}
-
-function getAvatarServerSnapshot() {
-  return null; // No localStorage on server
-}
-
-function useAvatar() {
-  return useSyncExternalStore(
-    subscribeToAvatar,
-    getAvatarSnapshot,
-    getAvatarServerSnapshot
-  );
-}
-
 export function Navbar({ showNav = true, activePath, variant = "default", children }: NavbarProps) {
   const { data: session } = useSession();
-  const avatar = useAvatar();
 
   const isTransparent = variant === "transparent";
   const navClass = isTransparent
@@ -69,13 +46,17 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
 
   return (
     <nav className={navClass}>
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="w-full px-6 h-20 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <img
-            src="/logo.png"
-            alt="Cloud Archistry"
-            className="w-10 h-10 rounded-xl object-contain"
-          />
+          <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0">
+            <Image
+              src="/logo.png"
+              alt="Cloud Archistry"
+              fill
+              sizes="56px"
+              className="object-cover scale-125"
+            />
+          </div>
           <span className={`text-xl font-bold ${isTransparent ? "text-white" : ""}`}>Cloud Archistry</span>
         </Link>
         
@@ -114,23 +95,3 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
   );
 }
 
-export function NavbarAvatar() {
-  const avatar = useAvatar();
-
-  if (avatar) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={avatar}
-        alt="Profile"
-        className="w-10 h-10 rounded-xl object-cover"
-      />
-    );
-  }
-
-  return (
-    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-      <Globe className="w-6 h-6 text-white" />
-    </div>
-  );
-}
