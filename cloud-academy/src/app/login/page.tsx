@@ -3,9 +3,9 @@
 import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { Cloud, Loader2, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
@@ -48,7 +48,7 @@ function LoginContent() {
         router.push("/");
         router.refresh();
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -64,10 +64,12 @@ function LoginContent() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img
+          <Image
             src="/logo.png"
             alt="Cloud Archistry"
-            className="w-16 h-16 rounded-xl mb-4 object-contain"
+            width={64}
+            height={64}
+            className="rounded-xl mb-4 object-contain"
           />
           <h1 className="text-2xl font-bold text-foreground font-mono">Cloud Archistry</h1>
           <p className="text-muted-foreground text-sm mt-1">Master AWS Architecture</p>
