@@ -145,7 +145,7 @@ const RESOURCE_HANDLERS: Record<string, (
         Tagging: {
           TagSet: [
             { Key: "Name", Value: name },
-            { Key: "ManagedBy", Value: "CloudAcademy" },
+            { Key: "ManagedBy", Value: "CloudArchistry" },
           ],
         },
       }));
@@ -180,7 +180,7 @@ const RESOURCE_HANDLERS: Record<string, (
         BillingMode: "PAY_PER_REQUEST",
         Tags: [
           { Key: "Name", Value: name },
-          { Key: "ManagedBy", Value: "CloudAcademy" },
+          { Key: "ManagedBy", Value: "CloudArchistry" },
         ],
       }));
       
@@ -207,7 +207,7 @@ const RESOURCE_HANDLERS: Record<string, (
         QueueName: name,
         tags: {
           Name: name,
-          ManagedBy: "CloudAcademy",
+          ManagedBy: "CloudArchistry",
         },
       }));
       
@@ -234,7 +234,7 @@ const RESOURCE_HANDLERS: Record<string, (
         Name: name,
         Tags: [
           { Key: "Name", Value: name },
-          { Key: "ManagedBy", Value: "CloudAcademy" },
+          { Key: "ManagedBy", Value: "CloudArchistry" },
         ],
       }));
       
@@ -271,7 +271,7 @@ const RESOURCE_HANDLERS: Record<string, (
         Timeout: (params.timeout as number) || 30,
         Tags: {
           Name: name,
-          ManagedBy: "CloudAcademy",
+          ManagedBy: "CloudArchistry",
         },
       }));
       

@@ -6,8 +6,8 @@ import crypto from "crypto";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const APP_URL = process.env.NEXTAUTH_URL || "http://localhost:6060";
-const FROM_EMAIL = process.env.EMAIL_FROM || "CloudMigrate <noreply@anais.solutions>";
+const APP_URL = process.env.NEXTAUTH_URL || "https://cloudarchistry.com";
+const FROM_EMAIL = process.env.EMAIL_FROM || "CloudArchistry <noreply@cloudarchistry.com>";
 
 /**
  * POST /api/team/invite - Send team invite
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       await resend.emails.send({
         from: FROM_EMAIL,
         to: email,
-        subject: `You're invited to join ${membership.team.name} on CloudAcademy`,
+        subject: `You're invited to join ${membership.team.name} on CloudArchistry`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -135,18 +135,18 @@ export async function POST(req: NextRequest) {
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0a; color: #ffffff; padding: 40px 20px;">
               <div style="max-width: 480px; margin: 0 auto; background-color: #141414; border-radius: 12px; padding: 40px; border: 1px solid #262626;">
                 <div style="text-align: center; margin-bottom: 32px;">
-                  <h1 style="color: #4ade80; font-size: 24px; margin: 0;">☁️ CloudAcademy</h1>
+                  <h1 style="color: #4ade80; font-size: 24px; margin: 0;">☁️ CloudArchistry</h1>
                 </div>
                 
-                <h2 style="font-size: 20px; margin-bottom: 16px;">You're invited!</h2>
+                <h2 style="font-size: 20px; margin-bottom: 16px;">You're Invited to Join Our Team!</h2>
                 
                 <p style="color: #a1a1aa; line-height: 1.6; margin-bottom: 24px;">
                   <strong style="color: #ffffff;">${academyUser.name || "A team member"}</strong> has invited you to join 
-                  <strong style="color: #4ade80;">${membership.team.name}</strong> on CloudAcademy.
+                  <strong style="color: #4ade80;">${membership.team.name}</strong> on CloudArchistry.
                 </p>
                 
                 <p style="color: #a1a1aa; line-height: 1.6; margin-bottom: 24px;">
-                  Join the team to collaborate on AWS architecture challenges, compete on leaderboards, 
+                  Join our community to collaborate on AWS architecture challenges, compete on leaderboards, 
                   and track your progress together.
                 </p>
                 

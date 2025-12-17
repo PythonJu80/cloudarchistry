@@ -366,7 +366,7 @@ export default function ExamsPage() {
       <section className="px-6 py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-2xl font-bold text-center mb-12">
-            Why Practice With CloudAcademy?
+            Why Practice With CloudArchistry?
           </h2>
           
           <div className="grid md:grid-cols-3 gap-8">

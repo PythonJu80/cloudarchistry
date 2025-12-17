@@ -4,8 +4,8 @@ import crypto from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const APP_URL = process.env.NEXTAUTH_URL || "http://localhost:6080";
-const FROM_EMAIL = process.env.EMAIL_FROM || "CloudMigrate <noreply@anais.solutions>";
+const APP_URL = process.env.NEXTAUTH_URL || "https://cloudarchistry.com";
+const FROM_EMAIL = process.env.EMAIL_FROM || "CloudArchistry <noreply@cloudarchistry.com>";
 
 /**
  * Generate a verification token and store it
@@ -42,7 +42,7 @@ export async function sendVerificationEmail(email: string, name?: string): Promi
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: "Verify your email - CloudMigrate",
+      subject: "Verify your email - CloudArchistry",
       html: `
         <!DOCTYPE html>
         <html>
@@ -53,7 +53,7 @@ export async function sendVerificationEmail(email: string, name?: string): Promi
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0a; color: #ffffff; padding: 40px 20px;">
             <div style="max-width: 480px; margin: 0 auto; background-color: #141414; border-radius: 12px; padding: 40px; border: 1px solid #262626;">
               <div style="text-align: center; margin-bottom: 32px;">
-                <h1 style="color: #4ade80; font-size: 24px; margin: 0;">☁️ CloudMigrate</h1>
+                <h1 style="color: #4ade80; font-size: 24px; margin: 0;">☁️ CloudArchistry</h1>
               </div>
               
               <h2 style="font-size: 20px; margin-bottom: 16px;">Verify your email</h2>

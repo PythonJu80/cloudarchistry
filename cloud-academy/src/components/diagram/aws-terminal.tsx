@@ -116,7 +116,7 @@ export function AwsTerminal({
   // Add initial welcome message (only on mount)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    addLine("info", "AWS CLI Terminal - Cloud Academy");
+    addLine("info", "AWS CLI Terminal - Cloud Archistry");
     addLine("info", "Type 'help' for available commands or start with 'aws ...'");
     if (!hasAwsCredentials) {
       addLine("warning", "⚠️ No AWS credentials configured. Go to Settings to add your AWS keys.");

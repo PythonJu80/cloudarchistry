@@ -787,7 +787,7 @@ export default function SettingsPage() {
                 <Globe className="w-6 h-6 text-white" />
               </div>
             )}
-            <span className="text-xl font-bold">CloudAcademy</span>
+            <span className="text-xl font-bold">Cloud Archistry</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/dashboard">

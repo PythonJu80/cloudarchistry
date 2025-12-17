@@ -228,7 +228,7 @@ def _resolve_persona_id(persona_id: Optional[str], certification_code: Optional[
 # FASTAPI APP SETUP
 # ============================================
 
-app = FastAPI(title="CloudMigrate Learning Agent", description="AI-powered learning agent for AWS cloud architecture")
+app = FastAPI(title="CloudArchistry Learning Agent", description="AI-powered learning agent for AWS cloud architecture")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 
@@ -262,9 +262,15 @@ def process_code_example(args):
 
 
 @app.post("/api/crawl/single")
-async def crawl_single_page(url: str) -> str:
+async def crawl_single_page(url: str, openai_api_key: str = None, tenant_id: str = None) -> str:
     """Crawl a single web page and store its content."""
+    from utils import set_request_api_key
+    
     try:
+        # Set request-scoped API key for embeddings
+        if openai_api_key:
+            set_request_api_key(openai_api_key)
+        
         ctx = await get_context()
         crawler = ctx.crawler
         
@@ -280,22 +286,26 @@ async def crawl_single_page(url: str) -> str:
         
         chunks = smart_chunk_markdown(markdown)
         
-        documents = []
+        # Build separate lists for add_documents_to_db
+        urls = []
+        chunk_numbers = []
+        contents = []
+        metadatas = []
+        url_to_full_document = {url: markdown}
+        
         for i, chunk in enumerate(chunks):
             section_info = extract_section_info(chunk)
-            documents.append({
-                "url": url,
-                "chunk_number": i,
-                "content": chunk,
-                "metadata": {
-                    "title": result.metadata.get("title", ""),
-                    "headers": section_info["headers"],
-                    "char_count": section_info["char_count"],
-                    "word_count": section_info["word_count"],
-                }
+            urls.append(url)
+            chunk_numbers.append(i)
+            contents.append(chunk)
+            metadatas.append({
+                "title": result.metadata.get("title", ""),
+                "headers": section_info["headers"],
+                "char_count": section_info["char_count"],
+                "word_count": section_info["word_count"],
             })
         
-        await add_documents_to_db(documents)
+        await add_documents_to_db(urls, chunk_numbers, contents, metadatas, url_to_full_document, tenant_id)
         
         neo4j_result = {"extracted": 0, "relationships": 0}
         if ctx.neo4j_driver:
@@ -305,21 +315,34 @@ async def crawl_single_page(url: str) -> str:
                 neo4j_driver=ctx.neo4j_driver
             )
         
-        return json.dumps({"success": True, "url": url, "chunks_stored": len(documents), "aws_services": neo4j_result}, indent=2)
+        return json.dumps({"success": True, "url": url, "chunks_stored": len(chunks), "aws_services": neo4j_result}, indent=2)
         
     except Exception as e:
         logger.error(f"Crawl single page error: {e}")
         return json.dumps({"success": False, "url": url, "error": str(e)}, indent=2)
+    finally:
+        set_request_api_key(None)
 
 
-async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurrent: int, chunk_size: int, tenant_id: str = None):
+async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurrent: int, chunk_size: int, tenant_id: str = None, openai_api_key: str = None):
     """Execute a crawl job in the background."""
+    from utils import set_request_api_key
+    
     try:
+        # Set request-scoped API key for embeddings
+        if openai_api_key:
+            set_request_api_key(openai_api_key)
+        
         await update_crawl_job(job_id, "running")
         ctx = await get_context()
         crawler = ctx.crawler
         
-        all_documents = []
+        # Build separate lists for add_documents_to_db
+        all_urls = []
+        all_chunk_numbers = []
+        all_contents = []
+        all_metadatas = []
+        url_to_full_document = {}
         all_code_examples = []
         crawled_urls = set()
         
@@ -346,18 +369,17 @@ async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurre
                 result = await crawler.arun(url=crawl_url, config=run_config)
                 if result.success and result.markdown:
                     crawled_urls.add(crawl_url)
+                    url_to_full_document[crawl_url] = result.markdown
                     
                     chunks = smart_chunk_markdown(result.markdown, chunk_size)
                     for i, chunk in enumerate(chunks):
                         section_info = extract_section_info(chunk)
-                        all_documents.append({
-                            "url": crawl_url,
-                            "chunk_number": i,
-                            "content": chunk,
-                            "metadata": {
-                                "title": result.metadata.get("title", ""),
-                                "headers": section_info["headers"],
-                            }
+                        all_urls.append(crawl_url)
+                        all_chunk_numbers.append(i)
+                        all_contents.append(chunk)
+                        all_metadatas.append({
+                            "title": result.metadata.get("title", ""),
+                            "headers": section_info["headers"],
                         })
                     
                     # Extract code examples
@@ -381,8 +403,8 @@ async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurre
                 logger.warning(f"Failed to crawl {crawl_url}: {e}")
         
         # Store documents
-        if all_documents:
-            await add_documents_to_db(all_documents)
+        if all_contents:
+            await add_documents_to_db(all_urls, all_chunk_numbers, all_contents, all_metadatas, url_to_full_document, tenant_id)
         
         # Generate code summaries and store
         if all_code_examples:
@@ -395,13 +417,15 @@ async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurre
         
         await update_crawl_job(job_id, "completed", result={
             "urls_crawled": len(crawled_urls),
-            "documents_stored": len(all_documents),
+            "documents_stored": len(all_contents),
             "code_examples": len(all_code_examples),
         })
         
     except Exception as e:
         logger.error(f"Crawl job {job_id} failed: {e}")
         await update_crawl_job(job_id, "failed", error=str(e))
+    finally:
+        set_request_api_key(None)
 
 
 @app.post("/api/crawl/smart")
@@ -409,6 +433,7 @@ async def smart_crawl_url(
     background_tasks: BackgroundTasks,
     url: str,
     tenant_id: str = None,
+    openai_api_key: str = None,
     max_depth: int = 2,
     max_concurrent: int = 5,
     chunk_size: int = 5000,
@@ -434,7 +459,7 @@ async def smart_crawl_url(
     job_id = job["job_id"]
     
     # Start background task
-    background_tasks.add_task(_execute_crawl_job, job_id, url, max_depth, max_concurrent, chunk_size, tenant_id)
+    background_tasks.add_task(_execute_crawl_job, job_id, url, max_depth, max_concurrent, chunk_size, tenant_id, openai_api_key)
     
     return {
         "success": True,
@@ -2052,6 +2077,49 @@ async def generate_hot_streak_endpoint(request: GenerateContentRequest):
             cert_code=short_code,
             question_count=question_count,
             exclude_ids=exclude_ids,
+        )
+        
+        return {
+            "success": True,
+            "questions": [
+                {
+                    "id": q.id,
+                    "question": q.question,
+                    "options": q.options,
+                    "correct_index": q.correct_index,
+                    "topic": q.topic,
+                    "difficulty": q.difficulty,
+                    "explanation": q.explanation,
+                }
+                for q in result.questions
+            ],
+            "topics_covered": result.topics_covered,
+            "certification": short_code,
+        }
+    finally:
+        set_request_api_key(None)
+        set_request_model(None)
+
+
+@app.post("/api/gaming/ticking-bomb/generate")
+async def generate_ticking_bomb_endpoint(request: GenerateContentRequest):
+    """Generate quick-fire questions for Ticking Bomb party game."""
+    from utils import set_request_api_key, set_request_model
+    from generators.game_modes import generate_ticking_bomb_questions
+    
+    try:
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        short_code = (request.certification_code or "SAA").upper()
+        question_count = request.options.get("question_count", 30) if request.options else 30
+        
+        result = await generate_ticking_bomb_questions(
+            user_level=request.user_level or "intermediate",
+            cert_code=short_code,
+            question_count=question_count,
         )
         
         return {

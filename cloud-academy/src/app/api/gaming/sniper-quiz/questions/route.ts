@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 // Learning Agent URL
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://localhost:8000";
+const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://api.cloudarchistry.com";
 
 // Fallback questions if AI generation fails
 const FALLBACK_QUESTIONS = [

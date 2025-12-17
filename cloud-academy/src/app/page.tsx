@@ -253,7 +253,7 @@ export default function Home() {
               <span className="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">CLOUD</span>
               <br />
               <span className="bg-gradient-to-r from-cyan-400 via-blue-400 via-purple-400 to-pink-500 bg-clip-text text-transparent animate-gradient-x drop-shadow-[0_0_30px_rgba(6,182,212,0.5)]">
-                ACADEMY
+                ARCHISTRY
               </span>
             </h1>
             
@@ -568,7 +568,7 @@ export default function Home() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-shadow">
               <Globe className="w-6 h-6 text-white" />
             </div>
-            <span className="font-bold text-white text-lg">CloudAcademy</span>
+            <span className="font-bold text-white text-lg">CloudArchistry</span>
           </div>
           <p className="text-sm text-white/40">
             Part of the CloudFabric ecosystem. © 2024

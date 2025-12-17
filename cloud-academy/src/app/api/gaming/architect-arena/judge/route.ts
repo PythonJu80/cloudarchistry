@@ -108,7 +108,7 @@ async function auditDiagram(
     expectedServices: params.allowedServices ?? [],
   };
 
-  const origin = request.nextUrl?.origin ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = request.nextUrl?.origin ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://cloudarchistry.com";
   const auditResponse = await fetch(`${origin}/api/diagram/audit`, {
     method: "POST",
     headers: {

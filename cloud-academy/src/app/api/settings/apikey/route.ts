@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
 // Decryption helper - must match encryption in settings/route.ts
-const ENCRYPTION_KEY = process.env.NEXTAUTH_SECRET || "cloudacademy-secret-change-in-production";
+const ENCRYPTION_KEY = process.env.NEXTAUTH_SECRET || "cloudarchistry-secret-change-in-production";
 const ALGORITHM = "aes-256-gcm";
 
 function decrypt(encryptedData: string): string {

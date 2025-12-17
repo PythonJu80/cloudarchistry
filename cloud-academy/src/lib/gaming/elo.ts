@@ -1,5 +1,5 @@
 /**
- * Elo Rating System for CloudAcademy Arena
+ * Elo Rating System for CloudArchistry Arena
  * Based on chess Elo with modifications for gaming
  */
 

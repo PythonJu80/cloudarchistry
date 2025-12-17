@@ -75,6 +75,7 @@ export default function GameMatchPage() {
         speed_deploy: "speed-deploy",
         service_slots: "service-slots",
         architect_arena: "architect-arena",
+        ticking_bomb: "ticking-bomb",
       };
       const matchType = data.match.matchType;
       if (matchType && matchType !== "quiz" && gameRoutes[matchType]) {

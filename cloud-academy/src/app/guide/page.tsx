@@ -52,11 +52,11 @@ export default function GuidePage() {
       id: "getting-started",
       title: "Getting Started",
       icon: <Play className="w-5 h-5" />,
-      description: "Learn the basics of Cloud Academy",
+      description: "Learn the basics of Cloud Archistry",
       content: (
         <div className="space-y-4">
           <p className="text-muted-foreground">
-            Welcome to Cloud Academy! This platform helps you prepare for AWS certifications through 
+            Welcome to Cloud Archistry! This platform helps you prepare for AWS certifications through 
             real-world business scenarios, AI-powered learning tools, hands-on diagram building, and 
             real AWS deployment.
           </p>
@@ -460,7 +460,7 @@ export default function GuidePage() {
         <div className="space-y-4">
           <p className="text-muted-foreground">
             The built-in AWS terminal lets you run read-only AWS CLI commands to explore your 
-            account without leaving Cloud Academy.
+            account without leaving Cloud Archistry.
           </p>
           
           <div className="p-4 rounded-lg bg-slate-800/50 border border-border/50">
@@ -567,7 +567,7 @@ export default function GuidePage() {
       content: (
         <div className="space-y-4">
           <p className="text-muted-foreground">
-            Cloud Academy uses your own API keys for AI features and AWS deployment. This gives 
+            Cloud Archistry uses your own API keys for AI features and AWS deployment. This gives 
             you full control over costs and capabilities.
           </p>
           
@@ -630,7 +630,7 @@ export default function GuidePage() {
       id: "tips",
       title: "Tips & Best Practices",
       icon: <Sparkles className="w-5 h-5" />,
-      description: "Get the most out of Cloud Academy",
+      description: "Get the most out of Cloud Archistry",
       content: (
         <div className="space-y-4">
           <div className="grid gap-4">
@@ -713,7 +713,7 @@ export default function GuidePage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 mb-4">
             <GraduationCap className="w-8 h-8 text-cyan-400" />
           </div>
-          <h1 className="text-3xl font-bold mb-3">Welcome to Cloud Academy</h1>
+          <h1 className="text-3xl font-bold mb-3">Welcome to Cloud Archistry</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Learn AWS through real-world business scenarios. Our AI generates custom challenges 
             based on actual companies, tailored to your target certification.

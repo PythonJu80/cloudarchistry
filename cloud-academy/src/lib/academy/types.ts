@@ -1,5 +1,5 @@
 /**
- * CloudAcademy Type Definitions
+ * CloudArchistry Type Definitions
  * These mirror the Prisma models but with proper TypeScript types for JSON fields
  */
 

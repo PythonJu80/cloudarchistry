@@ -487,6 +487,30 @@ NEXT_PUBLIC_LEARNING_AGENT_URL=http://learning-agent:1027
 | Sniper Quiz | `sniper-quiz/page.tsx` | `/api/gaming/sniper-quiz/*` | `/api/game/sniper-quiz/generate` |
 | Cloud Tycoon | `cloud-tycoon/page.tsx` | `/api/gaming/tycoon/*` | `/api/cloud-tycoon/*` |
 | Service Sniper | `service-sniper/page.tsx` | N/A (local only) | N/A |
+| Ticking Bomb | `ticking-bomb/page.tsx` | `/api/gaming/ticking-bomb/*` | `/api/gaming/ticking-bomb/generate` |
+
+---
+
+## Multiplayer Games (WebSocket)
+
+Ticking Bomb is the first party game using WebSockets. Key socket events:
+
+| Event | Direction | Purpose |
+|-------|-----------|---------|
+| `bomb-join-room` | Client → Server | Join a bomb room |
+| `bomb-leave-room` | Client → Server | Leave a bomb room |
+| `bomb-game-start` | Client → Server | Host starts the game |
+| `bomb-game-started` | Server → Client | Notify all players game started |
+| `bomb-pass` | Client → Server | Pass bomb to chosen player |
+| `bomb-passed` | Server → Client | Notify all players of bomb pass |
+| `bomb-answer` | Client → Server | Submit answer |
+| `bomb-answer-result` | Server → Client | Broadcast answer result |
+| `bomb-explode` | Client → Server | Player eliminated (fuse ran out) |
+| `bomb-explosion` | Server → Client | Notify all players of elimination |
+| `bomb-game-over` | Client → Server | Game finished, winner declared |
+| `bomb-game-ended` | Server → Client | Notify all players of winner |
+| `bomb-chat` | Bidirectional | In-room chat messages |
+| `bomb-reaction` | Bidirectional | Emoji reactions |
 
 ---
 

@@ -1,6 +1,6 @@
 /**
- * Prisma client for CloudAcademy
- * Shares the same database as the main CloudMigrate app
+ * Prisma client for CloudArchistry
+ * Shares the same database as the main CloudArchistry app
  */
 
 import { PrismaClient } from "@prisma/client";

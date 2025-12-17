@@ -68,7 +68,7 @@ type ViewMode = "cli" | "cloudformation" | "deploy";
 export function DeploymentPanel({
   nodes,
   edges,
-  projectName = "cloudacademy",
+  projectName = "cloudarchistry",
   environment = "dev",
   region = "us-east-1",
   hasAwsCredentials,

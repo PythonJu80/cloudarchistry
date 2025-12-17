@@ -495,6 +495,166 @@ Make them quick to read and answer - this is a 60-second timed game!{exclude_not
     )
 
 
+class TickingBombQuestions(BaseModel):
+    """Questions for Ticking Bomb game mode"""
+    questions: List[GameQuestion]
+    topics_covered: List[str]
+
+
+TICKING_BOMB_PROMPT = """You are generating quick-fire quiz questions for a "Ticking Bomb" party game.
+This is a multiplayer hot-potato game where players pass a bomb around by answering questions correctly.
+Questions must be FAST to read and answer - the bomb is ticking!
+
+USER PROFILE:
+- Skill Level: {user_level}
+- Target Certification: {cert_name}
+- Focus Areas: {focus_areas}
+
+CERTIFICATION CONTEXT:
+{cert_context}
+
+Generate {question_count} UNIQUE quick-fire questions that:
+
+1. ARE EXTREMELY QUICK TO READ AND ANSWER:
+   - Maximum 1-2 short sentences
+   - NO long scenarios - players have seconds to answer
+   - Clear, unambiguous correct answers
+   - Think "pub quiz" style - snappy and fun
+
+2. MATCH THE CERTIFICATION:
+   - Questions should be relevant to {cert_name}
+   - Cover the key focus areas for this cert
+   - Test practical knowledge, not obscure trivia
+
+3. SCALE TO SKILL LEVEL:
+   - {user_level}: Adjust complexity accordingly
+   - beginner: Core concepts, clear answers
+   - intermediate: Best practices, common patterns
+   - advanced/expert: Optimization, trade-offs
+
+4. ENSURE VARIETY:
+   - Mix different AWS services
+   - Mix question types (what/which/how)
+   - NO REPEATED QUESTIONS
+   - Make them FUN - this is a party game!
+
+5. QUALITY:
+   - All 4 options plausible but distinct
+   - Exactly 1 correct answer
+   - Brief explanations (shown after elimination)
+
+IMPORTANT: Randomize which option is correct! Do NOT always put the correct answer first.
+The correct_index should vary between 0, 1, 2, and 3 across questions.
+
+Return JSON:
+{{
+  "questions": [
+    {{
+      "id": "unique_id",
+      "question": "Short punchy question?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_index": 2,
+      "topic": "AWS Service/Topic",
+      "difficulty": "easy|medium|hard",
+      "explanation": "Brief explanation"
+    }}
+  ],
+  "topics_covered": ["list", "of", "topics"]
+}}
+"""
+
+
+async def generate_ticking_bomb_questions(
+    user_level: str = "intermediate",
+    cert_code: Optional[str] = None,
+    question_count: int = 30,
+    api_key: Optional[str] = None,
+) -> TickingBombQuestions:
+    """
+    Generate quick-fire questions for Ticking Bomb party game.
+    
+    Args:
+        user_level: User's skill level (beginner/intermediate/advanced/expert)
+        cert_code: Target certification code (e.g., "SAA-C03", "DVA-C02")
+        question_count: Number of questions to generate (default 30 for longer games)
+        api_key: User's OpenAI API key
+    
+    Returns:
+        TickingBombQuestions with quick-fire party questions
+    """
+    
+    # Build cert context
+    cert_name = "AWS Cloud Practitioner"
+    cert_context = ""
+    focus_areas = ["Core AWS Services", "Cloud Concepts", "Security", "Pricing"]
+    
+    # Map cert code to persona
+    persona_id = None
+    if cert_code:
+        upper_code = cert_code.upper()
+        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
+        if not persona_id:
+            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    
+    if persona_id and persona_id in CERTIFICATION_PERSONAS:
+        persona = CERTIFICATION_PERSONAS[persona_id]
+        cert_name = persona.get("cert", cert_name)
+        focus_areas = persona.get("focus", focus_areas)
+        cert_context = f"""
+This is for the {cert_name} certification.
+Exam Style: {persona.get('style', 'Standard AWS exam format')}
+Key Focus Areas: {', '.join(focus_areas)}
+"""
+    
+    # Build the prompt
+    system_prompt = TICKING_BOMB_PROMPT.format(
+        user_level=user_level,
+        cert_name=cert_name,
+        focus_areas=", ".join(focus_areas),
+        cert_context=cert_context,
+        question_count=question_count,
+    )
+    
+    user_prompt = f"""Generate {question_count} unique Ticking Bomb questions for:
+- Certification: {cert_name}
+- Skill Level: {user_level}
+
+Make them QUICK and FUN - this is a party game with a ticking bomb!
+Players need to read and answer in seconds."""
+
+    result = await _chat_json(
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        api_key=api_key,
+    )
+    
+    # Parse questions
+    questions = []
+    for idx, q in enumerate(result.get("questions", [])):
+        base_points = {"easy": 10, "medium": 15, "hard": 20}.get(q.get("difficulty", "medium"), 10)
+        
+        questions.append(GameQuestion(
+            id=q.get("id", f"bomb_{uuid.uuid4().hex[:8]}"),
+            question=q.get("question", ""),
+            options=q.get("options", ["A", "B", "C", "D"]),
+            correct_index=q.get("correct_index", 0),
+            topic=q.get("topic", "AWS"),
+            difficulty=q.get("difficulty", "medium"),
+            explanation=q.get("explanation", ""),
+            points=base_points,
+        ))
+    
+    topics_covered = result.get("topics_covered", list(set(q.topic for q in questions)))
+    
+    return TickingBombQuestions(
+        questions=questions,
+        topics_covered=topics_covered,
+    )
+
+
 # Quick test
 if __name__ == "__main__":
     import asyncio

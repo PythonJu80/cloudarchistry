@@ -781,7 +781,7 @@ export default function WorldPage() {
                   <div className="w-8 h-8 rounded-lg overflow-hidden">
                     <NavbarAvatar />
                   </div>
-                  <span className="font-bold">CloudAcademy</span>
+                  <span className="font-bold">Cloud Archistry</span>
                 </Link>
                 <Link href="/guide">
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-cyan-400">

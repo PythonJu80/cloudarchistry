@@ -67,7 +67,7 @@ function LoginContent() {
           <div className="p-3 bg-terminal-green/10 rounded-xl mb-4">
             <Cloud className="w-10 h-10 text-terminal-green" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground font-mono">Cloud Academy</h1>
+          <h1 className="text-2xl font-bold text-foreground font-mono">Cloud Archistry</h1>
           <p className="text-muted-foreground text-sm mt-1">Master AWS Architecture</p>
         </div>
 

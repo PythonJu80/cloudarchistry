@@ -23,7 +23,7 @@ export function initSocketServer(httpServer: HTTPServer): SocketIOServer {
     path: "/api/socket",
     addTrailingSlash: false,
     cors: {
-      origin: process.env.NEXTAUTH_URL || "http://localhost:6060",
+      origin: process.env.NEXTAUTH_URL || "https://cloudarchistry.com",
       methods: ["GET", "POST"],
       credentials: true,
     },

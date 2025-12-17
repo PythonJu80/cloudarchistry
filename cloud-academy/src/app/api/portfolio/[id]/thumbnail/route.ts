@@ -107,7 +107,7 @@ export async function GET(
   
   <!-- Footer line -->
   <line x1="20" y1="230" x2="180" y2="230" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="20" y="242" font-family="system-ui, sans-serif" font-size="6" fill="#94a3b8">CloudAcademy Portfolio</text>
+  <text x="20" y="242" font-family="system-ui, sans-serif" font-size="6" fill="#94a3b8">Cloud Archistry Portfolio</text>
   
   ${portfolio.isExample ? `
   <!-- Example badge -->

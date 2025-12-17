@@ -104,7 +104,7 @@ export default function InvitePage() {
           <div className="p-3 bg-terminal-green/10 rounded-xl mb-4">
             <Cloud className="w-10 h-10 text-terminal-green" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground font-mono">CloudAcademy</h1>
+          <h1 className="text-2xl font-bold text-foreground font-mono">CloudArchistry</h1>
         </div>
 
         <Card className="bg-card border-border">

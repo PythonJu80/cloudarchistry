@@ -507,6 +507,8 @@ export default function GameModePage() {
       router.push("/game/modes/speed-deploy");
     } else if (slug === "architect_arena") {
       router.push("/game/modes/architect-arena/lobby");
+    } else if (slug === "ticking_bomb") {
+      router.push("/game/modes/ticking-bomb");
     }
   };
 

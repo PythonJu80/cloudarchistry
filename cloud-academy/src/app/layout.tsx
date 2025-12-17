@@ -14,7 +14,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CloudAcademy - Master Cloud Architecture",
+  title: "Cloud Archistry - Master Cloud Architecture",
   description: "The world's first AI-powered cloud architecture training simulator. Learn AWS, GCP, and Azure through real-world scenarios.",
   keywords: ["AWS", "cloud", "training", "solutions architect", "certification", "learning", "simulator"],
   icons: {

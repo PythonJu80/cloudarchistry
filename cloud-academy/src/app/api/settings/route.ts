@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
 // Encryption helpers - use NEXTAUTH_SECRET for consistency
-const ENCRYPTION_KEY = process.env.NEXTAUTH_SECRET || "cloudacademy-secret-change-in-production";
+const ENCRYPTION_KEY = process.env.NEXTAUTH_SECRET || "cloudarchistry-secret-change-in-production";
 const ALGORITHM = "aes-256-gcm";
 
 function encrypt(text: string): string {

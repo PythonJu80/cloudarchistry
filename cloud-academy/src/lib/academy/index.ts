@@ -1,5 +1,5 @@
 /**
- * CloudAcademy Library
+ * CloudArchistry Library
  * 
  * Exports all services and types for the challenge platform
  */

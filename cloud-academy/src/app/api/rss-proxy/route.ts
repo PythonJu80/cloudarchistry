@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   try {
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "CloudAcademy RSS Reader/1.0",
+        "User-Agent": "CloudArchistry RSS Reader/1.0",
       },
       next: { revalidate: 300 }, // Cache for 5 minutes
     });
