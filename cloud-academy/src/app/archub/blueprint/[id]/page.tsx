@@ -3,8 +3,15 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import { Download, Copy, Eye, Share2, Trash2, FileCode, Calendar, User } from "lucide-react";
+import { Download, Copy, Eye, Share2, Trash2, FileCode, Calendar, User, Maximize2 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// Dynamic import to avoid SSR issues with React Flow
+const DiagramViewer = dynamic(
+  () => import("@/components/archub/diagram-viewer").then(mod => mod.DiagramViewer),
+  { ssr: false, loading: () => <div className="aspect-video bg-slate-800/50 flex items-center justify-center"><FileCode className="w-24 h-24 text-slate-600 animate-pulse" /></div> }
+);
 
 interface Diagram {
   id: string;
@@ -33,6 +40,8 @@ export default function BlueprintDetailPage() {
   const [diagram, setDiagram] = useState<Diagram | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [diagramContent, setDiagramContent] = useState<string | null>(null);
+  const [showFullscreen, setShowFullscreen] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -46,6 +55,19 @@ export default function BlueprintDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setDiagram(data);
+        
+        // Fetch diagram content for rendering
+        if (data.file_url && data.format === "drawio_xml") {
+          try {
+            const contentRes = await fetch(data.file_url);
+            if (contentRes.ok) {
+              const content = await contentRes.text();
+              setDiagramContent(content);
+            }
+          } catch (err) {
+            console.error("Error fetching diagram content:", err);
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching diagram:", error);
@@ -126,17 +148,59 @@ export default function BlueprintDetailPage() {
           <div className="col-span-8">
             <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 overflow-hidden">
               {/* Diagram Preview */}
-              <div className="aspect-video bg-slate-800/50 flex items-center justify-center">
-                {diagram.thumbnail_url ? (
-                  <img
-                    src={diagram.thumbnail_url}
-                    alt={diagram.title}
-                    className="w-full h-full object-contain"
-                  />
+              <div className="relative">
+                {diagramContent && diagram.format === "drawio_xml" ? (
+                  <>
+                    <DiagramViewer
+                      diagramContent={diagramContent}
+                      format="drawio_xml"
+                      className="aspect-video"
+                      showControls={true}
+                      showMiniMap={false}
+                    />
+                    <button
+                      onClick={() => setShowFullscreen(true)}
+                      className="absolute top-4 right-4 p-2 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-white transition-colors"
+                      title="Fullscreen"
+                    >
+                      <Maximize2 className="w-5 h-5" />
+                    </button>
+                  </>
+                ) : diagram.thumbnail_url ? (
+                  <div className="aspect-video bg-slate-800/50 flex items-center justify-center">
+                    <img
+                      src={diagram.thumbnail_url}
+                      alt={diagram.title}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
                 ) : (
-                  <FileCode className="w-24 h-24 text-slate-600" />
+                  <div className="aspect-video bg-slate-800/50 flex items-center justify-center">
+                    <FileCode className="w-24 h-24 text-slate-600" />
+                  </div>
                 )}
               </div>
+
+              {/* Fullscreen Modal */}
+              {showFullscreen && diagramContent && (
+                <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+                  <div className="w-full h-full max-w-7xl max-h-[90vh] relative">
+                    <button
+                      onClick={() => setShowFullscreen(false)}
+                      className="absolute top-4 right-4 z-10 p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white transition-colors"
+                    >
+                      ✕
+                    </button>
+                    <DiagramViewer
+                      diagramContent={diagramContent}
+                      format="drawio_xml"
+                      className="w-full h-full"
+                      showControls={true}
+                      showMiniMap={true}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Content */}
               <div className="p-6">
