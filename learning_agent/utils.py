@@ -53,12 +53,12 @@ class ApiKeyRequiredError(Exception):
 
 
 def get_openai_client(api_key: Optional[str] = None) -> openai.OpenAI:
-    """Get OpenAI client with provided API key or request context key. No fallback."""
-    # Priority: explicit param > request context (no environment fallback)
-    key = api_key or get_request_api_key()
+    """Get OpenAI client with provided API key, request context key, or .env fallback."""
+    # Priority: explicit param > request context > environment variable
+    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings."
+            "OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file."
         )
     return openai.OpenAI(api_key=key)
 

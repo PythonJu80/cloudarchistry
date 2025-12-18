@@ -1324,6 +1324,9 @@ model AcademyUserProfile {
   // Practice Exams
   examAttempts     ExamAttempt[]
   
+  // ArcHub - Architecture Diagram Community
+  arcHubProfile    ArcHubProfile?
+  
   // Learning Centre Chat
   learningChats    LearningChat[]
   
@@ -3642,4 +3645,91 @@ model ExternalResource {
   @@index([source])
   @@index([certification])
   @@index([isFavorite])
+}
+
+// ArcHub Profile - Architecture Diagram Community Profile
+model ArcHubProfile {
+  id          String   @id @default(cuid())
+  
+  // Link to AcademyUserProfile
+  profileId   String   @unique
+  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // ArcHub-specific display
+  arcHubUsername  String?  @unique  // Optional unique username for ArcHub
+  arcHubBio       String?  @db.Text
+  arcHubAvatarUrl String?
+  
+  // Social/Community
+  githubUrl       String?
+  linkedinUrl     String?
+  websiteUrl      String?
+  
+  // Stats
+  diagramsUploaded  Int @default(0)
+  totalViews        Int @default(0)
+  totalRemixes      Int @default(0)
+  totalExports      Int @default(0)
+  
+  // Reputation
+  reputation        Int @default(0)
+  badges            Json @default("[]")  // [{ "id": "first_upload", "earnedAt": "..." }]
+  
+  // Preferences
+  defaultVisibility String @default("public")  // public, private, unlisted
+  allowRemixes      Boolean @default(true)
+  allowComments     Boolean @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  diagrams    ArcHubDiagram[]
+  
+  @@index([profileId])
+  @@index([arcHubUsername])
+}
+
+// ArcHub Diagram - Community-uploaded architecture diagrams
+model ArcHubDiagram {
+  id          String   @id @default(cuid())
+  
+  // Owner
+  arcHubProfileId String
+  arcHubProfile   ArcHubProfile @relation(fields: [arcHubProfileId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  title       String
+  description String?  @db.Text
+  format      String   // drawio_xml, vsdx
+  status      String   @default("pending")  // pending, processing, completed, failed
+  
+  // Storage
+  fileUrl     String
+  thumbnailUrl String?
+  fileSize    Int?
+  
+  // Categorization
+  tags        Json @default("[]")
+  services    Json @default("[]")  // AWS services detected
+  categories  Json @default("{}")  // { "compute": ["EC2", "Lambda"], "storage": ["S3"] }
+  
+  // Visibility
+  visibility  String @default("public")  // public, private, unlisted
+  
+  // Stats
+  views       Int @default(0)
+  remixes     Int @default(0)
+  exports     Int @default(0)
+  
+  // Remix tracking
+  isRemix     Boolean @default(false)
+  originalDiagramId String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([arcHubProfileId])
+  @@index([status])
+  @@index([visibility])
+  @@index([createdAt])
 }

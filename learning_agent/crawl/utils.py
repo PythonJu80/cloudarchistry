@@ -74,6 +74,19 @@ def is_txt(url: str) -> bool:
     return url.endswith('.txt')
 
 
+def is_sitemap_index(url: str) -> bool:
+    """
+    Check if a URL is a sitemap index.
+    
+    Args:
+        url: URL to check
+        
+    Returns:
+        True if the URL is a sitemap index, False otherwise
+    """
+    return 'sitemap_index' in url.lower() or url.endswith('sitemap_index.xml')
+
+
 def parse_sitemap(sitemap_url: str) -> List[str]:
     """
     Parse a sitemap and extract URLs.
@@ -95,6 +108,67 @@ def parse_sitemap(sitemap_url: str) -> List[str]:
             print(f"Error parsing sitemap XML: {e}")
 
     return urls
+
+
+def parse_sitemap_index(sitemap_index_url: str, max_sitemaps: int = None) -> List[str]:
+    """
+    Parse a sitemap index and extract all child sitemap URLs.
+    
+    Args:
+        sitemap_index_url: URL of the sitemap index
+        max_sitemaps: Maximum number of child sitemaps to return (optional)
+        
+    Returns:
+        List of sitemap URLs found in the index
+    """
+    resp = requests.get(sitemap_index_url)
+    sitemap_urls = []
+
+    if resp.status_code == 200:
+        try:
+            tree = ElementTree.fromstring(resp.content)
+            # Sitemap index uses <sitemap><loc> tags
+            sitemap_urls = [loc.text for loc in tree.findall('.//{*}sitemap/{*}loc')]
+            
+            if max_sitemaps and len(sitemap_urls) > max_sitemaps:
+                sitemap_urls = sitemap_urls[:max_sitemaps]
+                
+        except Exception as e:
+            print(f"Error parsing sitemap index XML: {e}")
+
+    return sitemap_urls
+
+
+def parse_all_sitemaps_from_index(sitemap_index_url: str, max_sitemaps: int = None, max_urls_per_sitemap: int = None) -> List[str]:
+    """
+    Parse a sitemap index and all its child sitemaps to get all URLs.
+    
+    Args:
+        sitemap_index_url: URL of the sitemap index
+        max_sitemaps: Maximum number of child sitemaps to parse (optional)
+        max_urls_per_sitemap: Maximum URLs to extract from each sitemap (optional)
+        
+    Returns:
+        List of all URLs from all sitemaps
+    """
+    all_urls = []
+    
+    # Get all sitemap URLs from the index
+    sitemap_urls = parse_sitemap_index(sitemap_index_url, max_sitemaps)
+    print(f"Found {len(sitemap_urls)} sitemaps in index")
+    
+    # Parse each sitemap
+    for i, sitemap_url in enumerate(sitemap_urls):
+        try:
+            urls = parse_sitemap(sitemap_url)
+            if max_urls_per_sitemap:
+                urls = urls[:max_urls_per_sitemap]
+            all_urls.extend(urls)
+            print(f"Parsed sitemap {i+1}/{len(sitemap_urls)}: {len(urls)} URLs from {sitemap_url}")
+        except Exception as e:
+            print(f"Error parsing sitemap {sitemap_url}: {e}")
+    
+    return all_urls
 
 
 def smart_chunk_markdown(text: str, chunk_size: int = 5000) -> List[str]:

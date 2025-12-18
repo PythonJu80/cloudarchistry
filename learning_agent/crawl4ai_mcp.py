@@ -65,10 +65,21 @@ from crawl.jobs import create_crawl_job, update_crawl_job, get_crawl_job
 from crawl.utils import (
     rerank_results,
     is_sitemap,
+    is_sitemap_index,
     is_txt,
     parse_sitemap,
+    parse_sitemap_index,
+    parse_all_sitemaps_from_index,
     smart_chunk_markdown,
     extract_section_info,
+)
+
+# Crawl presets
+from config.crawl_presets import (
+    get_preset,
+    get_all_presets,
+    filter_sitemap_urls,
+    CRAWL_PRESETS,
 )
 
 # Models
@@ -324,8 +335,8 @@ async def crawl_single_page(url: str, openai_api_key: str = None, tenant_id: str
         set_request_api_key(None)
 
 
-async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurrent: int, chunk_size: int, tenant_id: str = None, openai_api_key: str = None):
-    """Execute a crawl job in the background."""
+async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurrent: int, chunk_size: int, tenant_id: str = None, openai_api_key: str = None, preset: str = None, max_urls: int = None):
+    """Execute a crawl job in the background with optional filtering."""
     from utils import set_request_api_key
     
     try:
@@ -347,9 +358,24 @@ async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurre
         crawled_urls = set()
         
         # Determine crawl strategy based on URL type
-        if is_sitemap(url):
+        if is_sitemap_index(url):
+            # Parse sitemap index and all child sitemaps
+            logger.info(f"Sitemap index detected: {url}")
+            urls_to_crawl = parse_all_sitemaps_from_index(url, max_sitemaps=50)
+            logger.info(f"Sitemap index parsed: {len(urls_to_crawl)} total URLs found")
+            
+            # Apply filtering if preset is specified
+            if preset:
+                urls_to_crawl = filter_sitemap_urls(urls_to_crawl, preset_name=preset)
+                logger.info(f"After filtering with preset '{preset}': {len(urls_to_crawl)} URLs")
+        elif is_sitemap(url):
             urls_to_crawl = parse_sitemap(url)
             logger.info(f"Sitemap found with {len(urls_to_crawl)} URLs")
+            
+            # Apply filtering if preset is specified
+            if preset:
+                urls_to_crawl = filter_sitemap_urls(urls_to_crawl, preset_name=preset)
+                logger.info(f"After filtering with preset '{preset}': {len(urls_to_crawl)} URLs")
         elif is_txt(url):
             # Assume it's a list of URLs
             import requests
@@ -358,10 +384,15 @@ async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurre
         else:
             urls_to_crawl = [url]
         
+        # Apply max_urls limit
+        if max_urls and len(urls_to_crawl) > max_urls:
+            logger.info(f"Limiting crawl to {max_urls} URLs (from {len(urls_to_crawl)})")
+            urls_to_crawl = urls_to_crawl[:max_urls]
+        
         # Crawl URLs
         run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
         
-        for crawl_url in urls_to_crawl[:100]:  # Limit to 100 URLs
+        for crawl_url in urls_to_crawl:
             if crawl_url in crawled_urls:
                 continue
             
@@ -437,35 +468,48 @@ async def smart_crawl_url(
     max_depth: int = 2,
     max_concurrent: int = 5,
     chunk_size: int = 5000,
+    preset: str = None,
+    max_urls: int = None,
 ):
-    """Smart crawl that handles sitemaps, URL lists, and recursive crawling."""
+    """
+    Smart crawl that handles sitemaps, sitemap indexes, URL lists, and recursive crawling.
+    
+    Args:
+        url: URL to crawl (can be a page, sitemap, sitemap index, or .txt file with URLs)
+        preset: Crawl preset name (architecture-only, core-services, learning-essentials, intermediate, comprehensive)
+        max_urls: Maximum number of URLs to crawl (overrides preset default)
+    """
     tenant_id = tenant_id or DEFAULT_TENANT_ID
     
     # Check rate limit
-    allowed, message = await check_tenant_rate_limit(tenant_id)
-    if not allowed:
-        return {"success": False, "error": message}
+    rate_check = await check_tenant_rate_limit(tenant_id)
+    if not rate_check.get("allowed", True):
+        return {"success": False, "error": rate_check.get("reason", "Rate limit exceeded")}
     
     # Create job
     job = await create_crawl_job(url, tenant_id, {
         "max_depth": max_depth,
         "max_concurrent": max_concurrent,
         "chunk_size": chunk_size,
+        "preset": preset,
+        "max_urls": max_urls,
     })
     
     if not job.get("success", True):
         return job
     
-    job_id = job["job_id"]
+    job_id = job["job"]["id"]
     
     # Start background task
-    background_tasks.add_task(_execute_crawl_job, job_id, url, max_depth, max_concurrent, chunk_size, tenant_id, openai_api_key)
+    background_tasks.add_task(_execute_crawl_job, job_id, url, max_depth, max_concurrent, chunk_size, tenant_id, openai_api_key, preset, max_urls)
     
     return {
         "success": True,
         "job_id": job_id,
         "status": "queued",
-        "message": f"Crawl job started for {url}",
+        "message": f"Crawl job started for {url}" + (f" with preset '{preset}'" if preset else ""),
+        "preset": preset,
+        "max_urls": max_urls,
     }
 
 
@@ -492,6 +536,79 @@ async def get_crawl_stats(tenant_id: str = None):
     tenant_id = tenant_id or DEFAULT_TENANT_ID
     stats = await get_tenant_crawl_stats(tenant_id)
     return {"success": True, "tenant_id": tenant_id, **stats}
+
+
+@app.get("/api/crawl/presets")
+async def list_crawl_presets():
+    """List available crawl presets with their configurations."""
+    presets = get_all_presets()
+    return {
+        "success": True,
+        "presets": {
+            name: {
+                "description": config["description"],
+                "max_urls": config["max_urls"],
+                "services_count": len(config.get("services", [])),
+                "include_patterns_count": len(config.get("include_patterns", [])),
+                "exclude_patterns_count": len(config.get("exclude_patterns", [])),
+            }
+            for name, config in presets.items()
+        },
+        "available_presets": list(presets.keys()),
+    }
+
+
+@app.get("/api/crawl/extract-files")
+async def extract_files_from_sitemap(
+    sitemap_url: str = "https://docs.aws.amazon.com/sitemap_index.xml",
+    file_extension: str = ".zip",
+    max_sitemaps: int = None,
+):
+    """
+    Extract all files with a specific extension from AWS documentation sitemap.
+    
+    Args:
+        sitemap_url: URL of sitemap or sitemap index (default: AWS docs sitemap index)
+        file_extension: File extension to filter (default: .zip)
+        max_sitemaps: Maximum number of child sitemaps to parse from index (optional)
+        
+    Returns:
+        List of all URLs matching the file extension
+    """
+    try:
+        all_urls = []
+        
+        # Check if it's a sitemap index
+        if is_sitemap_index(sitemap_url):
+            logger.info(f"Parsing sitemap index: {sitemap_url}")
+            all_urls = parse_all_sitemaps_from_index(sitemap_url, max_sitemaps=max_sitemaps)
+        elif is_sitemap(sitemap_url):
+            logger.info(f"Parsing sitemap: {sitemap_url}")
+            all_urls = parse_sitemap(sitemap_url)
+        else:
+            return {
+                "success": False,
+                "error": "URL must be a sitemap or sitemap index"
+            }
+        
+        # Filter URLs by file extension
+        file_urls = [url for url in all_urls if url.endswith(file_extension)]
+        
+        return {
+            "success": True,
+            "sitemap_url": sitemap_url,
+            "file_extension": file_extension,
+            "total_urls_found": len(all_urls),
+            "file_urls_found": len(file_urls),
+            "files": file_urls,
+        }
+        
+    except Exception as e:
+        logger.error(f"Error extracting files from sitemap: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 # ============================================
