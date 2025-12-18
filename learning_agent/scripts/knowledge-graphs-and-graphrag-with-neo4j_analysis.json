@@ -1,0 +1,1230 @@
+{
+  "file": "/home/kingju/Documents/cloudmigrate-saas/aws_architecture_diagrams/knowledge-graphs-and-graphrag-with-neo4j.pptx",
+  "total_slides": 1,
+  "slide_dimensions": {
+    "width": 12192000,
+    "height": 6858000
+  },
+  "slides": [
+    {
+      "slide_number": 1,
+      "shapes": [
+        {
+          "name": "object 2",
+          "type": "TEXT_BOX (17)",
+          "has_text": true,
+          "position": {
+            "left": 977900,
+            "top": 6331711,
+            "width": 3898900,
+            "height": 289823
+          },
+          "text": "Reviewed for technical accuracy November 2024\n\u00a9 2024, Amazon Web Services, Inc. or its affiliates. All rights reserved."
+        },
+        {
+          "name": "object 3",
+          "type": "TEXT_BOX (17)",
+          "has_text": true,
+          "position": {
+            "left": 5412740,
+            "top": 6365747,
+            "width": 2372995,
+            "height": 228268
+          },
+          "text": "AWS Reference Architecture"
+        },
+        {
+          "name": "object 4",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 109857,
+            "top": 0,
+            "width": 12082143,
+            "height": 6858000
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "object 5",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 202253,
+                "top": 5867933,
+                "width": 591312,
+                "height": 350520
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "object 6",
+              "type": "FREEFORM (5)",
+              "has_text": true,
+              "position": {
+                "left": 9339938,
+                "top": -461711,
+                "width": 2852624,
+                "height": 6858000
+              }
+            },
+            {
+              "name": "object 8",
+              "type": "FREEFORM (5)",
+              "has_text": true,
+              "position": {
+                "left": 110419,
+                "top": 797057,
+                "width": 9144000,
+                "height": 0
+              }
+            }
+          ]
+        },
+        {
+          "name": "object 12",
+          "type": "PLACEHOLDER (14)",
+          "has_text": true,
+          "position": {
+            "left": 118261,
+            "top": 104861,
+            "width": 9178356,
+            "height": 484107
+          },
+          "text": "Knowledge Graphs and GraphRAG with AWS and Neo4j"
+        },
+        {
+          "name": "Oval 618",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9344595,
+            "top": 71768,
+            "width": 274320,
+            "height": 274320
+          },
+          "text": "1",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Oval 619",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9357610,
+            "top": 1291385,
+            "width": 274320,
+            "height": 274320
+          },
+          "text": "2",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Oval 621",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9357610,
+            "top": 1665791,
+            "width": 274320,
+            "height": 274320
+          },
+          "text": "3",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "object 12",
+          "type": "TEXT_BOX (17)",
+          "has_text": true,
+          "position": {
+            "left": 9610501,
+            "top": 52584,
+            "width": 2563580,
+            "height": 6844053
+          },
+          "text": "Structured, unstructured, and semi-structured data exists in a wide variety of systems, including Amazon Redshift, Amazon Simple Storage Service (Amazon S3) and Amazon Managed Streaming for Apache Kafka (Amazon MSK). Other systems can be accessed through an integration layer such as AWS Glue. Some subset of this data is highly connected.  Insights can be uncovered by modeling it as a graph.\nScripts running in Amazon SageMaker pull connected data from these source systems.\nOnce in SageMaker, the data is passed to an Amazon Bedrock process managed by LangChain. Large language models (LLMs) extract entities and format the result as Cypher, the Neo4j query language.  SageMaker passes that Cypher to the Neo4j driver.\nCypher statements wrapping the extracted data and entities are fed into the Neo4j graph database to create a knowledge graph.  The Graph Database is one  component of Neo4j AuraDB, a Neo4j SaaS running on AWS.  \nUsers can explore the resulting knowledge graph in Neo4j Bloom, a BI tool designed specifically for graphs. \nEnrichment can be done with Neo4j Graph Data Science. Entity resolution algorithms resolve duplicate entries. Community detection algorithms can be used to identify clusters and generate local cluster summaries for GraphRAG. Graph embedding algorithms help map and identify topologically similar entities for GraphRAG.\nWith a knowledge graph created, applications can then make use of that graph in a GraphRAG architecture to provide grounded results with fewer hallucinations than alternative approaches.  Those applications can run in a variety of AWS platforms, including AWS Lambda, Amazon Elastic Compute Cloud (Amazon EC2) and Amazon Elastic Kubernetes Service (Amazon EKS).\nClient applications can make calls into functions hosted in Amazon SageMaker.  Those functions query Amazon Bedrock. \nAmazon Bedrock responses are grounded using Neo4j Graph Database with data gathered from the wider enterprise. Using a graph for grounding provides a vector RAG approach with the additional ability to use the structure of the graph to improve responses."
+        },
+        {
+          "name": "Google Shape;169;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 609600,
+            "top": 1345500,
+            "width": 8663351,
+            "height": 4826700
+          },
+          "text": "AWS Cloud",
+          "is_auto_shape": true,
+          "auto_shape_type": "RECTANGLE (1)"
+        },
+        {
+          "name": "Google Shape;171;g27fb0a1e8c5_0_174",
+          "type": "PICTURE (13)",
+          "has_text": false,
+          "position": {
+            "left": 609619,
+            "top": 1345458,
+            "width": 308620,
+            "height": 320333
+          },
+          "is_image": true,
+          "image_type": "image/png"
+        },
+        {
+          "name": "Google Shape;180;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 2581163,
+            "top": 1839421,
+            "width": 1243714,
+            "height": 4102596
+          },
+          "text": "Parsing",
+          "is_auto_shape": true,
+          "auto_shape_type": "RECTANGLE (1)"
+        },
+        {
+          "name": "Google Shape;186;g27fb0a1e8c5_0_174",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 995136,
+            "top": 5181600,
+            "width": 784033,
+            "height": 708761
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;187;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 2738867,
+                "top": 3723872,
+                "width": 457200,
+                "height": 457200
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;188;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 2557384,
+                "top": 4201841,
+                "width": 784033,
+                "height": 230792
+              },
+              "text": "AWS Glue"
+            }
+          ]
+        },
+        {
+          "name": "Google Shape;192;g27fb0a1e8c5_0_174",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 926839,
+            "top": 4197887,
+            "width": 920626,
+            "height": 682446
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;193;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 927457,
+                "top": 1769053,
+                "width": 457200,
+                "height": 457200
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;194;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 692762,
+                "top": 2220707,
+                "width": 920626,
+                "height": 230792
+              },
+              "text": "Amazon MSK"
+            }
+          ]
+        },
+        {
+          "name": "Google Shape;195;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 2183800,
+            "top": 3649763,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "2",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;196;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 3186098,
+            "top": 3124200,
+            "width": 1677,
+            "height": 488728
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Google Shape;197;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 5291158,
+            "top": 2610294,
+            "width": 1218761,
+            "height": 1476789
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Google Shape;198;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 1750685,
+            "top": 3962400,
+            "width": 994550,
+            "height": 0
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Group 124",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 2883124,
+            "top": 4953000,
+            "width": 609300,
+            "height": 916420
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;199;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 3007587,
+                "top": 4564110,
+                "width": 516845,
+                "height": 516845
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;200;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 2961359,
+                "top": 5111239,
+                "width": 609300,
+                "height": 369291
+              },
+              "text": "Amazon Bedrock"
+            }
+          ]
+        },
+        {
+          "name": "Google Shape;203;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 2699621,
+            "top": 2137709,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "3",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;209;g27fb0a1e8c5_0_174",
+          "type": "PICTURE (13)",
+          "has_text": false,
+          "position": {
+            "left": 4552064,
+            "top": 2133600,
+            "width": 898126,
+            "height": 320325
+          },
+          "is_image": true,
+          "image_type": "image/png"
+        },
+        {
+          "name": "Group 118",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 4515855,
+            "top": 3818359,
+            "width": 970545,
+            "height": 747857
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;208;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 4668255,
+                "top": 3992011,
+                "width": 970545,
+                "height": 230792
+              },
+              "text": "Graph Database"
+            },
+            {
+              "name": "Google Shape;228;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 4906107,
+                "top": 3474946,
+                "width": 537450,
+                "height": 537450
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            }
+          ]
+        },
+        {
+          "name": "Group 119",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 4555440,
+            "top": 5009436,
+            "width": 891375,
+            "height": 857964
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;207;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 4662954,
+                "top": 4798359,
+                "width": 891375,
+                "height": 369291
+              },
+              "text": "Graph Data Science"
+            },
+            {
+              "name": "Google Shape;229;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 4837485,
+                "top": 4309686,
+                "width": 502000,
+                "height": 502000
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            }
+          ]
+        },
+        {
+          "name": "Group 122",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 2667000,
+            "top": 2343694,
+            "width": 1041549,
+            "height": 780506
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;232;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 2997284,
+                "top": 2619238,
+                "width": 537450,
+                "height": 537450
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;233;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 2745235,
+                "top": 3168952,
+                "width": 1041549,
+                "height": 230792
+              },
+              "text": "Neo4j driver"
+            }
+          ]
+        },
+        {
+          "name": "Group 582",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 8116626,
+            "top": 2514600,
+            "width": 898200,
+            "height": 689039
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;249;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 8529725,
+                "top": 3002184,
+                "width": 457200,
+                "height": 457200
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;250;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 8316130,
+                "top": 3460431,
+                "width": 898200,
+                "height": 230792
+              },
+              "text": "AWS Lambda"
+            }
+          ]
+        },
+        {
+          "name": "object 12",
+          "type": "TEXT_BOX (17)",
+          "has_text": true,
+          "position": {
+            "left": 140617,
+            "top": 641848,
+            "width": 8682203,
+            "height": 408958
+          },
+          "text": "This reference architecture demonstrates how AWS services and Neo4j can be used to create knowledge graphs.  Those graphs can then be used in a GraphRAG architecture."
+        },
+        {
+          "name": "Google Shape;202;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9346730,
+            "top": 2412012,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "4",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;204;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9346427,
+            "top": 3092240,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "5",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;215;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9353769,
+            "top": 3560752,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "6",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;218;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9336301,
+            "top": 5667272,
+            "width": 274200,
+            "height": 279108
+          },
+          "text": "8",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;219;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9353769,
+            "top": 6126276,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "9",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Group 116",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 1005195,
+            "top": 3218310,
+            "width": 763915,
+            "height": 678311
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Graphic 8",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 1187810,
+                "top": 3284231,
+                "width": 459440,
+                "height": 459440
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "TextBox 9",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 1020190,
+                "top": 3731710,
+                "width": 763915,
+                "height": 230832
+              },
+              "text": "Amazon S3"
+            }
+          ]
+        },
+        {
+          "name": "Group 114",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 884238,
+            "top": 2286000,
+            "width": 1005829,
+            "height": 631044
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Graphic 23",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 1205199,
+                "top": 2590800,
+                "width": 442051,
+                "height": 442051
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "TextBox 9",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 884238,
+                "top": 2991012,
+                "width": 1005829,
+                "height": 230832
+              },
+              "text": "Amazon Redshift"
+            }
+          ]
+        },
+        {
+          "name": "Group 123",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 2667000,
+            "top": 3612928,
+            "width": 1038194,
+            "height": 851343
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Graphic 22",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 3009095,
+                "top": 3676676,
+                "width": 513829,
+                "height": 513829
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "TextBox 15",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 2746912,
+                "top": 4158687,
+                "width": 1038194,
+                "height": 369332
+              },
+              "text": "Amazon SageMaker"
+            }
+          ]
+        },
+        {
+          "name": "Google Shape;180;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 793565,
+            "top": 1839420,
+            "width": 1243714,
+            "height": 4102597
+          },
+          "text": "Data sources",
+          "is_auto_shape": true,
+          "auto_shape_type": "RECTANGLE (1)"
+        },
+        {
+          "name": "Google Shape;180;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 4368761,
+            "top": 1839413,
+            "width": 1243714,
+            "height": 4102597
+          },
+          "text": "Knowledge graph",
+          "is_auto_shape": true,
+          "auto_shape_type": "RECTANGLE (1)"
+        },
+        {
+          "name": "Google Shape;180;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 6156359,
+            "top": 1885956,
+            "width": 1243714,
+            "height": 4056053
+          },
+          "text": "GraphRAG",
+          "is_auto_shape": true,
+          "auto_shape_type": "RECTANGLE (1)"
+        },
+        {
+          "name": "Google Shape;180;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 7943957,
+            "top": 1885957,
+            "width": 1243714,
+            "height": 4056052
+          },
+          "text": "Applications",
+          "is_auto_shape": true,
+          "auto_shape_type": "RECTANGLE (1)"
+        },
+        {
+          "name": "Group 121",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 4732402,
+            "top": 2590800,
+            "width": 537450,
+            "height": 784338
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;236;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 4874104,
+                "top": 2615406,
+                "width": 537450,
+                "height": 537450
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;208;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 4874104,
+                "top": 3168952,
+                "width": 537450,
+                "height": 230792
+              },
+              "text": "Bloom"
+            }
+          ]
+        },
+        {
+          "name": "Group 586",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 8116626,
+            "top": 3667501,
+            "width": 898200,
+            "height": 686189
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Graphic 5",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 8515423,
+                "top": 3861573,
+                "width": 475306,
+                "height": 475306
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;250;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 8305800,
+                "top": 4316970,
+                "width": 898200,
+                "height": 230792
+              },
+              "text": "Amazon EC2"
+            }
+          ]
+        },
+        {
+          "name": "Group 592",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 8116626,
+            "top": 4817552,
+            "width": 898200,
+            "height": 712802
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Graphic 23",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 8372107,
+                "top": 4697398,
+                "width": 486942,
+                "height": 486942
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;250;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 8166478,
+                "top": 5179408,
+                "width": 898200,
+                "height": 230792
+              },
+              "text": "Amazon EKS"
+            }
+          ]
+        },
+        {
+          "name": "Google Shape;196;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 3186097,
+            "top": 4464271,
+            "width": 1678,
+            "height": 488729
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Google Shape;196;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 3456499,
+            "top": 2612419,
+            "width": 1297208,
+            "height": 1474665
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Google Shape;196;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 4979293,
+            "top": 4625679,
+            "width": 1678,
+            "height": 291657
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Google Shape;196;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 5001127,
+            "top": 3410412,
+            "width": 1677,
+            "height": 381000
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Google Shape;196;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 6776967,
+            "top": 3122076,
+            "width": 1677,
+            "height": 488728
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Group 614",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 6473993,
+            "top": 4950876,
+            "width": 609300,
+            "height": 916420
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;199;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 3007587,
+                "top": 4564110,
+                "width": 516845,
+                "height": 516845
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;200;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 2961359,
+                "top": 5111239,
+                "width": 609300,
+                "height": 369291
+              },
+              "text": "Amazon Bedrock"
+            }
+          ]
+        },
+        {
+          "name": "Group 617",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 6257869,
+            "top": 2341570,
+            "width": 1041549,
+            "height": 780506
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Google Shape;232;g27fb0a1e8c5_0_174",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 2997284,
+                "top": 2619238,
+                "width": 537450,
+                "height": 537450
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "Google Shape;233;g27fb0a1e8c5_0_174",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 2745235,
+                "top": 3168952,
+                "width": 1041549,
+                "height": 230792
+              },
+              "text": "Neo4j driver"
+            }
+          ]
+        },
+        {
+          "name": "Group 623",
+          "type": "GROUP (6)",
+          "has_text": false,
+          "position": {
+            "left": 6257869,
+            "top": 3610804,
+            "width": 1038194,
+            "height": 851343
+          },
+          "is_group": true,
+          "children": [
+            {
+              "name": "Graphic 22",
+              "type": "PICTURE (13)",
+              "has_text": false,
+              "position": {
+                "left": 3009095,
+                "top": 3676676,
+                "width": 513829,
+                "height": 513829
+              },
+              "is_image": true,
+              "image_type": "image/png"
+            },
+            {
+              "name": "TextBox 15",
+              "type": "TEXT_BOX (17)",
+              "has_text": true,
+              "position": {
+                "left": 2746912,
+                "top": 4158687,
+                "width": 1038194,
+                "height": 369332
+              },
+              "text": "Amazon SageMaker"
+            }
+          ]
+        },
+        {
+          "name": "Google Shape;196;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 6776966,
+            "top": 4462147,
+            "width": 1678,
+            "height": 488729
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Google Shape;198;g27fb0a1e8c5_0_174",
+          "type": "LINE (9)",
+          "has_text": false,
+          "position": {
+            "left": 7033881,
+            "top": 3867718,
+            "width": 1021172,
+            "height": 3310
+          },
+          "is_connector": true
+        },
+        {
+          "name": "Google Shape;173;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 891320,
+            "top": 2144511,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "1",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;202;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 3999342,
+            "top": 2664528,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "4",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;204;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 4454280,
+            "top": 2549112,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "5",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;215;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 7979526,
+            "top": 2204641,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "7",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;218;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 7547441,
+            "top": 3531088,
+            "width": 274200,
+            "height": 279108
+          },
+          "text": "8",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;219;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 5829143,
+            "top": 2697600,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "9",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;215;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 4454280,
+            "top": 4893889,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "6",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        },
+        {
+          "name": "Google Shape;215;g27fb0a1e8c5_0_174",
+          "type": "AUTO_SHAPE (1)",
+          "has_text": true,
+          "position": {
+            "left": 9356680,
+            "top": 4560520,
+            "width": 274200,
+            "height": 274200
+          },
+          "text": "7",
+          "is_auto_shape": true,
+          "auto_shape_type": "OVAL (9)"
+        }
+      ]
+    }
+  ]
+}

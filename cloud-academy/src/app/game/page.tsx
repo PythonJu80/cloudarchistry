@@ -20,6 +20,8 @@ import {
   Sparkles,
   X,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -105,29 +107,60 @@ const ScanLines = () => (
   />
 );
 
-// Featured game hero card
-const FeaturedGameHero = ({ onPlay }: { onPlay: () => void }) => {
+// Game carousel configuration - which games to feature
+const FEATURED_GAMES = GAME_MODES.filter(m => m.isLive);
+
+// Carousel slide for a single game
+const CarouselSlide = ({ 
+  game, 
+  onPlay,
+  isActive 
+}: { 
+  game: typeof GAME_MODES[0]; 
+  onPlay: () => void;
+  isActive: boolean;
+}) => {
   const [glitch, setGlitch] = useState(false);
+  
+  // Generate stable random player count (lazy initializer runs once)
+  const [playerCount] = useState(() => Math.floor(Math.random() * 200 + 50));
 
   useEffect(() => {
+    if (!isActive) return;
     const interval = setInterval(() => {
       setGlitch(true);
       setTimeout(() => setGlitch(false), 150);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isActive]);
+
+  // Extract gradient colors for glow effect
+  const gradientMatch = game.gradient.match(/#[a-fA-F0-9]{6}/g);
+  const glowColors = gradientMatch ? gradientMatch.join(', ') : '#ef4444, #f97316';
 
   return (
-    <div className="relative mb-8 group cursor-pointer" onClick={onPlay}>
+    <div className="relative group cursor-pointer w-full" onClick={onPlay}>
       {/* Massive glow effect */}
-      <div className="absolute -inset-4 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 rounded-3xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-500 animate-pulse" />
+      <div 
+        className="absolute -inset-4 rounded-3xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-500 animate-pulse" 
+        style={{ background: `linear-gradient(to right, ${glowColors})` }}
+      />
       
       {/* Card */}
-      <div className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-gradient-to-br from-gray-900 via-gray-900 to-red-950">
+      <div 
+        className="relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-gray-900 via-gray-900"
+        style={{ borderColor: gradientMatch?.[0] ? `${gradientMatch[0]}80` : '#ef444480' }}
+      >
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNCAxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZjAwMDAiIG9wYWNpdHk9Ii4xIi8+PC9nPjwvc3ZnPg==')] animate-spin-slow" style={{ animationDuration: '60s' }} />
         </div>
+
+        {/* Gradient overlay based on game */}
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{ background: game.gradient }}
+        />
 
         <div className="relative p-8 flex items-center gap-8">
           {/* Left: Icon and info */}
@@ -136,13 +169,16 @@ const FeaturedGameHero = ({ onPlay }: { onPlay: () => void }) => {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20 border border-green-500/50 mb-4">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <span className="text-xs font-bold text-green-400 uppercase tracking-wider">Live Now</span>
-              <span className="text-xs text-green-400/70">• 247 playing</span>
+              <span className="text-xs text-green-400/70">• {playerCount} playing</span>
             </div>
 
             {/* Title with glitch effect */}
             <h2 className={`text-5xl md:text-6xl font-black mb-3 ${glitch ? 'animate-glitch' : ''}`}>
-              <span className="bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
-                QUIZ BATTLE
+              <span 
+                className="bg-clip-text text-transparent"
+                style={{ backgroundImage: game.gradient }}
+              >
+                {game.title.toUpperCase()}
               </span>
             </h2>
             <style jsx>{`
@@ -158,15 +194,14 @@ const FeaturedGameHero = ({ onPlay }: { onPlay: () => void }) => {
             `}</style>
 
             <p className="text-gray-400 text-lg mb-6 max-w-md">
-              Head-to-head AWS knowledge showdown. Race to buzz in first. 
-              <span className="text-red-400 font-semibold"> Fastest brain wins.</span>
+              {game.description}
             </p>
 
             {/* Stats row */}
             <div className="flex items-center gap-6 mb-6">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm text-gray-400">1v1</span>
+                <span className="text-sm text-gray-400">{game.players}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Timer className="w-4 h-4 text-yellow-400" />
@@ -181,7 +216,8 @@ const FeaturedGameHero = ({ onPlay }: { onPlay: () => void }) => {
             {/* CTA Button */}
             <Button
               size="lg"
-              className="relative overflow-hidden bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-400 hover:to-orange-400 text-white font-black text-xl px-10 py-6 rounded-xl group/btn"
+              className="relative overflow-hidden text-white font-black text-xl px-10 py-6 rounded-xl group/btn"
+              style={{ background: game.gradient }}
             >
               <span className="relative z-10 flex items-center gap-3">
                 <Play className="w-6 h-6 fill-current" />
@@ -194,11 +230,20 @@ const FeaturedGameHero = ({ onPlay }: { onPlay: () => void }) => {
 
           {/* Right: Large animated icon */}
           <div className="hidden lg:block relative">
-            <div className="text-[150px] leading-none animate-bounce-slow">⚔️</div>
+            <div className="text-[150px] leading-none animate-bounce-slow">{game.icon}</div>
             {/* Floating particles around icon */}
-            <div className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full animate-ping" />
-            <div className="absolute bottom-10 left-0 w-3 h-3 bg-orange-500 rounded-full animate-ping" style={{ animationDelay: '0.5s' }} />
-            <div className="absolute top-20 right-10 w-2 h-2 bg-yellow-500 rounded-full animate-ping" style={{ animationDelay: '1s' }} />
+            <div 
+              className="absolute top-0 right-0 w-4 h-4 rounded-full animate-ping" 
+              style={{ backgroundColor: gradientMatch?.[0] || '#ef4444' }}
+            />
+            <div 
+              className="absolute bottom-10 left-0 w-3 h-3 rounded-full animate-ping" 
+              style={{ backgroundColor: gradientMatch?.[1] || '#f97316', animationDelay: '0.5s' }}
+            />
+            <div 
+              className="absolute top-20 right-10 w-2 h-2 rounded-full animate-ping" 
+              style={{ backgroundColor: gradientMatch?.[0] || '#fbbf24', animationDelay: '1s' }}
+            />
             <style jsx>{`
               @keyframes bounce-slow {
                 0%, 100% { transform: translateY(0) rotate(-5deg); }
@@ -212,6 +257,126 @@ const FeaturedGameHero = ({ onPlay }: { onPlay: () => void }) => {
         {/* Bottom gradient fade */}
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-900 to-transparent" />
       </div>
+    </div>
+  );
+};
+
+// Game carousel component
+const GameCarousel = ({ 
+  onPlayQuizBattle,
+  onNavigateToMode 
+}: { 
+  onPlayQuizBattle: () => void;
+  onNavigateToMode: (slug: GameModeSlug) => void;
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Auto-advance carousel every 4 seconds
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % FEATURED_GAMES.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isPaused]);
+
+  const goToSlide = (index: number) => {
+    setCurrentIndex(index);
+  };
+
+  const goToPrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + FEATURED_GAMES.length) % FEATURED_GAMES.length);
+  };
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % FEATURED_GAMES.length);
+  };
+
+  const handlePlay = (game: typeof GAME_MODES[0]) => {
+    if (game.slug === 'quiz_battle') {
+      onPlayQuizBattle();
+    } else {
+      onNavigateToMode(game.slug);
+    }
+  };
+
+  const currentGame = FEATURED_GAMES[currentIndex];
+
+  return (
+    <div 
+      className="relative mb-8"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Carousel container */}
+      <div className="relative overflow-hidden">
+        <div 
+          className="flex transition-transform duration-700 ease-in-out"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {FEATURED_GAMES.map((game, index) => (
+            <div key={game.slug} className="w-full flex-shrink-0">
+              <CarouselSlide 
+                game={game} 
+                onPlay={() => handlePlay(game)}
+                isActive={index === currentIndex}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Navigation arrows */}
+      <button
+        onClick={goToPrev}
+        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 border border-white/20 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+        style={{ opacity: isPaused ? 1 : 0 }}
+      >
+        <ChevronLeft className="w-6 h-6 text-white" />
+      </button>
+      <button
+        onClick={goToNext}
+        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 border border-white/20 transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+        style={{ opacity: isPaused ? 1 : 0 }}
+      >
+        <ChevronRight className="w-6 h-6 text-white" />
+      </button>
+
+      {/* Dot indicators */}
+      <div className="flex justify-center gap-2 mt-4">
+        {FEATURED_GAMES.map((game, index) => (
+          <button
+            key={game.slug}
+            onClick={() => goToSlide(index)}
+            className={`relative h-2 rounded-full transition-all duration-300 ${
+              index === currentIndex 
+                ? 'w-8' 
+                : 'w-2 hover:bg-white/50'
+            }`}
+            style={{
+              background: index === currentIndex ? currentGame.gradient : 'rgba(255,255,255,0.3)'
+            }}
+          >
+            {/* Progress bar for active slide */}
+            {index === currentIndex && !isPaused && (
+              <div 
+                className="absolute inset-0 rounded-full bg-white/30 origin-left"
+                style={{ 
+                  animation: 'progress 4s linear',
+                }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <style jsx>{`
+        @keyframes progress {
+          from { transform: scaleX(0); }
+          to { transform: scaleX(1); }
+        }
+      `}</style>
     </div>
   );
 };
@@ -606,8 +771,11 @@ export default function GameModePage() {
             </div>
           )}
 
-          {/* Featured Game Hero */}
-          <FeaturedGameHero onPlay={() => setShowChallengeModal(true)} />
+          {/* Featured Game Carousel */}
+          <GameCarousel 
+            onPlayQuizBattle={() => setShowChallengeModal(true)} 
+            onNavigateToMode={navigateToMode}
+          />
 
           {/* Challenge Modal */}
           {showChallengeModal && (

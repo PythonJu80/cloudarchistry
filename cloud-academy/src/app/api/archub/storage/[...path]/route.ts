@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const MINIO_INTERNAL_URL = process.env.MINIO_INTERNAL_URL || "http://minio:9000";
+const DIAGRAM_API_URL = process.env.DIAGRAM_API_URL || "http://diagram-api:8002";
 
 export async function GET(
   req: NextRequest,
@@ -8,11 +8,14 @@ export async function GET(
 ) {
   try {
     const filePath = params.path.join("/");
-    const minioUrl = `${MINIO_INTERNAL_URL}/${filePath}`;
     
-    const response = await fetch(minioUrl);
+    // Use the diagram API's storage endpoint which has proper MinIO auth
+    const apiUrl = `${DIAGRAM_API_URL}/storage/${filePath}`;
+    
+    const response = await fetch(apiUrl);
     
     if (!response.ok) {
+      console.error(`Failed to fetch from diagram API: ${response.status} ${response.statusText}`);
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
     

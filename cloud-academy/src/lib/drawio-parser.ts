@@ -229,6 +229,7 @@ export function parseDrawioXml(xmlContent: string): ParsedDiagram {
             label: service.shortName || service.name,
             sublabel: cleanLabel(value),
             color: service.color,
+            iconPath: getAwsIconPath(service.id),
           },
           style: {
             width,
@@ -291,9 +292,92 @@ export function parseDrawioXml(xmlContent: string): ParsedDiagram {
  * Identify AWS service from Draw.io style string
  */
 function identifyAwsService(style: string, value: string): string | null {
+  const styleLower = style.toLowerCase();
+  
+  // Direct resIcon matching (most common in AWS4 shapes) - e.g., resIcon=mxgraph.aws4.s3
+  const resIconMatch = style.match(/resIcon=mxgraph\.aws4\.([^;]+)/i);
+  if (resIconMatch) {
+    const serviceName = resIconMatch[1].toLowerCase();
+    // Direct mapping for common services
+    const directMap: Record<string, string> = {
+      "s3": "s3",
+      "ec2": "ec2",
+      "lambda": "lambda",
+      "lambda_function": "lambda",
+      "rds": "rds",
+      "dynamodb": "dynamodb",
+      "cloudfront": "cloudfront",
+      "route_53": "route53",
+      "api_gateway": "api-gateway",
+      "elastic_load_balancing": "alb",
+      "application_load_balancer": "alb",
+      "network_load_balancer": "nlb",
+      "internet_gateway": "internet-gateway",
+      "nat_gateway": "nat-gateway",
+      "vpc": "vpc",
+      "waf": "waf",
+      "shield": "shield",
+      "cognito": "cognito",
+      "sqs": "sqs",
+      "sns": "sns",
+      "ecs": "ecs",
+      "eks": "eks",
+      "fargate": "fargate",
+      "ecr": "ecr",
+      "aurora": "aurora",
+      "elasticache": "elasticache",
+      "redshift": "redshift",
+      "glue": "glue",
+      "athena": "athena",
+      "quicksight": "quicksight",
+      "kinesis": "kinesis-streams",
+      "kinesis_data_streams": "kinesis-streams",
+      "kinesis_data_firehose": "kinesis-firehose",
+      "cloudwatch": "cloudwatch",
+      "cloudtrail": "cloudtrail",
+      "iam": "iam",
+      "kms": "kms",
+      "secrets_manager": "secrets-manager",
+      "glacier": "glacier",
+      "efs": "efs",
+      "ebs": "ebs",
+      "backup": "backup",
+      "step_functions": "step-functions",
+      "eventbridge": "eventbridge",
+      "msk": "msk",
+      "opensearch": "opensearch",
+      "neptune": "neptune",
+      "documentdb": "documentdb",
+    };
+    if (directMap[serviceName]) {
+      return directMap[serviceName];
+    }
+  }
+  
+  // Direct prIcon matching (product icons) - e.g., prIcon=mxgraph.aws4.route_53
+  const prIconMatch = style.match(/prIcon=mxgraph\.aws4\.([^;]+)/i);
+  if (prIconMatch) {
+    const serviceName = prIconMatch[1].toLowerCase();
+    const directMap: Record<string, string> = {
+      "route_53": "route53",
+      "cloudfront": "cloudfront",
+      "api_gateway": "api-gateway",
+      "lambda": "lambda",
+      "s3": "s3",
+      "ec2": "ec2",
+      "rds": "rds",
+      "dynamodb": "dynamodb",
+      "ecs": "ecs",
+      "eks": "eks",
+    };
+    if (directMap[serviceName]) {
+      return directMap[serviceName];
+    }
+  }
+  
   // Check style for AWS shape patterns
   for (const [pattern, serviceId] of Object.entries(DRAWIO_AWS_PATTERNS)) {
-    if (style.toLowerCase().includes(pattern.toLowerCase())) {
+    if (styleLower.includes(pattern.toLowerCase())) {
       return serviceId;
     }
   }
@@ -304,28 +388,6 @@ function identifyAwsService(style: string, value: string): string | null {
     const shape = shapeMatch[1].toLowerCase();
     for (const [pattern, serviceId] of Object.entries(DRAWIO_AWS_PATTERNS)) {
       if (shape.includes(pattern.toLowerCase().replace("mxgraph.", ""))) {
-        return serviceId;
-      }
-    }
-  }
-  
-  // Check for resIcon= attribute (common in AWS4 shapes)
-  const resIconMatch = style.match(/resIcon=([^;]+)/);
-  if (resIconMatch) {
-    const resIcon = resIconMatch[1].toLowerCase();
-    for (const [pattern, serviceId] of Object.entries(DRAWIO_AWS_PATTERNS)) {
-      if (resIcon.includes(pattern.toLowerCase().replace("mxgraph.", ""))) {
-        return serviceId;
-      }
-    }
-  }
-  
-  // Check for prIcon= attribute
-  const prIconMatch = style.match(/prIcon=([^;]+)/);
-  if (prIconMatch) {
-    const prIcon = prIconMatch[1].toLowerCase();
-    for (const [pattern, serviceId] of Object.entries(DRAWIO_AWS_PATTERNS)) {
-      if (prIcon.includes(pattern.toLowerCase().replace("mxgraph.", ""))) {
         return serviceId;
       }
     }
@@ -427,6 +489,111 @@ function cleanLabel(value: string): string {
  */
 export function getCategoryColor(category: string): string {
   return CATEGORY_COLORS[category] || "#6B7280";
+}
+
+/**
+ * Get AWS icon path for a service ID
+ */
+function getAwsIconPath(serviceId: string): string | undefined {
+  // Map service IDs to AWS Architecture icon paths (48px size for quality)
+  const iconMap: Record<string, string> = {
+    // Compute
+    "ec2": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Compute/48/Arch_Amazon-EC2_48.svg",
+    "lambda": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Compute/48/Arch_AWS-Lambda_48.svg",
+    "auto-scaling": "/aws-icons/Architecture-Group-Icons_07312025/Auto-Scaling-group_32.svg",
+    "batch": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Compute/48/Arch_AWS-Batch_48.svg",
+    "lightsail": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Compute/48/Arch_Amazon-Lightsail_48.svg",
+    
+    // Containers
+    "ecs": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Containers/48/Arch_Amazon-Elastic-Container-Service_48.svg",
+    "eks": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Containers/48/Arch_Amazon-Elastic-Kubernetes-Service_48.svg",
+    "fargate": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Containers/48/Arch_AWS-Fargate_48.svg",
+    "ecr": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Containers/48/Arch_Amazon-Elastic-Container-Registry_48.svg",
+    
+    // Database
+    "rds": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Database/48/Arch_Amazon-RDS_48.svg",
+    "aurora": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Database/48/Arch_Amazon-Aurora_48.svg",
+    "dynamodb": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Database/48/Arch_Amazon-DynamoDB_48.svg",
+    "elasticache": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Database/48/Arch_Amazon-ElastiCache_48.svg",
+    "redshift": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_Amazon-Redshift_48.svg",
+    "neptune": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Database/48/Arch_Amazon-Neptune_48.svg",
+    "documentdb": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Database/48/Arch_Amazon-DocumentDB_48.svg",
+    "memorydb": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Database/48/Arch_Amazon-MemoryDB-for-Redis_48.svg",
+    
+    // Storage
+    "s3": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Storage/48/Arch_Amazon-Simple-Storage-Service_48.svg",
+    "glacier": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Storage/48/Arch_Amazon-S3-Glacier_48.svg",
+    "efs": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Storage/48/Arch_Amazon-Elastic-File-System_48.svg",
+    "ebs": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Storage/48/Arch_Amazon-Elastic-Block-Store_48.svg",
+    "fsx": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Storage/48/Arch_Amazon-FSx_48.svg",
+    "backup": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Storage/48/Arch_AWS-Backup_48.svg",
+    "storage-gateway": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Storage/48/Arch_AWS-Storage-Gateway_48.svg",
+    
+    // Networking
+    "vpc": "/aws-icons/Architecture-Group-Icons_07312025/Virtual-private-cloud-VPC_32.svg",
+    "route53": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_Amazon-Route-53_48.svg",
+    "cloudfront": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_Amazon-CloudFront_48.svg",
+    "api-gateway": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_Amazon-API-Gateway_48.svg",
+    "alb": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_Elastic-Load-Balancing_48.svg",
+    "nlb": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_Elastic-Load-Balancing_48.svg",
+    "internet-gateway": "/aws-icons/Architecture-Group-Icons_07312025/AWS-Cloud_32.svg",
+    "nat-gateway": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_Amazon-VPC_48.svg",
+    "transit-gateway": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_AWS-Transit-Gateway_48.svg",
+    "direct-connect": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_AWS-Direct-Connect_48.svg",
+    "global-accelerator": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_AWS-Global-Accelerator_48.svg",
+    "privatelink": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_AWS-PrivateLink_48.svg",
+    "vpn-gateway": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Networking-Content-Delivery/48/Arch_AWS-Site-to-Site-VPN_48.svg",
+    
+    // Security
+    "iam": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_AWS-Identity-and-Access-Management_48.svg",
+    "cognito": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_Amazon-Cognito_48.svg",
+    "waf": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_AWS-WAF_48.svg",
+    "shield": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_AWS-Shield_48.svg",
+    "guardduty": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_Amazon-GuardDuty_48.svg",
+    "kms": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_AWS-Key-Management-Service_48.svg",
+    "secrets-manager": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_AWS-Secrets-Manager_48.svg",
+    "acm": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_AWS-Certificate-Manager_48.svg",
+    "inspector": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_Amazon-Inspector_48.svg",
+    "macie": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_Amazon-Macie_48.svg",
+    "security-hub": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_AWS-Security-Hub_48.svg",
+    "detective": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Security-Identity-Compliance/48/Arch_Amazon-Detective_48.svg",
+    
+    // Integration
+    "sqs": "/aws-icons/Architecture-Service-Icons_07312025/Arch_App-Integration/48/Arch_Amazon-Simple-Queue-Service_48.svg",
+    "sns": "/aws-icons/Architecture-Service-Icons_07312025/Arch_App-Integration/48/Arch_Amazon-Simple-Notification-Service_48.svg",
+    "eventbridge": "/aws-icons/Architecture-Service-Icons_07312025/Arch_App-Integration/48/Arch_Amazon-EventBridge_48.svg",
+    "step-functions": "/aws-icons/Architecture-Service-Icons_07312025/Arch_App-Integration/48/Arch_AWS-Step-Functions_48.svg",
+    "appsync": "/aws-icons/Architecture-Service-Icons_07312025/Arch_App-Integration/48/Arch_AWS-AppSync_48.svg",
+    "mq": "/aws-icons/Architecture-Service-Icons_07312025/Arch_App-Integration/48/Arch_Amazon-MQ_48.svg",
+    "ses": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Business-Applications/48/Arch_Amazon-Simple-Email-Service_48.svg",
+    
+    // Management
+    "cloudwatch": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Management-Governance/48/Arch_Amazon-CloudWatch_48.svg",
+    "cloudtrail": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Management-Governance/48/Arch_AWS-CloudTrail_48.svg",
+    "systems-manager": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Management-Governance/48/Arch_AWS-Systems-Manager_48.svg",
+    "config": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Management-Governance/48/Arch_AWS-Config_48.svg",
+    "xray": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Developer-Tools/48/Arch_AWS-X-Ray_48.svg",
+    "cloudformation": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Management-Governance/48/Arch_AWS-CloudFormation_48.svg",
+    "trusted-advisor": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Management-Governance/48/Arch_AWS-Trusted-Advisor_48.svg",
+    
+    // Analytics
+    "kinesis-streams": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_Amazon-Kinesis-Data-Streams_48.svg",
+    "kinesis-firehose": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_Amazon-Kinesis-Data-Firehose_48.svg",
+    "kinesis-analytics": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_Amazon-Kinesis-Data-Analytics_48.svg",
+    "athena": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_Amazon-Athena_48.svg",
+    "glue": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_AWS-Glue_48.svg",
+    "quicksight": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_Amazon-QuickSight_48.svg",
+    "opensearch": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_Amazon-OpenSearch-Service_48.svg",
+    "msk": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Analytics/48/Arch_Amazon-Managed-Streaming-for-Apache-Kafka_48.svg",
+    
+    // DevOps
+    "codecommit": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Developer-Tools/48/Arch_AWS-CodeCommit_48.svg",
+    "codepipeline": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Developer-Tools/48/Arch_AWS-CodePipeline_48.svg",
+    "codebuild": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Developer-Tools/48/Arch_AWS-CodeBuild_48.svg",
+    "codedeploy": "/aws-icons/Architecture-Service-Icons_07312025/Arch_Developer-Tools/48/Arch_AWS-CodeDeploy_48.svg",
+  };
+  
+  return iconMap[serviceId];
 }
 
 /**

@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 
-const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
 
 /**
  * POST /api/versus/[matchCode]/speed-deploy - Handle Speed Deploy match actions
@@ -12,7 +12,7 @@ const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { matchCode: string } }
+  { params }: { params: Promise<{ matchCode: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -20,7 +20,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { matchCode } = params;
+    const { matchCode } = await params;
     const body = await req.json();
     const { action, services, timeRemaining } = body;
 

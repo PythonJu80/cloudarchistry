@@ -8,6 +8,8 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from io import BytesIO
 import logging
+from PIL import Image, ImageDraw, ImageFont
+import re
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -75,6 +77,120 @@ def validate_vsdx(content: bytes) -> bool:
         return False
 
 
+def generate_thumbnail(content: bytes, diagram_format: DiagramFormat, title: str) -> BytesIO:
+    """
+    Generate a simple thumbnail preview for the diagram.
+    For Draw.io XML, we extract service count and create a visual preview.
+    """
+    try:
+        # Create a 400x300 thumbnail with a gradient background
+        width, height = 400, 300
+        img = Image.new('RGB', (width, height), color='#1e293b')
+        draw = ImageDraw.Draw(img)
+        
+        # Draw gradient background
+        for y in range(height):
+            color_value = int(30 + (y / height) * 40)
+            draw.rectangle([(0, y), (width, y+1)], fill=(color_value, color_value + 20, color_value + 40))
+        
+        # Extract service info from diagram
+        service_count = 0
+        services_text = ""
+        
+        if diagram_format == DiagramFormat.DRAWIO_XML:
+            try:
+                root = ET.fromstring(content)
+                # Count AWS service nodes
+                aws_patterns = ['mxgraph.aws4', 'aws4.', 'amazon', 'aws']
+                cells = root.findall('.//*[@style]')
+                
+                found_services = set()
+                for cell in cells:
+                    style = cell.get('style', '').lower()
+                    value = cell.get('value', '').lower()
+                    
+                    if any(pattern in style or pattern in value for pattern in aws_patterns):
+                        # Extract service name
+                        for word in (value + ' ' + style).split():
+                            if len(word) > 2:
+                                found_services.add(word[:15])
+                
+                service_count = len(found_services)
+                services_text = f"{service_count} AWS Services"
+            except:
+                services_text = "AWS Architecture"
+        else:
+            services_text = "Architecture Diagram"
+        
+        # Draw diagram icon (simple representation)
+        icon_size = 80
+        icon_x = (width - icon_size) // 2
+        icon_y = 60
+        
+        # Draw nodes representation
+        node_positions = [
+            (icon_x + 10, icon_y + 10),
+            (icon_x + 50, icon_y + 10),
+            (icon_x + 30, icon_y + 40),
+            (icon_x + 10, icon_y + 60),
+            (icon_x + 50, icon_y + 60),
+        ]
+        
+        for x, y in node_positions:
+            draw.ellipse([x, y, x+20, y+20], fill='#3b82f6', outline='#60a5fa', width=2)
+        
+        # Draw connections
+        draw.line([icon_x + 20, icon_y + 20, icon_x + 40, icon_y + 50], fill='#94a3b8', width=2)
+        draw.line([icon_x + 60, icon_y + 20, icon_x + 40, icon_y + 50], fill='#94a3b8', width=2)
+        draw.line([icon_x + 20, icon_y + 70, icon_x + 40, icon_y + 50], fill='#94a3b8', width=2)
+        draw.line([icon_x + 60, icon_y + 70, icon_x + 40, icon_y + 50], fill='#94a3b8', width=2)
+        
+        # Draw title (truncated if too long)
+        title_text = title[:30] + "..." if len(title) > 30 else title
+        try:
+            # Try to use a nice font, fallback to default
+            font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+            font_subtitle = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+        except:
+            font_title = ImageFont.load_default()
+            font_subtitle = ImageFont.load_default()
+        
+        # Draw title
+        title_bbox = draw.textbbox((0, 0), title_text, font=font_title)
+        title_width = title_bbox[2] - title_bbox[0]
+        draw.text(((width - title_width) // 2, 170), title_text, fill='#f1f5f9', font=font_title)
+        
+        # Draw service count
+        subtitle_bbox = draw.textbbox((0, 0), services_text, font=font_subtitle)
+        subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
+        draw.text(((width - subtitle_width) // 2, 200), services_text, fill='#94a3b8', font=font_subtitle)
+        
+        # Draw format badge
+        format_text = "Draw.io" if diagram_format == DiagramFormat.DRAWIO_XML else "Visio"
+        draw.rectangle([10, height - 30, 80, height - 10], fill='#3b82f6', outline='#60a5fa')
+        format_bbox = draw.textbbox((0, 0), format_text, font=font_subtitle)
+        format_width = format_bbox[2] - format_bbox[0]
+        draw.text((45 - format_width // 2, height - 25), format_text, fill='#ffffff', font=font_subtitle)
+        
+        # Save to BytesIO
+        thumbnail_io = BytesIO()
+        img.save(thumbnail_io, format='PNG', optimize=True)
+        thumbnail_io.seek(0)
+        
+        return thumbnail_io
+        
+    except Exception as e:
+        logger.error(f"Error generating thumbnail: {e}")
+        # Return a simple fallback thumbnail
+        img = Image.new('RGB', (400, 300), color='#1e293b')
+        draw = ImageDraw.Draw(img)
+        draw.text((150, 140), "Diagram", fill='#94a3b8')
+        thumbnail_io = BytesIO()
+        img.save(thumbnail_io, format='PNG')
+        thumbnail_io.seek(0)
+        return thumbnail_io
+
+
 @app.post("/upload", response_model=DiagramMetadata)
 async def upload_diagram(
     title: str = Form(...),
@@ -111,6 +227,16 @@ async def upload_diagram(
     content_type = "application/xml" if diagram_format == DiagramFormat.DRAWIO_XML else "application/vnd.visio"
     file_url = storage.upload_file(object_name, BytesIO(content), len(content), content_type)
     
+    # Generate and upload thumbnail
+    thumbnail_url = None
+    try:
+        thumbnail_io = generate_thumbnail(content, diagram_format, title)
+        thumbnail_object_name = f"diagrams/{user_id}/{diagram_id}_thumb.png"
+        thumbnail_url = storage.upload_file(thumbnail_object_name, thumbnail_io, thumbnail_io.getbuffer().nbytes, "image/png")
+        logger.info(f"Generated thumbnail for diagram {diagram_id}")
+    except Exception as e:
+        logger.error(f"Failed to generate thumbnail for diagram {diagram_id}: {e}")
+    
     import json
     tags_list = json.loads(tags) if tags else []
     
@@ -123,6 +249,7 @@ async def upload_diagram(
         user_id=user_id,
         username=username,
         file_url=file_url,
+        thumbnail_url=thumbnail_url,
         tags=tags_list,
         services=[],
         categories={},

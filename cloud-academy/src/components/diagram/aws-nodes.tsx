@@ -413,17 +413,27 @@ export const AWSResourceNode = memo(({ data, selected }: { data: AWSResourceNode
         </div>
         
         {/* Labels container - takes 40% of height, scales with node */}
-        <div className="flex-[2] min-h-0 w-full flex flex-col items-center justify-center overflow-hidden">
+        <div className="flex-[2] min-h-0 w-full flex flex-col items-center justify-center overflow-hidden px-1">
           <p 
-            className="font-bold text-gray-800 text-center leading-tight truncate w-full"
-            style={{ fontSize: "clamp(6px, 12%, 14px)" }}
+            className="font-bold text-gray-800 text-center leading-tight w-full break-words"
+            style={{ 
+              fontSize: "clamp(6px, 12%, 14px)",
+              wordBreak: "break-word",
+              overflowWrap: "break-word",
+              hyphens: "auto"
+            }}
           >
             {data.label}
           </p>
           {data.sublabel && (
             <p 
-              className="text-gray-500 text-center leading-tight truncate w-full"
-              style={{ fontSize: "clamp(5px, 9%, 11px)" }}
+              className="text-gray-500 text-center leading-tight w-full break-words"
+              style={{ 
+                fontSize: "clamp(5px, 9%, 11px)",
+                wordBreak: "break-word",
+                overflowWrap: "break-word",
+                hyphens: "auto"
+              }}
             >
               {data.sublabel}
             </p>

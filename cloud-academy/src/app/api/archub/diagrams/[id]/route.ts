@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 const DIAGRAM_API_URL = process.env.DIAGRAM_API_URL || "http://diagram-api:8002";
+const DIAGRAM_INGESTION_URL = process.env.DIAGRAM_INGESTION_URL || "http://diagram-ingestion:8000";
 
 export async function GET(
   req: NextRequest,
@@ -42,22 +43,55 @@ export async function DELETE(
       return NextResponse.json({ error: "ArcHub profile not found" }, { status: 404 });
     }
 
-    const diagram = await prisma.arcHubDiagram.findUnique({
+    // Check local ArcHubDiagram table first
+    const localDiagram = await prisma.arcHubDiagram.findUnique({
       where: { id: params.id },
     });
 
-    if (!diagram || diagram.arcHubProfileId !== arcHubProfile.id) {
-      return NextResponse.json({ error: "Diagram not found or unauthorized" }, { status: 404 });
+    // If diagram exists locally, verify ownership
+    if (localDiagram && localDiagram.arcHubProfileId !== arcHubProfile.id) {
+      return NextResponse.json({ error: "Not authorized to delete this diagram" }, { status: 403 });
     }
 
-    await prisma.arcHubDiagram.delete({
-      where: { id: params.id },
-    });
+    // Delete from diagram-ingestion (which will delete from MinIO and the diagram database)
+    // Note: user_id in diagram-ingestion is the arcHubProfile.id (set during upload)
+    let ingestionDeleted = false;
+    try {
+      const deleteResponse = await fetch(
+        `${DIAGRAM_INGESTION_URL}/diagram/${params.id}?user_id=${arcHubProfile.id}`,
+        { method: "DELETE" }
+      );
+      
+      if (deleteResponse.ok) {
+        ingestionDeleted = true;
+      } else {
+        const errorText = await deleteResponse.text();
+        console.error("Failed to delete from diagram-ingestion:", errorText);
+        // If 404, the diagram doesn't exist in ingestion - that's okay
+        if (deleteResponse.status === 404) {
+          ingestionDeleted = true;
+        }
+      }
+    } catch (error) {
+      console.error("Error calling diagram-ingestion delete:", error);
+    }
 
-    await prisma.arcHubProfile.update({
-      where: { id: arcHubProfile.id },
-      data: { diagramsUploaded: { decrement: 1 } },
-    });
+    // Delete from local database if it exists there
+    if (localDiagram) {
+      await prisma.arcHubDiagram.delete({
+        where: { id: params.id },
+      });
+
+      await prisma.arcHubProfile.update({
+        where: { id: arcHubProfile.id },
+        data: { diagramsUploaded: { decrement: 1 } },
+      });
+    }
+
+    // If neither deletion worked, return error
+    if (!localDiagram && !ingestionDeleted) {
+      return NextResponse.json({ error: "Diagram not found or not authorized" }, { status: 404 });
+    }
 
     return NextResponse.json({ message: "Diagram deleted successfully" });
   } catch (error) {

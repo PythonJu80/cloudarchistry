@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { Download, Copy, Eye, Share2, Trash2, FileCode, Calendar, User, Maximize2 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 
 // Dynamic import to avoid SSR issues with React Flow
@@ -47,6 +48,7 @@ export default function BlueprintDetailPage() {
     if (params.id) {
       fetchDiagram();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
   const fetchDiagram = async () => {
@@ -59,10 +61,33 @@ export default function BlueprintDetailPage() {
         // Fetch diagram content for rendering
         if (data.file_url && data.format === "drawio_xml") {
           try {
-            const contentRes = await fetch(data.file_url);
+            // Convert any file URL to use our storage proxy
+            let fetchUrl = data.file_url;
+            
+            // Extract the path after the domain/host
+            // Handles both:
+            // - http://minio:9000/architecture-diagrams/diagrams/...
+            // - https://cloudarchistry.com/api/archub/storage/architecture-diagrams/diagrams/...
+            const pathMatch = fetchUrl.match(/(?:minio:9000|api\/archub\/storage)\/(architecture-diagrams\/.+)$/);
+            if (pathMatch) {
+              fetchUrl = `/api/archub/storage/${pathMatch[1]}`;
+            } else {
+              // Fallback: try to extract just the path part
+              const urlObj = new URL(fetchUrl, window.location.origin);
+              if (urlObj.pathname.includes("architecture-diagrams")) {
+                const idx = urlObj.pathname.indexOf("architecture-diagrams");
+                fetchUrl = `/api/archub/storage/${urlObj.pathname.substring(idx)}`;
+              }
+            }
+            
+            console.log("Fetching diagram content from:", fetchUrl);
+            const contentRes = await fetch(fetchUrl);
             if (contentRes.ok) {
               const content = await contentRes.text();
+              console.log("Diagram content loaded, length:", content.length);
               setDiagramContent(content);
+            } else {
+              console.error("Failed to fetch diagram content:", contentRes.status, contentRes.statusText);
             }
           } catch (err) {
             console.error("Error fetching diagram content:", err);
@@ -177,11 +202,13 @@ export default function BlueprintDetailPage() {
                     </button>
                   </>
                 ) : diagram.thumbnail_url ? (
-                  <div className="aspect-video bg-slate-800/50 flex items-center justify-center">
-                    <img
-                      src={diagram.thumbnail_url}
+                  <div className="aspect-video bg-slate-800/50 relative">
+                    <Image
+                      src={diagram.thumbnail_url.replace(/^https?:\/\/[^\/]+/, '')}
                       alt={diagram.title}
-                      className="w-full h-full object-contain"
+                      fill
+                      className="object-contain"
+                      unoptimized
                     />
                   </div>
                 ) : (
@@ -324,16 +351,14 @@ export default function BlueprintDetailPage() {
                   Share
                 </button>
 
-                {isOwner && (
-                  <button
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="w-full px-4 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {deleting ? "Deleting..." : "Delete"}
-                  </button>
-                )}
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="w-full px-4 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
               </div>
 
               {/* Stats */}

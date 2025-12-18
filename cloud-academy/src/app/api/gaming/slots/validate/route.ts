@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
 
 export async function POST(request: NextRequest) {
   try {

@@ -60,6 +60,21 @@ class MinioStorage:
             logger.error(f"Error downloading file: {e}")
             raise
     
+    def get_file(self, path: str) -> bytes:
+        """
+        Get file from storage by path. Path can include bucket name or not.
+        Examples: 
+          - architecture-diagrams/diagrams/user/file.xml
+          - diagrams/user/file.xml
+        """
+        # Remove bucket name from path if present
+        if path.startswith(f"{self.bucket}/"):
+            object_name = path[len(self.bucket) + 1:]
+        else:
+            object_name = path
+        
+        return self.download_file(object_name)
+    
     def get_file_url(self, object_name: str) -> str:
         return f"{self.external_url}/{self.bucket}/{object_name}"
     

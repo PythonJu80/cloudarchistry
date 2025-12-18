@@ -306,6 +306,39 @@ async def get_trending_diagrams(
     ]
 
 
+@app.get("/storage/{path:path}")
+async def get_storage_file(path: str):
+    """
+    Proxy endpoint to fetch files from MinIO with proper authentication.
+    This allows the frontend to access diagram files without exposing MinIO credentials.
+    """
+    try:
+        file_data = storage.get_file(path)
+        
+        # Determine content type based on file extension
+        content_type = "application/octet-stream"
+        if path.endswith(".xml"):
+            content_type = "application/xml"
+        elif path.endswith(".vsdx"):
+            content_type = "application/vnd.ms-visio.drawing"
+        elif path.endswith(".png"):
+            content_type = "image/png"
+        elif path.endswith(".jpg") or path.endswith(".jpeg"):
+            content_type = "image/jpeg"
+        
+        from fastapi.responses import Response
+        return Response(
+            content=file_data,
+            media_type=content_type,
+            headers={
+                "Cache-Control": "public, max-age=31536000",
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error fetching storage file {path}: {e}")
+        raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8002)

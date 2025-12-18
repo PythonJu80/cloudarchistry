@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { Folder, FileCode, TrendingUp, Upload, Search, Filter } from "lucide-react";
+import { Folder, FileCode, TrendingUp, Upload, Search } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface DiagramStats {
   total_diagrams: number;
@@ -49,7 +49,6 @@ const AWS_CATEGORIES = [
 
 export default function ArcHubPage() {
   const { data: session } = useSession();
-  const router = useRouter();
   const [stats, setStats] = useState<DiagramStats | null>(null);
   const [diagrams, setDiagrams] = useState<Diagram[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -59,12 +58,14 @@ export default function ArcHubPage() {
   useEffect(() => {
     fetchStats();
     fetchDiagrams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (selectedCategory || searchQuery) {
       fetchDiagrams();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, searchQuery]);
 
   const fetchStats = async () => {
@@ -252,15 +253,19 @@ export default function ArcHubPage() {
                     href={`/archub/blueprint/${diagram.id}`}
                     className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:border-blue-500/50 transition-all overflow-hidden group"
                   >
-                    <div className="aspect-video bg-slate-800/50 flex items-center justify-center">
+                    <div className="aspect-video bg-slate-800/50 relative">
                       {diagram.thumbnail_url ? (
-                        <img
-                          src={diagram.thumbnail_url}
+                        <Image
+                          src={diagram.thumbnail_url.replace(/^https?:\/\/[^\/]+/, '')}
                           alt={diagram.title}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          unoptimized
                         />
                       ) : (
-                        <FileCode className="w-16 h-16 text-slate-600" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <FileCode className="w-16 h-16 text-slate-600" />
+                        </div>
                       )}
                     </div>
                     <div className="p-4">

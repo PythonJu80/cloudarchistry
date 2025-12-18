@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import type { Prisma } from "@prisma/client";
 
-const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL;
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
 const HISTORY_LIMIT = 5;
 
 type TelemetryHints = {
@@ -27,7 +27,7 @@ type TelemetryPayload = {
 
 function ensureEnv() {
   if (!LEARNING_AGENT_URL) {
-    throw new Error("NEXT_PUBLIC_LEARNING_AGENT_URL is not configured");
+    throw new Error("LEARNING_AGENT_URL is not configured");
   }
 }
 

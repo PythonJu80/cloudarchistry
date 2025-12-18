@@ -111,6 +111,16 @@ const containerSizes: Record<string, { width: number; height: number }> = {
   autoScaling: { width: 150, height: 100 },
 };
 
+// Z-index hierarchy for proper layering (lower = further back, higher = in front)
+// Matches diagram-canvas.tsx so containers don't cover child nodes
+const containerZIndex: Record<string, number> = {
+  vpc: 1,
+  subnet: 2,
+  securityGroup: 3,
+  autoScaling: 4,
+};
+const DEFAULT_SERVICE_ZINDEX = 10; // Regular services always on top
+
 // Convert a single puzzle piece to a React Flow node at a given position
 function puzzlePieceToNode(piece: PuzzlePiece, position: { x: number; y: number }): Node {
   const nodeType = getNodeType(piece.service_id);
@@ -125,6 +135,10 @@ function puzzlePieceToNode(piece: PuzzlePiece, position: { x: number; y: number 
     displayLabel = subnetType === "public" ? "Public" : "Private";
   }
   
+  // Determine z-index: containers get lower values, services get higher
+  const isContainer = !!size;
+  const zIndex = containerZIndex[nodeType] ?? (isContainer ? 0 : DEFAULT_SERVICE_ZINDEX);
+  
   return {
     id: piece.id,
     type: nodeType,
@@ -137,6 +151,7 @@ function puzzlePieceToNode(piece: PuzzlePiece, position: { x: number; y: number 
       subnetType: piece.service_id.startsWith("subnet-") ? getSubnetType(piece.service_id) : undefined,
     },
     draggable: true,
+    zIndex,
   };
 }
 

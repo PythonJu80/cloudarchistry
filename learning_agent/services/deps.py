@@ -9,7 +9,7 @@ import httpx
 class AgentDeps:
     """Dependencies for the agent"""
     def __init__(self):
-        self.tavily_api_key = os.getenv("TAVILY_API_KEY")
+        self.brave_api_key = os.getenv("BRAVE_API_KEY")
         # No OpenAI key from env - must come from user's settings
         self.http_client = httpx.AsyncClient(timeout=30.0)
     

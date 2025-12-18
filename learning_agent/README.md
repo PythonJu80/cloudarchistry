@@ -5,7 +5,7 @@ AI-powered scenario generator for cloud architecture training.
 ## What It Does
 
 1. **Receives a location/company** from the CloudAcademy world map
-2. **Researches the business** via Tavily web search
+2. **Researches the business** via Brave web search
 3. **Generates realistic cloud architecture scenarios** based on what that company actually does
 4. **Provides coaching** through interactive chat
 
@@ -23,7 +23,7 @@ AI-powered scenario generator for cloud architecture training.
 ```bash
 # Required
 OPENAI_API_KEY=your-openai-api-key
-TAVILY_API_KEY=your-tavily-api-key
+BRAVE_API_KEY=your-brave-api-key
 
 # Optional
 PORT=1027
@@ -48,7 +48,7 @@ docker build -t cloud-academy-agent .
 # Run
 docker run -p 1027:1027 \
   -e OPENAI_API_KEY=your-key \
-  -e TAVILY_API_KEY=your-key \
+  -e BRAVE_API_KEY=your-key \
   cloud-academy-agent
 ```
 
@@ -89,7 +89,7 @@ curl -X POST http://localhost:1027/chat \
 
 ```text
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  CloudAcademy   │────▶│  Learning Agent  │────▶│  Tavily Search  │
+│  CloudAcademy   │────▶│  Learning Agent  │────▶│  Brave Search   │
 │   (Frontend)    │     │   (This API)     │     │   (Web Data)    │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
                                │

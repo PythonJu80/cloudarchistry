@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { gatherStudyGuideData, type StudyGuideData } from "@/lib/academy/services/study-guide-data";
 
-const LEARNING_AGENT_URL = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL;
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
 
 /**
  * GET /api/learn/guide

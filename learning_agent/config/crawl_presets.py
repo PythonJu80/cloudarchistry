@@ -139,6 +139,7 @@ def should_include_url(url: str, include_patterns: list, exclude_patterns: list,
         True if URL should be included, False otherwise
     """
     import fnmatch
+    from config.aws_service_url_mapping import get_all_url_patterns
     
     # First check exclusions (higher priority)
     for pattern in exclude_patterns:
@@ -147,8 +148,18 @@ def should_include_url(url: str, include_patterns: list, exclude_patterns: list,
     
     # Check service filter if provided
     if services:
+        # Get AWS documentation URL patterns for the user's service IDs
+        url_patterns = get_all_url_patterns(services)
         url_lower = url.lower()
-        service_match = any(f"/{service}/" in url_lower or f"{service}." in url_lower for service in services)
+        
+        # Check if any of the AWS URL patterns match
+        service_match = any(
+            f"/{pattern.lower()}/" in url_lower or 
+            f"/{pattern.lower()}/latest/" in url_lower or
+            f".amazon.com/{pattern.lower()}/" in url_lower
+            for pattern in url_patterns
+        )
+        
         if not service_match:
             return False
     
