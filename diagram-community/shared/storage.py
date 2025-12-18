@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class MinioStorage:
     def __init__(self):
         self.endpoint = os.getenv("MINIO_ENDPOINT", "minio:9000")
+        self.external_url = os.getenv("MINIO_EXTERNAL_URL", "https://cloudarchistry.com/api/archub/storage")
         self.access_key = os.getenv("MINIO_ACCESS_KEY", "cloudmigrate")
         self.secret_key = os.getenv("MINIO_SECRET_KEY", "cloudmigrate2025")
         self.bucket = os.getenv("MINIO_BUCKET", "architecture-diagrams")
@@ -41,7 +42,7 @@ class MinioStorage:
                 length,
                 content_type=content_type
             )
-            url = f"http://{self.endpoint}/{self.bucket}/{object_name}"
+            url = f"{self.external_url}/{self.bucket}/{object_name}"
             logger.info(f"Uploaded file: {object_name}")
             return url
         except S3Error as e:
@@ -60,7 +61,7 @@ class MinioStorage:
             raise
     
     def get_file_url(self, object_name: str) -> str:
-        return f"http://{self.endpoint}/{self.bucket}/{object_name}"
+        return f"{self.external_url}/{self.bucket}/{object_name}"
     
     def delete_file(self, object_name: str) -> bool:
         try:
