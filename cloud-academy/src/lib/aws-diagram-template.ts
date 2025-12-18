@@ -43,11 +43,11 @@ interface DiagramEdge {
 // Base units - everything scales from these
 const U = {
   nodeW: 100,      // Node width
-  nodeH: 80,       // Node height  
-  gapX: 40,        // Horizontal gap between nodes
-  gapY: 20,        // Vertical gap between nodes
-  pad: 30,         // Container padding
-  header: 35,      // Container header height
+  nodeH: 90,       // Node height (includes label)
+  gapX: 50,        // Horizontal gap between nodes
+  gapY: 30,        // Vertical gap between nodes
+  pad: 40,         // Container padding
+  header: 45,      // Container header height
 };
 
 /**
@@ -81,18 +81,26 @@ export function buildAWSDiagram(payload: AgentPayload): { nodes: DiagramNode[]; 
   const publicCount = tiers.public.length;
   const computeCount = tiers.compute.length;
   const dataCount = tiers.data.length;
+  const securityCount = tiers.security.length;
+  const integrationCount = tiers.integration.length;
   
   // Calculate how many columns we need inside private subnet
   const privateColumns = (computeCount > 0 ? 1 : 0) + (dataCount > 0 ? 1 : 0);
   const maxPrivateRows = Math.max(computeCount, dataCount, 1);
   const maxPublicRows = Math.max(publicCount, 1);
-  const maxVpcRows = Math.max(maxPrivateRows, maxPublicRows);
+  const maxEdgeRows = Math.max(edgeCount, 1);
   
   // Calculate dimensions dynamically
   const colWidth = U.nodeW + U.gapX;
   
+  // Security row height (above VPC)
+  const securityRowH = securityCount > 0 ? U.nodeH + U.gapY : 0;
+  
+  // Integration row height (below VPC)
+  const integrationRowH = integrationCount > 0 ? U.nodeH + U.gapY + U.pad : 0;
+  
   // Private subnet width: fits compute + data columns
-  const privateSubnetW = privateColumns * colWidth + U.pad * 2;
+  const privateSubnetW = Math.max(privateColumns, 1) * colWidth + U.pad * 2;
   const privateSubnetH = maxPrivateRows * (U.nodeH + U.gapY) + U.header + U.pad;
   
   // Public subnet width: fits public column
@@ -108,15 +116,15 @@ export function buildAWSDiagram(payload: AgentPayload): { nodes: DiagramNode[]; 
   // Edge column position (outside VPC, to the left)
   const edgeX = U.pad;
   
-  // VPC position (after edge column)
-  const vpcX = edgeCount > 0 ? edgeX + colWidth + U.gapX : U.pad;
-  const vpcY = U.pad + U.header;
+  // VPC position (after edge column, below security row)
+  const vpcX = edgeCount > 0 ? edgeX + colWidth + U.gapX : U.pad + colWidth;
+  const vpcY = U.pad + U.header + securityRowH;
   
-  // Cloud dimensions (wraps everything)
-  const cloudW = vpcX + vpcW + U.pad;
-  const cloudH = vpcY + vpcH + U.pad;
+  // Cloud dimensions (wraps everything including security above and integration below)
+  const cloudW = Math.max(vpcX + vpcW, securityCount * colWidth, integrationCount * colWidth) + U.pad * 2;
+  const cloudH = vpcY + vpcH + integrationRowH + U.pad;
   
-  // Starting Y for services (inside containers)
+  // Starting Y for VPC services (inside containers)
   const serviceStartY = vpcY + U.header + U.pad + U.header;
   
   // === ADD CONTAINERS ===
@@ -206,22 +214,24 @@ export function buildAWSDiagram(payload: AgentPayload): { nodes: DiagramNode[]; 
     });
   });
   
-  // Security tier (above everything)
+  // Security tier (above VPC, horizontally centered)
+  const securityStartX = vpcX;
   tiers.security.forEach((svc, i) => {
     nodes.push({
       id: svc.id,
       type: "awsService",
-      position: { x: U.pad + i * colWidth, y: U.pad },
+      position: { x: securityStartX + i * colWidth, y: U.pad + U.header },
       data: { label: svc.label, service_id: svc.service_id },
     });
   });
   
-  // Integration tier (below VPC)
+  // Integration tier (below VPC, horizontally centered)
+  const integrationStartX = vpcX;
   tiers.integration.forEach((svc, i) => {
     nodes.push({
       id: svc.id,
       type: "awsService",
-      position: { x: vpcX + U.pad + i * colWidth, y: vpcY + vpcH + U.gapY },
+      position: { x: integrationStartX + i * colWidth, y: vpcY + vpcH + U.gapY },
       data: { label: svc.label, service_id: svc.service_id },
     });
   });

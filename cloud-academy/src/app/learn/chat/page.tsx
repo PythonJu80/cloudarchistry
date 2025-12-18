@@ -273,7 +273,7 @@ function ChatContent() {
     try {
       if (isDrawingMode) {
         // Call AWS Drawing Agent for diagram generation
-        const response = await fetch("http://localhost:6098/diagrams/generate", {
+        const response = await fetch("http://10.121.19.210:6098/diagrams/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

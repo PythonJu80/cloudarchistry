@@ -79,7 +79,13 @@ CRAWL_PRESETS = {
     },
     "architecture-only": {
         "description": "Only AWS architecture diagrams and reference architectures",
-        "include_patterns": ["*/architecture-diagrams/*", "*/wellarchitected/*"],
+        "include_patterns": [
+            "*aws.amazon.com/architecture*",
+            "*aws.amazon.com/solutions*",
+            "*/architecture-diagrams/*", 
+            "*/wellarchitected/*",
+            "*/reference-architecture*",
+        ],
         "exclude_patterns": [],
         "services": [],
         "max_urls": 500,

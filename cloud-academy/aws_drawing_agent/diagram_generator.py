@@ -2,13 +2,79 @@
 Diagram Generator
 =================
 Generates AWS architecture diagrams from text descriptions using LLM.
+Now with RAG support - queries pgvector for architecture knowledge.
 """
 
 import logging
-from typing import Dict, Optional
+import asyncio
+from typing import Dict, Optional, List
 from llm_generator import LLMDiagramGenerator
 
 logger = logging.getLogger(__name__)
+
+
+def get_rag_context_sync(description: str, api_key: str, limit: int = 5) -> str:
+    """
+    Query pgvector for relevant architecture knowledge (synchronous version).
+    Returns context string to inject into LLM prompt.
+    """
+    import os
+    import json
+    import psycopg2
+    from openai import OpenAI
+    
+    try:
+        client = OpenAI(api_key=api_key)
+        
+        # Get embedding for the description
+        embed_response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=description[:8000]
+        )
+        query_embedding = embed_response.data[0].embedding
+        
+        # Connect to postgres directly (sync)
+        database_url = os.getenv("DATABASE_URL")
+        if not database_url:
+            logger.warning("DATABASE_URL not set for RAG")
+            return ""
+        
+        conn = psycopg2.connect(database_url)
+        cur = conn.cursor()
+        
+        # Search pgvector
+        embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+        cur.execute("""
+            SELECT url, content, 1 - (embedding <=> %s::vector) as similarity
+            FROM "AcademyKnowledgeChunk"
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+        """, (embedding_str, embedding_str, limit))
+        
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        if not rows:
+            logger.info("No RAG results found")
+            return ""
+        
+        # Build context string from top results
+        context_parts = []
+        for url, content, similarity in rows:
+            if similarity > 0.4:
+                context_parts.append(f"[From {url}]:\n{content[:800]}")
+        
+        if context_parts:
+            context = "\n\n".join(context_parts)
+            logger.info(f"RAG context: {len(context_parts)} chunks, {len(context)} chars")
+            return f"\n\nREFERENCE ARCHITECTURE KNOWLEDGE:\n{context}"
+        
+        return ""
+        
+    except Exception as e:
+        logger.warning(f"RAG query failed: {e}")
+        return ""
 
 
 class DiagramGenerator:
@@ -89,13 +155,14 @@ class DiagramGenerator:
                 }
             }
     
-    def generate_with_explanation(self, description: str) -> Dict:
+    def generate_with_explanation(self, description: str, use_rag: bool = True) -> Dict:
         """
         Generate a diagram AND explanation from text description.
-        Uses reference architectures from PPTX files as examples.
+        Uses RAG (pgvector) for architecture knowledge + reference architectures from PPTX files.
         
         Args:
             description: Natural language description of architecture
+            use_rag: Whether to query pgvector for architecture knowledge (default: True)
             
         Returns:
             Dict with 'diagram' (nodes/edges), 'explanation' (markdown), and 'metadata'
@@ -110,11 +177,24 @@ class DiagramGenerator:
             }
         
         try:
+            # Get RAG context from pgvector
+            rag_context = ""
+            if use_rag and self.openai_api_key:
+                try:
+                    rag_context = get_rag_context_sync(description, self.openai_api_key, limit=5)
+                    if rag_context:
+                        logger.info(f"RAG context added: {len(rag_context)} chars")
+                except Exception as e:
+                    logger.warning(f"RAG failed, continuing without: {e}")
+            
             # Find similar reference architectures to use as examples
             reference_example = self._find_similar_architecture(description)
             
+            # Combine description with RAG context
+            enhanced_description = description + rag_context
+            
             result = self.llm_generator.generate_diagram_with_explanation(
-                description=description,
+                description=enhanced_description,
                 services_list=self.services_list,
                 reference_example=reference_example
             )
@@ -128,7 +208,9 @@ class DiagramGenerator:
                 "status": "success",
                 "nodes_count": len(diagram.get("nodes", [])),
                 "edges_count": len(diagram.get("edges", [])),
-                "reference_used": reference_example.get("name") if reference_example else None
+                "reference_used": reference_example.get("name") if reference_example else None,
+                "rag_used": bool(rag_context),
+                "rag_context_length": len(rag_context) if rag_context else 0
             }
             
             return {
