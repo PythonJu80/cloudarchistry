@@ -78,6 +78,16 @@ export default function BlueprintDetailPage() {
 
   const handleExport = async () => {
     if (!diagram) return;
+    // Track the export
+    try {
+      await fetch(`/api/archub/diagrams/${diagram.id}/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ format: diagram.format }),
+      });
+    } catch (err) {
+      console.error("Error tracking export:", err);
+    }
     window.open(diagram.file_url, "_blank");
   };
 
