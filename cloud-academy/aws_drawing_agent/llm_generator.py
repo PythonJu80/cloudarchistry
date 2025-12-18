@@ -187,20 +187,34 @@ Use markdown formatting with headers and bullet points."""
     
     def _build_system_prompt(self, services_list: list = None) -> str:
         """Build system prompt with AWS architecture knowledge."""
-        prompt = """You are an AWS architect. Return ONLY valid JSON for a React Flow diagram.
+        prompt = """Return ONLY the AWS services and connections as JSON. Frontend handles layout.
 
-CRITICAL: Output raw JSON only. No markdown. No code blocks. No explanations.
+OUTPUT FORMAT (no positions, no containers):
+{
+  "services": [
+    {"id": "svc1", "service_id": "apigateway", "label": "API Gateway", "tier": "edge"},
+    {"id": "svc2", "service_id": "lambda", "label": "Lambda", "tier": "compute"},
+    {"id": "svc3", "service_id": "dynamodb", "label": "DynamoDB", "tier": "data"}
+  ],
+  "connections": [
+    {"from": "svc1", "to": "svc2"},
+    {"from": "svc2", "to": "svc3"}
+  ]
+}
 
-EXAMPLE:
-{"nodes":[{"id":"cloud","type":"group","position":{"x":20,"y":50},"data":{"label":"AWS Cloud","width":600,"height":200}},{"id":"svc1","type":"awsService","position":{"x":100,"y":120},"data":{"label":"API Gateway","service_id":"apigateway"}},{"id":"svc2","type":"awsService","position":{"x":300,"y":120},"data":{"label":"Lambda","service_id":"lambda"}},{"id":"svc3","type":"awsService","position":{"x":500,"y":120},"data":{"label":"DynamoDB","service_id":"dynamodb"}}],"edges":[{"id":"e1","source":"svc1","target":"svc2"},{"id":"e2","source":"svc2","target":"svc3"}]}
+TIER VALUES (determines placement):
+- "edge": Internet-facing (CloudFront, Route53, API Gateway, ALB)
+- "public": Public subnet (NAT Gateway, Bastion)
+- "compute": Private subnet compute (Lambda, ECS, EC2, EKS)
+- "data": Private subnet data (RDS, DynamoDB, ElastiCache, S3)
+- "security": Security services (WAF, Shield, Cognito, IAM)
+- "integration": Integration (SQS, SNS, EventBridge, Step Functions)
 
 RULES:
-- Start with {"nodes":[ and end with ]}
-- Every node needs: id, type, position:{x,y}, data:{label,service_id}
-- type is "group" for containers, "awsService" for services
-- Position x: 100, 300, 500 for columns. Position y: 120 for services
-- Include AWS Cloud group with width:600, height:200
-- Connect services with edges
+- Return ONLY services array and connections array
+- Every service needs: id, service_id, label, tier
+- Connections show data flow direction (from -> to)
+- NO positions, NO containers, NO groups - frontend handles that
 
 """
         
@@ -246,28 +260,62 @@ Generate valid React Flow JSON (JSON only, no markdown):"""
             raise ValueError(f"Could not extract valid JSON: {e}")
     
     def _validate_diagram(self, diagram: Dict):
-        """Validate diagram structure."""
+        """Validate diagram structure and convert new format if needed."""
         if not isinstance(diagram, dict):
             raise ValueError("Diagram must be a dictionary")
         
+        # New format: services/connections - convert to nodes/edges
+        if "services" in diagram:
+            services = diagram.get("services", [])
+            connections = diagram.get("connections", [])
+            
+            if not isinstance(services, list):
+                raise ValueError("'services' must be a list")
+            
+            # Convert services to nodes (frontend will handle positioning)
+            nodes = []
+            for svc in services:
+                if not isinstance(svc, dict) or "id" not in svc:
+                    continue
+                nodes.append({
+                    "id": svc["id"],
+                    "type": "awsService",
+                    "data": {
+                        "label": svc.get("label", ""),
+                        "service_id": svc.get("service_id", ""),
+                        "tier": svc.get("tier", "compute"),
+                    }
+                })
+            
+            # Convert connections to edges
+            edges = []
+            for i, conn in enumerate(connections if isinstance(connections, list) else []):
+                if isinstance(conn, dict) and "from" in conn and "to" in conn:
+                    edges.append({
+                        "id": f"edge-{i}",
+                        "source": conn["from"],
+                        "target": conn["to"],
+                    })
+            
+            # Replace with converted format
+            diagram["nodes"] = nodes
+            diagram["edges"] = edges
+            diagram["services"] = services  # Keep for frontend template engine
+            diagram["connections"] = connections
+            return
+        
+        # Old format: nodes/edges
         if "nodes" not in diagram:
-            raise ValueError("Diagram must have 'nodes' key")
+            raise ValueError("Diagram must have 'nodes' or 'services' key")
         
         if "edges" not in diagram:
-            raise ValueError("Diagram must have 'edges' key")
+            diagram["edges"] = []
         
         if not isinstance(diagram["nodes"], list):
             raise ValueError("'nodes' must be a list")
         
         if not isinstance(diagram["edges"], list):
             raise ValueError("'edges' must be a list")
-        
-        # Validate node structure (position is optional - frontend handles layout)
-        for i, node in enumerate(diagram["nodes"]):
-            if "id" not in node:
-                raise ValueError(f"Node {i} missing 'id'")
-            if "data" not in node:
-                raise ValueError(f"Node {i} missing 'data'")
     
     def enhance_diagram_with_validation(
         self, 

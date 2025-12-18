@@ -21,6 +21,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Download, Maximize2, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { buildAWSDiagram, isNewPayloadFormat } from "@/lib/aws-diagram-template";
 
 /**
  * Dynamic icon path resolver for AWS services.
@@ -212,9 +213,42 @@ interface DiagramMessageProps {
 }
 
 function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
+  // Check if nodes need positioning (new tier-based format)
+  const diagramData = useMemo(() => {
+    // Check if nodes lack positions but have tier data - need to apply template
+    const needsLayout = diagram.nodes.some(n => !n.position && n.data?.tier);
+    
+    if (needsLayout) {
+      // Convert nodes with tiers to services format for template engine
+      const services = diagram.nodes
+        .filter(n => n.type === "awsService" || !n.type)
+        .map(n => ({
+          id: n.id,
+          service_id: String(n.data?.service_id || ""),
+          label: String(n.data?.label || ""),
+          tier: (n.data?.tier as "edge" | "public" | "compute" | "data" | "security" | "integration") || "compute",
+        }));
+      
+      const connections = diagram.edges.map(e => ({
+        from: e.source,
+        to: e.target,
+      }));
+      
+      return buildAWSDiagram({ services, connections });
+    }
+    
+    // If payload has "services" array directly, use template engine
+    if (isNewPayloadFormat(diagram)) {
+      return buildAWSDiagram(diagram);
+    }
+    
+    // Otherwise use existing nodes/edges directly (old format with positions)
+    return { nodes: diagram.nodes, edges: diagram.edges };
+  }, [diagram]);
+
   // Transform nodes with proper styling
   const nodes = useMemo(() => {
-    return diagram.nodes.map((node) => {
+    return diagramData.nodes.map((node) => {
       const isGroup = node.type === "group";
       const isLabel = node.type === "label";
       return {
@@ -230,15 +264,15 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
         },
       };
     });
-  }, [diagram.nodes]);
+  }, [diagramData.nodes]);
   
   // Calculate canvas size from nodes
   const canvasSize = useMemo(() => {
-    if (!diagram.nodes || diagram.nodes.length === 0) {
+    if (!diagramData.nodes || diagramData.nodes.length === 0) {
       return { width: 800, height: 500 };
     }
     
-    const positions = diagram.nodes
+    const positions = diagramData.nodes
       .filter(n => n.position)
       .map(n => ({ x: n.position.x, y: n.position.y }));
     
@@ -253,11 +287,11 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
       width: Math.max(800, maxX),
       height: Math.max(500, maxY)
     };
-  }, [diagram.nodes]);
+  }, [diagramData.nodes]);
 
   // Transform edges with proper styling and arrow markers
   const edges = useMemo(() => {
-    return diagram.edges.map((edge) => ({
+    return diagramData.edges.map((edge) => ({
       ...edge,
       type: edge.type || "smoothstep",
       animated: true,
@@ -269,7 +303,7 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
         height: 20,
       },
     }));
-  }, [diagram.edges]);
+  }, [diagramData.edges]);
 
   return (
     <div 
