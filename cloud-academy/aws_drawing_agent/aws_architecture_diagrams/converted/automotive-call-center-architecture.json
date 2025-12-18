@@ -1,0 +1,989 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Automotive Call Center Reference Architecture",
+        "width": 658,
+        "height": 42,
+        "shape_name": "TextBox 71",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 118,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2022, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "default",
+      "position": {
+        "x": 313,
+        "y": 452
+      },
+      "data": {
+        "label": "",
+        "width": 584,
+        "height": 192,
+        "shape_name": "Rectangle 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "awsService",
+      "position": {
+        "x": 309,
+        "y": 185
+      },
+      "data": {
+        "label": "",
+        "width": 39,
+        "height": 39,
+        "shape_name": "Graphic 2",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "label",
+      "position": {
+        "x": 210,
+        "y": 258
+      },
+      "data": {
+        "label": "Sensor \u000bdata\nLocation \u000bdata",
+        "width": 98,
+        "height": 74,
+        "shape_name": "TextBox 4",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "awsService",
+      "position": {
+        "x": 209,
+        "y": 421
+      },
+      "data": {
+        "label": "",
+        "width": 99,
+        "height": 67,
+        "shape_name": "Group 5",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "awsService",
+      "position": {
+        "x": 342,
+        "y": 518
+      },
+      "data": {
+        "label": "",
+        "width": 25,
+        "height": 25,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "awsService",
+      "position": {
+        "x": 619,
+        "y": 456
+      },
+      "data": {
+        "label": "",
+        "width": 245,
+        "height": 67,
+        "shape_name": "Group 9",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 402,
+        "y": 525
+      },
+      "data": {
+        "label": "",
+        "width": 23,
+        "height": 10,
+        "shape_name": "Group 23",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "label",
+      "position": {
+        "x": 375,
+        "y": 544
+      },
+      "data": {
+        "label": "contact flows",
+        "width": 79,
+        "height": 42,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "default",
+      "position": {
+        "x": 467,
+        "y": 517
+      },
+      "data": {
+        "label": "",
+        "width": 22,
+        "height": 22,
+        "shape_name": "Action Button: Sound 19",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "label",
+      "position": {
+        "x": 445,
+        "y": 546
+      },
+      "data": {
+        "label": "voice ID",
+        "width": 70,
+        "height": 25,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "default",
+      "position": {
+        "x": 401,
+        "y": 518
+      },
+      "data": {
+        "label": "",
+        "width": 24,
+        "height": 22,
+        "shape_name": "Rectangle 21",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "label",
+      "position": {
+        "x": 590,
+        "y": 541
+      },
+      "data": {
+        "label": "Call queue",
+        "width": 79,
+        "height": 42,
+        "shape_name": "TextBox 22",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "awsService",
+      "position": {
+        "x": 614,
+        "y": 515
+      },
+      "data": {
+        "label": "",
+        "width": 27,
+        "height": 28,
+        "shape_name": "Graphic 29",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "default",
+      "position": {
+        "x": 785,
+        "y": 565
+      },
+      "data": {
+        "label": "Call summary",
+        "width": 84,
+        "height": 37,
+        "shape_name": "Rectangle 25",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "default",
+      "position": {
+        "x": 513,
+        "y": 516
+      },
+      "data": {
+        "label": "Customer profile",
+        "width": 79,
+        "height": 36,
+        "shape_name": "Rectangle 26",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "default",
+      "position": {
+        "x": 505,
+        "y": 403
+      },
+      "data": {
+        "label": "CRM System\n(Salesforce)",
+        "width": 103,
+        "height": 36,
+        "shape_name": "Rectangle 27",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "awsService",
+      "position": {
+        "x": 686,
+        "y": 556
+      },
+      "data": {
+        "label": "",
+        "width": 134,
+        "height": 122,
+        "shape_name": "Group 29",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "label",
+      "position": {
+        "x": 300,
+        "y": 544
+      },
+      "data": {
+        "label": "Amazon Connect",
+        "width": 101,
+        "height": 42,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "label",
+      "position": {
+        "x": 425,
+        "y": 685
+      },
+      "data": {
+        "label": "Amazon Connect voice and messaging support channel",
+        "width": 384,
+        "height": 25,
+        "shape_name": "TextBox 35",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "group",
+      "position": {
+        "x": 309,
+        "y": 186
+      },
+      "data": {
+        "label": "",
+        "width": 619,
+        "height": 492,
+        "shape_name": "Rectangle 36",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "default",
+      "position": {
+        "x": 415,
+        "y": 203
+      },
+      "data": {
+        "label": "",
+        "width": 385,
+        "height": 148,
+        "shape_name": "Rectangle 37",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "default",
+      "position": {
+        "x": 558,
+        "y": 206
+      },
+      "data": {
+        "label": "",
+        "width": 110,
+        "height": 106,
+        "shape_name": "Rectangle 38",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "label",
+      "position": {
+        "x": 573,
+        "y": 225
+      },
+      "data": {
+        "label": "Serverless \nConnected \nMobility \nBackend",
+        "width": 88,
+        "height": 74,
+        "shape_name": "TextBox 39",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 691,
+        "y": 220
+      },
+      "data": {
+        "label": "",
+        "width": 35,
+        "height": 35,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "awsService",
+      "position": {
+        "x": 428,
+        "y": 316
+      },
+      "data": {
+        "label": "",
+        "width": 24,
+        "height": 25,
+        "shape_name": "Graphic 10",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "awsService",
+      "position": {
+        "x": 403,
+        "y": 339
+      },
+      "data": {
+        "label": "AWS Lambda",
+        "width": 114,
+        "height": 25,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "awsService",
+      "position": {
+        "x": 650,
+        "y": 257
+      },
+      "data": {
+        "label": "Amazon API Gateway",
+        "width": 123,
+        "height": 42,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "api-gateway"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "label",
+      "position": {
+        "x": 436,
+        "y": 298
+      },
+      "data": {
+        "label": "assign case",
+        "width": 86,
+        "height": 42,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "label",
+      "position": {
+        "x": 474,
+        "y": 363
+      },
+      "data": {
+        "label": "Connected mobility backend and case ID sync",
+        "width": 308,
+        "height": 25,
+        "shape_name": "TextBox 48",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "default",
+      "position": {
+        "x": 243,
+        "y": 508
+      },
+      "data": {
+        "label": "1",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "default",
+      "position": {
+        "x": 338,
+        "y": 586
+      },
+      "data": {
+        "label": "2",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 2",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "default",
+      "position": {
+        "x": 413,
+        "y": 204
+      },
+      "data": {
+        "label": "3",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 3",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "default",
+      "position": {
+        "x": 395,
+        "y": 586
+      },
+      "data": {
+        "label": "4",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 3",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "default",
+      "position": {
+        "x": 460,
+        "y": 586
+      },
+      "data": {
+        "label": "5",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 4",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "default",
+      "position": {
+        "x": 526,
+        "y": 585
+      },
+      "data": {
+        "label": "6",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 5",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "default",
+      "position": {
+        "x": 610,
+        "y": 564
+      },
+      "data": {
+        "label": "7",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 6",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "default",
+      "position": {
+        "x": 742,
+        "y": 547
+      },
+      "data": {
+        "label": "8",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "default",
+      "position": {
+        "x": 761,
+        "y": 441
+      },
+      "data": {
+        "label": "9",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBox 8",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "default",
+      "position": {
+        "x": 842,
+        "y": 544
+      },
+      "data": {
+        "label": "10",
+        "width": 28,
+        "height": 23,
+        "shape_name": "NumBox 9",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "default",
+      "position": {
+        "x": 938,
+        "y": 452
+      },
+      "data": {
+        "label": "11",
+        "width": 25,
+        "height": 25,
+        "shape_name": "NumBoxInside 10",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-44",
+      "type": "awsService",
+      "position": {
+        "x": 476,
+        "y": 219
+      },
+      "data": {
+        "label": "",
+        "width": 35,
+        "height": 35,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-45",
+      "type": "awsService",
+      "position": {
+        "x": 435,
+        "y": 253
+      },
+      "data": {
+        "label": "Amazon API Gateway",
+        "width": 123,
+        "height": 42,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "api-gateway"
+      }
+    },
+    {
+      "id": "node-46",
+      "type": "default",
+      "position": {
+        "x": 1033,
+        "y": 353
+      },
+      "data": {
+        "label": "",
+        "width": 75,
+        "height": 148,
+        "shape_name": "Rectangle 79",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-47",
+      "type": "awsService",
+      "position": {
+        "x": 1059,
+        "y": 360
+      },
+      "data": {
+        "label": "",
+        "width": 21,
+        "height": 19,
+        "shape_name": "Picture 80",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-48",
+      "type": "awsService",
+      "position": {
+        "x": 1056,
+        "y": 472
+      },
+      "data": {
+        "label": "",
+        "width": 27,
+        "height": 22,
+        "shape_name": "Picture 81",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-49",
+      "type": "label",
+      "position": {
+        "x": 1037,
+        "y": 378
+      },
+      "data": {
+        "label": "Computer",
+        "width": 74,
+        "height": 24,
+        "shape_name": "TextBox 82",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-50",
+      "type": "label",
+      "position": {
+        "x": 1045,
+        "y": 494
+      },
+      "data": {
+        "label": "Phone",
+        "width": 54,
+        "height": 24,
+        "shape_name": "TextBox 83",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-51",
+      "type": "label",
+      "position": {
+        "x": 985,
+        "y": 527
+      },
+      "data": {
+        "label": "Call center/home office\n agents",
+        "width": 196,
+        "height": 38,
+        "shape_name": "TextBox 10",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-52",
+      "type": "label",
+      "position": {
+        "x": 1045,
+        "y": 442
+      },
+      "data": {
+        "label": "Agent",
+        "width": 52,
+        "height": 24,
+        "shape_name": "TextBox 85",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-53",
+      "type": "label",
+      "position": {
+        "x": 892,
+        "y": 295
+      },
+      "data": {
+        "label": "Case ID\nVehicle data \nVoice call\nCustomer profile\nCall summary\nAmazon Connect Contact Lens Insights",
+        "width": 147,
+        "height": 126,
+        "shape_name": "TextBox 12",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-54",
+      "type": "awsService",
+      "position": {
+        "x": 1056,
+        "y": 409
+      },
+      "data": {
+        "label": "",
+        "width": 25,
+        "height": 30,
+        "shape_name": "Picture 87",
+        "shape_type": "PICTURE (13)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 18",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 18"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 24",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 24"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 28",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 28"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 40",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 40"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 42",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 42"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 44",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 44"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 49",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 49"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 50",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 50"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 51",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 51"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 52",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 52"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 53",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 53"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 54",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 54"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 55",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 55"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 56",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 56"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 57",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 57"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 58",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 58"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "automotive-call-center-architecture.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

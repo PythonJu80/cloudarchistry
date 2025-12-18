@@ -1,0 +1,46 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 18,
+        "y": 12
+      },
+      "data": {
+        "label": "IBM Planning Analytics with Watson on AWS\u000bFor the architecture description, refer to the full diagram.",
+        "width": 902,
+        "height": 77,
+        "shape_name": "Title text box",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "group",
+      "position": {
+        "x": 111,
+        "y": 115
+      },
+      "data": {
+        "label": "",
+        "width": 1042,
+        "height": 559,
+        "shape_name": "Group 3",
+        "shape_type": "GROUP (6)"
+      }
+    }
+  ],
+  "edges": [],
+  "metadata": {
+    "source_file": "ibm-planning-analytics-with-watson.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

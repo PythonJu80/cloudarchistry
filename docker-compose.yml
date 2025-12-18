@@ -285,6 +285,33 @@ services:
       - prod
       - dev
 
+  # AWS Drawing Agent - Specialized AI for AWS architecture diagrams
+  aws-drawing-agent:
+    build:
+      context: ./cloud-academy/aws_drawing_agent
+      dockerfile: Dockerfile
+    ports:
+      - "6098:6098"
+    environment:
+      - ARCHITECTURES_DIR=/app/aws_architecture_diagrams
+      - PORT=6098
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+    volumes:
+      - ./cloud-academy/aws_drawing_agent/aws_architecture_diagrams:/app/aws_architecture_diagrams:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6098/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - prod
+      - dev
+
   # Diagram Ingestion Service - Handles XML/VSDX uploads and validation (Production)
   diagram-ingestion:
     build:
@@ -504,7 +531,7 @@ services:
       postgres:
         condition: service_healthy
       learning-agent:
-        condition: service_healthy
+        condition: service_started
       diagram-api:
         condition: service_healthy
     profiles:
@@ -533,7 +560,7 @@ services:
       postgres:
         condition: service_healthy
       learning-agent:
-        condition: service_healthy
+        condition: service_started
     profiles:
       - dev
 

@@ -1,0 +1,91 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Serverless Web Hosting on AWS App Runner",
+        "width": 658,
+        "height": 42,
+        "shape_name": "TextBox 71",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2022, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "group",
+      "position": {
+        "x": 85,
+        "y": 143
+      },
+      "data": {
+        "label": "",
+        "width": 1045,
+        "height": 511,
+        "shape_name": "Group 1",
+        "shape_type": "GROUP (6)"
+      }
+    }
+  ],
+  "edges": [],
+  "metadata": {
+    "source_file": "serverless-web-hosting-aws-app-runner.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

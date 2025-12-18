@@ -1,0 +1,1203 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2024, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Datavant - Datavant Switchboard with AWS Clean Rooms",
+        "width": 1156,
+        "height": 42,
+        "shape_name": "TextBox 50",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 51",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "default",
+      "position": {
+        "x": 228,
+        "y": 159
+      },
+      "data": {
+        "label": "1",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 80",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "default",
+      "position": {
+        "x": 173,
+        "y": 395
+      },
+      "data": {
+        "label": "",
+        "width": 301,
+        "height": 141,
+        "shape_name": "Google Shape;68;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "default",
+      "position": {
+        "x": 119,
+        "y": 105
+      },
+      "data": {
+        "label": "",
+        "width": 1131,
+        "height": 248,
+        "shape_name": "Google Shape;69;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "default",
+      "position": {
+        "x": 120,
+        "y": 571
+      },
+      "data": {
+        "label": "",
+        "width": 734,
+        "height": 153,
+        "shape_name": "Google Shape;70;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "awsService",
+      "position": {
+        "x": 982,
+        "y": 265
+      },
+      "data": {
+        "label": "",
+        "width": 55,
+        "height": 55,
+        "shape_name": "Google Shape;84;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "awsService",
+      "position": {
+        "x": 1090,
+        "y": 263
+      },
+      "data": {
+        "label": "",
+        "width": 55,
+        "height": 55,
+        "shape_name": "Google Shape;85;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 1092,
+        "y": 153
+      },
+      "data": {
+        "label": "",
+        "width": 55,
+        "height": 55,
+        "shape_name": "Google Shape;86;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 984,
+        "y": 155
+      },
+      "data": {
+        "label": "",
+        "width": 55,
+        "height": 55,
+        "shape_name": "Google Shape;87;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "awsService",
+      "position": {
+        "x": 729,
+        "y": 187
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;88;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "awsService",
+      "position": {
+        "x": 649,
+        "y": 192
+      },
+      "data": {
+        "label": "",
+        "width": 50,
+        "height": 50,
+        "shape_name": "Google Shape;89;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "awsService",
+      "position": {
+        "x": 474,
+        "y": 192
+      },
+      "data": {
+        "label": "",
+        "width": 47,
+        "height": 47,
+        "shape_name": "Google Shape;90;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 273,
+        "y": 179
+      },
+      "data": {
+        "label": "",
+        "width": 71,
+        "height": 71,
+        "shape_name": "Google Shape;91;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "awsService",
+      "position": {
+        "x": 561,
+        "y": 190
+      },
+      "data": {
+        "label": "",
+        "width": 53,
+        "height": 53,
+        "shape_name": "Google Shape;92;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "default",
+      "position": {
+        "x": 169,
+        "y": 186
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;93;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "default",
+      "position": {
+        "x": 380,
+        "y": 187
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;94;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "default",
+      "position": {
+        "x": 952,
+        "y": 112
+      },
+      "data": {
+        "label": "Analytics services",
+        "width": 229,
+        "height": 232,
+        "shape_name": "Google Shape;95;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "default",
+      "position": {
+        "x": 858,
+        "y": 189
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;96;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "awsService",
+      "position": {
+        "x": 954,
+        "y": 214
+      },
+      "data": {
+        "label": "Amazon Redshift",
+        "width": 124,
+        "height": 32,
+        "shape_name": "Google Shape;97;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "redshift"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "awsService",
+      "position": {
+        "x": 1059,
+        "y": 213
+      },
+      "data": {
+        "label": "Amazon Athena",
+        "width": 124,
+        "height": 32,
+        "shape_name": "Google Shape;98;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "athena"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "awsService",
+      "position": {
+        "x": 950,
+        "y": 323
+      },
+      "data": {
+        "label": "Amazon EMR",
+        "width": 124,
+        "height": 32,
+        "shape_name": "Google Shape;99;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "emr"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "default",
+      "position": {
+        "x": 1075,
+        "y": 317
+      },
+      "data": {
+        "label": "Amazon SageMaker",
+        "width": 92,
+        "height": 51,
+        "shape_name": "Google Shape;100;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "awsService",
+      "position": {
+        "x": 155,
+        "y": 247
+      },
+      "data": {
+        "label": "Amazon S3",
+        "width": 92,
+        "height": 32,
+        "shape_name": "Google Shape;101;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "awsService",
+      "position": {
+        "x": 364,
+        "y": 248
+      },
+      "data": {
+        "label": "Amazon S3",
+        "width": 92,
+        "height": 32,
+        "shape_name": "Google Shape;102;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 844,
+        "y": 249
+      },
+      "data": {
+        "label": "Amazon S3",
+        "width": 92,
+        "height": 32,
+        "shape_name": "Google Shape;103;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "default",
+      "position": {
+        "x": 718,
+        "y": 243
+      },
+      "data": {
+        "label": "AWS Clean Rooms",
+        "width": 92,
+        "height": 51,
+        "shape_name": "Google Shape;104;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "default",
+      "position": {
+        "x": 457,
+        "y": 244
+      },
+      "data": {
+        "label": "crawler",
+        "width": 92,
+        "height": 51,
+        "shape_name": "Google Shape;105;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "default",
+      "position": {
+        "x": 633,
+        "y": 237
+      },
+      "data": {
+        "label": "Data Catalog",
+        "width": 92,
+        "height": 51,
+        "shape_name": "Google Shape;106;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "awsService",
+      "position": {
+        "x": 547,
+        "y": 248
+      },
+      "data": {
+        "label": "AWS Glue",
+        "width": 92,
+        "height": 32,
+        "shape_name": "Google Shape;107;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "glue"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "default",
+      "position": {
+        "x": 264,
+        "y": 237
+      },
+      "data": {
+        "label": "container\u000bDatavant Switchboard",
+        "width": 98,
+        "height": 67,
+        "shape_name": "Google Shape;108;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "awsService",
+      "position": {
+        "x": 735,
+        "y": 638
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;109;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "awsService",
+      "position": {
+        "x": 662,
+        "y": 642
+      },
+      "data": {
+        "label": "",
+        "width": 50,
+        "height": 50,
+        "shape_name": "Google Shape;110;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "awsService",
+      "position": {
+        "x": 478,
+        "y": 643
+      },
+      "data": {
+        "label": "",
+        "width": 47,
+        "height": 47,
+        "shape_name": "Google Shape;111;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "awsService",
+      "position": {
+        "x": 281,
+        "y": 630
+      },
+      "data": {
+        "label": "",
+        "width": 71,
+        "height": 71,
+        "shape_name": "Google Shape;112;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "awsService",
+      "position": {
+        "x": 565,
+        "y": 640
+      },
+      "data": {
+        "label": "",
+        "width": 53,
+        "height": 53,
+        "shape_name": "Google Shape;113;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "default",
+      "position": {
+        "x": 169,
+        "y": 638
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;114;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "default",
+      "position": {
+        "x": 391,
+        "y": 638
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;115;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "awsService",
+      "position": {
+        "x": 374,
+        "y": 698
+      },
+      "data": {
+        "label": "Amazon S3",
+        "width": 92,
+        "height": 32,
+        "shape_name": "Google Shape;117;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "default",
+      "position": {
+        "x": 721,
+        "y": 693
+      },
+      "data": {
+        "label": "AWS Clean Rooms",
+        "width": 92,
+        "height": 51,
+        "shape_name": "Google Shape;118;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "default",
+      "position": {
+        "x": 455,
+        "y": 694
+      },
+      "data": {
+        "label": "crawler",
+        "width": 92,
+        "height": 51,
+        "shape_name": "Google Shape;119;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "default",
+      "position": {
+        "x": 643,
+        "y": 688
+      },
+      "data": {
+        "label": "Data Catalog",
+        "width": 92,
+        "height": 51,
+        "shape_name": "Google Shape;120;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-44",
+      "type": "awsService",
+      "position": {
+        "x": 546,
+        "y": 697
+      },
+      "data": {
+        "label": "AWS Glue",
+        "width": 92,
+        "height": 32,
+        "shape_name": "Google Shape;121;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "glue"
+      }
+    },
+    {
+      "id": "node-45",
+      "type": "default",
+      "position": {
+        "x": 235,
+        "y": 692
+      },
+      "data": {
+        "label": "container\u000bDatavant Switchboard",
+        "width": 170,
+        "height": 55,
+        "shape_name": "Google Shape;122;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-46",
+      "type": "default",
+      "position": {
+        "x": 155,
+        "y": 99
+      },
+      "data": {
+        "label": "AWS Cloud\u000bRole: collaboration creator",
+        "width": 238,
+        "height": 53,
+        "shape_name": "Google Shape;148;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-47",
+      "type": "awsService",
+      "position": {
+        "x": 173,
+        "y": 513
+      },
+      "data": {
+        "label": "AWS Fargate",
+        "width": 111,
+        "height": 51,
+        "shape_name": "Google Shape;150;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "fargate"
+      }
+    },
+    {
+      "id": "node-48",
+      "type": "awsService",
+      "position": {
+        "x": 260,
+        "y": 513
+      },
+      "data": {
+        "label": "Amazon EKS",
+        "width": 111,
+        "height": 51,
+        "shape_name": "Google Shape;151;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "eks"
+      }
+    },
+    {
+      "id": "node-49",
+      "type": "awsService",
+      "position": {
+        "x": 353,
+        "y": 513
+      },
+      "data": {
+        "label": "Amazon ECS",
+        "width": 106,
+        "height": 51,
+        "shape_name": "Google Shape;152;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "ecs"
+      }
+    },
+    {
+      "id": "node-50",
+      "type": "awsService",
+      "position": {
+        "x": 169,
+        "y": 379
+      },
+      "data": {
+        "label": "",
+        "width": 71,
+        "height": 71,
+        "shape_name": "Google Shape;153;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-51",
+      "type": "default",
+      "position": {
+        "x": 230,
+        "y": 388
+      },
+      "data": {
+        "label": "Container deployment methods\u000bDatavant Switchboard",
+        "width": 275,
+        "height": 38,
+        "shape_name": "Google Shape;156;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-52",
+      "type": "awsService",
+      "position": {
+        "x": 285,
+        "y": 456
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;161;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-53",
+      "type": "awsService",
+      "position": {
+        "x": 371,
+        "y": 456
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;162;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-54",
+      "type": "awsService",
+      "position": {
+        "x": 198,
+        "y": 456
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 57,
+        "shape_name": "Google Shape;163;p14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-55",
+      "type": "awsService",
+      "position": {
+        "x": 119,
+        "y": 106
+      },
+      "data": {
+        "label": "",
+        "width": 40,
+        "height": 40,
+        "shape_name": "Graphic 93",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-56",
+      "type": "awsService",
+      "position": {
+        "x": 119,
+        "y": 571
+      },
+      "data": {
+        "label": "",
+        "width": 40,
+        "height": 40,
+        "shape_name": "Graphic 94",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-57",
+      "type": "default",
+      "position": {
+        "x": 150,
+        "y": 564
+      },
+      "data": {
+        "label": "AWS Cloud\u000bRole: member",
+        "width": 238,
+        "height": 53,
+        "shape_name": "Google Shape;148;p14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-58",
+      "type": "awsService",
+      "position": {
+        "x": 153,
+        "y": 704
+      },
+      "data": {
+        "label": "Amazon S3",
+        "width": 92,
+        "height": 32,
+        "shape_name": "Google Shape;101;p14",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-59",
+      "type": "default",
+      "position": {
+        "x": 332,
+        "y": 160
+      },
+      "data": {
+        "label": "2",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 120",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-60",
+      "type": "default",
+      "position": {
+        "x": 568,
+        "y": 145
+      },
+      "data": {
+        "label": "3",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 141",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-61",
+      "type": "default",
+      "position": {
+        "x": 737,
+        "y": 144
+      },
+      "data": {
+        "label": "4",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 145",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-62",
+      "type": "default",
+      "position": {
+        "x": 230,
+        "y": 619
+      },
+      "data": {
+        "label": "1",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 153",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-63",
+      "type": "default",
+      "position": {
+        "x": 350,
+        "y": 608
+      },
+      "data": {
+        "label": "2",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 157",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-64",
+      "type": "default",
+      "position": {
+        "x": 772,
+        "y": 591
+      },
+      "data": {
+        "label": "4",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 185",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-65",
+      "type": "default",
+      "position": {
+        "x": 858,
+        "y": 142
+      },
+      "data": {
+        "label": "5",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 186",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-66",
+      "type": "default",
+      "position": {
+        "x": 956,
+        "y": 120
+      },
+      "data": {
+        "label": "6",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 187",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-67",
+      "type": "default",
+      "position": {
+        "x": 580,
+        "y": 597
+      },
+      "data": {
+        "label": "3",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 188",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Google Shape;123;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;123;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;124;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;124;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;125;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;125;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;126;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;126;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;127;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;127;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;128;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;128;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;129;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;129;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;130;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;130;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;131;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;131;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;132;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;132;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;133;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;133;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;134;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;134;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;135;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;135;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;136;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;136;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;137;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;137;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;124;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;124;p14"
+      }
+    },
+    {
+      "id": "edge-Google Shape;124;p14",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;124;p14"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "datavant-switchboard-with-aws-clean-rooms.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

@@ -1,0 +1,657 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2024, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "group",
+      "position": {
+        "x": 52,
+        "y": 137
+      },
+      "data": {
+        "label": "",
+        "width": 704,
+        "height": 491,
+        "shape_name": "Rectangle 111",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "awsService",
+      "position": {
+        "x": 52,
+        "y": 136
+      },
+      "data": {
+        "label": "",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Graphic 20",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "awsService",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Cross-Account EC2 Status Monitoring for High Performance Computing(HPC) Clusters",
+        "width": 1239,
+        "height": 42,
+        "shape_name": "TextBox 50",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 51",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "awsService",
+      "position": {
+        "x": 127,
+        "y": 251
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 5",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "awsService",
+      "position": {
+        "x": 104,
+        "y": 320
+      },
+      "data": {
+        "label": "Amazon EC2",
+        "width": 110,
+        "height": 27,
+        "shape_name": "TextBox 6",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "awsService",
+      "position": {
+        "x": 127,
+        "y": 354
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 5",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "awsService",
+      "position": {
+        "x": 104,
+        "y": 424
+      },
+      "data": {
+        "label": "Amazon EC2",
+        "width": 110,
+        "height": 27,
+        "shape_name": "TextBox 6",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 127,
+        "y": 458
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 7",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 104,
+        "y": 527
+      },
+      "data": {
+        "label": "Amazon EC2",
+        "width": 110,
+        "height": 27,
+        "shape_name": "TextBox 8",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "default",
+      "position": {
+        "x": 84,
+        "y": 205
+      },
+      "data": {
+        "label": "",
+        "width": 157,
+        "height": 342,
+        "shape_name": "Rectangle 11",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "label",
+      "position": {
+        "x": 100,
+        "y": 204
+      },
+      "data": {
+        "label": "Compute Cluster",
+        "width": 148,
+        "height": 27,
+        "shape_name": "TextBox 13",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "awsService",
+      "position": {
+        "x": 295,
+        "y": 354
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 19",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 248,
+        "y": 426
+      },
+      "data": {
+        "label": "Amazon EventBridge",
+        "width": 164,
+        "height": 27,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "eventbridge"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "awsService",
+      "position": {
+        "x": 432,
+        "y": 354
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 10",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 404,
+        "y": 425
+      },
+      "data": {
+        "label": "AWS Lambda",
+        "width": 121,
+        "height": 27,
+        "shape_name": "TextBox 20",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "awsService",
+      "position": {
+        "x": 594,
+        "y": 352
+      },
+      "data": {
+        "label": "",
+        "width": 65,
+        "height": 65,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "awsService",
+      "position": {
+        "x": 549,
+        "y": 428
+      },
+      "data": {
+        "label": "Amazon CloudWatch Logs",
+        "width": 160,
+        "height": 45,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cloudwatch"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "default",
+      "position": {
+        "x": 250,
+        "y": 205
+      },
+      "data": {
+        "label": "",
+        "width": 302,
+        "height": 342,
+        "shape_name": "Rectangle 21",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "default",
+      "position": {
+        "x": 554,
+        "y": 203
+      },
+      "data": {
+        "label": "",
+        "width": 394,
+        "height": 343,
+        "shape_name": "Rectangle 22",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "awsService",
+      "position": {
+        "x": 284,
+        "y": 206
+      },
+      "data": {
+        "label": "Amazon EC2 status collection and processing",
+        "width": 236,
+        "height": 45,
+        "shape_name": "TextBox 26",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "default",
+      "position": {
+        "x": 761,
+        "y": 136
+      },
+      "data": {
+        "label": "",
+        "width": 364,
+        "height": 491,
+        "shape_name": "Rectangle 28",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "awsService",
+      "position": {
+        "x": 761,
+        "y": 136
+      },
+      "data": {
+        "label": "",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Graphic 20",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "awsService",
+      "position": {
+        "x": 816,
+        "y": 350
+      },
+      "data": {
+        "label": "",
+        "width": 65,
+        "height": 65,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "awsService",
+      "position": {
+        "x": 772,
+        "y": 426
+      },
+      "data": {
+        "label": "Amazon CloudWatch Logs",
+        "width": 160,
+        "height": 45,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cloudwatch"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 983,
+        "y": 357
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 61,
+        "shape_name": "Graphic 24",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "label",
+      "position": {
+        "x": 964,
+        "y": 428
+      },
+      "data": {
+        "label": "dashboard",
+        "width": 109,
+        "height": 27,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "default",
+      "position": {
+        "x": 948,
+        "y": 205
+      },
+      "data": {
+        "label": "",
+        "width": 133,
+        "height": 342,
+        "shape_name": "Rectangle 35",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "label",
+      "position": {
+        "x": 964,
+        "y": 207
+      },
+      "data": {
+        "label": "Visualization",
+        "width": 110,
+        "height": 27,
+        "shape_name": "TextBox 37",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "awsService",
+      "position": {
+        "x": 565,
+        "y": 205
+      },
+      "data": {
+        "label": "Data sharing using Amazon CloudWatch cross-account observability",
+        "width": 370,
+        "height": 45,
+        "shape_name": "TextBox 38",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cloudwatch"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "default",
+      "position": {
+        "x": 185,
+        "y": 284
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 194,
+        "shape_name": "Freeform 39",
+        "shape_type": "FREEFORM (5)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "default",
+      "position": {
+        "x": 89,
+        "y": 231
+      },
+      "data": {
+        "label": "1",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 46",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "default",
+      "position": {
+        "x": 262,
+        "y": 237
+      },
+      "data": {
+        "label": "2",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 47",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "default",
+      "position": {
+        "x": 565,
+        "y": 262
+      },
+      "data": {
+        "label": "3",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 48",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "default",
+      "position": {
+        "x": 967,
+        "y": 254
+      },
+      "data": {
+        "label": "4",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Oval 49",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "label",
+      "position": {
+        "x": 82,
+        "y": 139
+      },
+      "data": {
+        "label": "AWS Cloud\u000bHPC cluster account",
+        "width": 370,
+        "height": 45,
+        "shape_name": "TextBox 52",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "label",
+      "position": {
+        "x": 790,
+        "y": 138
+      },
+      "data": {
+        "label": "AWS Cloud\u000bCentralized monitoring account",
+        "width": 370,
+        "height": 45,
+        "shape_name": "TextBox 53",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 40",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 40"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 42",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 42"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 43",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 43"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 44",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 44"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 45",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 45"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "hpc-cluster-monitoring.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

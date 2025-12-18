@@ -1,0 +1,512 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Edit in the Cloud on AWS",
+        "width": 658,
+        "height": 42,
+        "shape_name": "TextBox 71",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2022, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "awsService",
+      "position": {
+        "x": 312,
+        "y": 185
+      },
+      "data": {
+        "label": "VPC",
+        "width": 574,
+        "height": 448,
+        "shape_name": "Rectangle 104",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "vpc"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "group",
+      "position": {
+        "x": 297,
+        "y": 136
+      },
+      "data": {
+        "label": "AWS Cloud",
+        "width": 606,
+        "height": 506,
+        "shape_name": "Rectangle 105",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "awsService",
+      "position": {
+        "x": 297,
+        "y": 136
+      },
+      "data": {
+        "label": "",
+        "width": 26,
+        "height": 29,
+        "shape_name": "Graphic 9",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "awsService",
+      "position": {
+        "x": 312,
+        "y": 186
+      },
+      "data": {
+        "label": "",
+        "width": 26,
+        "height": 29,
+        "shape_name": "Graphic 10",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "awsService",
+      "position": {
+        "x": 342,
+        "y": 235
+      },
+      "data": {
+        "label": "",
+        "width": 29,
+        "height": 29,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "awsService",
+      "position": {
+        "x": 341,
+        "y": 234
+      },
+      "data": {
+        "label": "G4dn EC2 instance",
+        "width": 274,
+        "height": 211,
+        "shape_name": "Rectangle 111",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 193,
+        "y": 349
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 49,
+        "shape_name": "Graphic 24",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "label",
+      "position": {
+        "x": 154,
+        "y": 402
+      },
+      "data": {
+        "label": "Teradici PCoIP or\u000bNICE DCV client",
+        "width": 132,
+        "height": 40,
+        "shape_name": "TextBox 25",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "default",
+      "position": {
+        "x": 347,
+        "y": 281
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "default",
+      "position": {
+        "x": 702,
+        "y": 232
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "default",
+      "position": {
+        "x": 702,
+        "y": 390
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 367,
+        "y": 345
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 49,
+        "shape_name": "Graphic 16",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "label",
+      "position": {
+        "x": 338,
+        "y": 399
+      },
+      "data": {
+        "label": "Video editing software",
+        "width": 112,
+        "height": 40,
+        "shape_name": "TextBox 33",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 735,
+        "y": 392
+      },
+      "data": {
+        "label": "",
+        "width": 67,
+        "height": 67,
+        "shape_name": "Graphic 18",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "label",
+      "position": {
+        "x": 654,
+        "y": 467
+      },
+      "data": {
+        "label": "Amazon FSx for\u000bWindows File Server",
+        "width": 239,
+        "height": 40,
+        "shape_name": "TextBox 12",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "label",
+      "position": {
+        "x": 462,
+        "y": 272
+      },
+      "data": {
+        "label": "Teradici cloud access software or\u000bNICE DCV",
+        "width": 135,
+        "height": 55,
+        "shape_name": "TextBox 33",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "label",
+      "position": {
+        "x": 472,
+        "y": 359
+      },
+      "data": {
+        "label": "NVIDIA driver",
+        "width": 112,
+        "height": 25,
+        "shape_name": "TextBox 33",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "label",
+      "position": {
+        "x": 472,
+        "y": 409
+      },
+      "data": {
+        "label": "Windows Server 2019",
+        "width": 112,
+        "height": 40,
+        "shape_name": "TextBox 33",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "awsService",
+      "position": {
+        "x": 736,
+        "y": 234
+      },
+      "data": {
+        "label": "",
+        "width": 67,
+        "height": 67,
+        "shape_name": "Graphic 7",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "label",
+      "position": {
+        "x": 656,
+        "y": 309
+      },
+      "data": {
+        "label": "AWS Directory\u000bService",
+        "width": 235,
+        "height": 40,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "awsService",
+      "position": {
+        "x": 737,
+        "y": 550
+      },
+      "data": {
+        "label": "",
+        "width": 67,
+        "height": 67,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "awsService",
+      "position": {
+        "x": 658,
+        "y": 625
+      },
+      "data": {
+        "label": "Amazon Simple Storage \u000bService (Amazon S3)",
+        "width": 235,
+        "height": 40,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "label",
+      "position": {
+        "x": 602,
+        "y": 269
+      },
+      "data": {
+        "label": "User authentication",
+        "width": 135,
+        "height": 25,
+        "shape_name": "TextBox 131",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "label",
+      "position": {
+        "x": 605,
+        "y": 427
+      },
+      "data": {
+        "label": "Network storage",
+        "width": 126,
+        "height": 25,
+        "shape_name": "TextBox 132",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "label",
+      "position": {
+        "x": 537,
+        "y": 588
+      },
+      "data": {
+        "label": "Optional",
+        "width": 126,
+        "height": 25,
+        "shape_name": "TextBox 133",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "default",
+      "position": {
+        "x": 550,
+        "y": 364
+      },
+      "data": {
+        "label": "",
+        "width": 104,
+        "height": 295,
+        "shape_name": "Freeform 134",
+        "shape_type": "FREEFORM (5)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "default",
+      "position": {
+        "x": 799,
+        "y": 269
+      },
+      "data": {
+        "label": "",
+        "width": 29,
+        "height": 144,
+        "shape_name": "Freeform 135",
+        "shape_type": "FREEFORM (5)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 128",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 128"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 129",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 129"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 130",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 130"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "edit-in-cloud-on-aws.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

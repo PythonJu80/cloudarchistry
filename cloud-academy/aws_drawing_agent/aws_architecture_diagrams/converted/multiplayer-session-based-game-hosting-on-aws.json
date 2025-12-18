@@ -1,0 +1,766 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Multiplayer Session-based Game Hosting on AWS",
+        "width": 658,
+        "height": 42,
+        "shape_name": "TextBox 71",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2023, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "group",
+      "position": {
+        "x": 240,
+        "y": 114
+      },
+      "data": {
+        "label": "AWS Cloud",
+        "width": 797,
+        "height": 522,
+        "shape_name": "Rectangle 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "awsService",
+      "position": {
+        "x": 240,
+        "y": 112
+      },
+      "data": {
+        "label": "",
+        "width": 41,
+        "height": 41,
+        "shape_name": "Graphic 2",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "awsService",
+      "position": {
+        "x": 236,
+        "y": 249
+      },
+      "data": {
+        "label": "Amazon Cognito\nuser identities",
+        "width": 241,
+        "height": 48,
+        "shape_name": "TextBox 7",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cognito"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "awsService",
+      "position": {
+        "x": 166,
+        "y": 323
+      },
+      "data": {
+        "label": "",
+        "width": 50,
+        "height": 49,
+        "shape_name": "Graphic 1",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "label",
+      "position": {
+        "x": 137,
+        "y": 380
+      },
+      "data": {
+        "label": "Game clients",
+        "width": 112,
+        "height": 54,
+        "shape_name": "TextBox 2",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "awsService",
+      "position": {
+        "x": 316,
+        "y": 178
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "default",
+      "position": {
+        "x": 190,
+        "y": 216
+      },
+      "data": {
+        "label": "",
+        "width": 128,
+        "height": 90,
+        "shape_name": "Freeform 31",
+        "shape_type": "FREEFORM (5)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 232,
+        "y": 383
+      },
+      "data": {
+        "label": "Amazon API Gateway",
+        "width": 241,
+        "height": 29,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "api-gateway"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "awsService",
+      "position": {
+        "x": 315,
+        "y": 316
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 4",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "awsService",
+      "position": {
+        "x": 436,
+        "y": 392
+      },
+      "data": {
+        "label": "AWS Lambda\nbackend logic",
+        "width": 241,
+        "height": 48,
+        "shape_name": "TextBox 5",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "awsService",
+      "position": {
+        "x": 518,
+        "y": 318
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 6",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 611,
+        "y": 219
+      },
+      "data": {
+        "label": "Amazon DynamoDB\nplayer data",
+        "width": 241,
+        "height": 48,
+        "shape_name": "TextBox 10",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "dynamodb"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "awsService",
+      "position": {
+        "x": 691,
+        "y": 154
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 11",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 613,
+        "y": 385
+      },
+      "data": {
+        "label": "Amazon DynamoDB\nmatchmaking tickets",
+        "width": 241,
+        "height": 48,
+        "shape_name": "TextBox 50",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "dynamodb"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "awsService",
+      "position": {
+        "x": 694,
+        "y": 317
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 51",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "default",
+      "position": {
+        "x": 550,
+        "y": 187
+      },
+      "data": {
+        "label": "",
+        "width": 143,
+        "height": 110,
+        "shape_name": "Freeform 52",
+        "shape_type": "FREEFORM (5)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "awsService",
+      "position": {
+        "x": 520,
+        "y": 491
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 1",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "label",
+      "position": {
+        "x": 439,
+        "y": 558
+      },
+      "data": {
+        "label": "Amazon GameLift\nqueue and matchmaking",
+        "width": 241,
+        "height": 48,
+        "shape_name": "TextBox 2",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "awsService",
+      "position": {
+        "x": 318,
+        "y": 502
+      },
+      "data": {
+        "label": "",
+        "width": 60,
+        "height": 60,
+        "shape_name": "Graphic 20",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "label",
+      "position": {
+        "x": 280,
+        "y": 569
+      },
+      "data": {
+        "label": "Amazon GameLift fleet (multi-Region)",
+        "width": 158,
+        "height": 48,
+        "shape_name": "TextBox 21",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "awsService",
+      "position": {
+        "x": 646,
+        "y": 636
+      },
+      "data": {
+        "label": "Amazon CloudWatch\nmetrics, logs, and dashboards",
+        "width": 241,
+        "height": 48,
+        "shape_name": "TextBox 76",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "rds"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "awsService",
+      "position": {
+        "x": 728,
+        "y": 567
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 77",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "awsService",
+      "position": {
+        "x": 791,
+        "y": 300
+      },
+      "data": {
+        "label": "AWS Lambda\nprocess tickets",
+        "width": 241,
+        "height": 48,
+        "shape_name": "TextBox 55",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 871,
+        "y": 228
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 61",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "awsService",
+      "position": {
+        "x": 872,
+        "y": 421
+      },
+      "data": {
+        "label": "",
+        "width": 62,
+        "height": 62,
+        "shape_name": "Graphic 73",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "awsService",
+      "position": {
+        "x": 788,
+        "y": 493
+      },
+      "data": {
+        "label": "Amazon Simple \nNotification Service \n(Amazon SNS)\ntopic",
+        "width": 241,
+        "height": 87,
+        "shape_name": "TextBox 74",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "sns"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "default",
+      "position": {
+        "x": 188,
+        "y": 441
+      },
+      "data": {
+        "label": "",
+        "width": 130,
+        "height": 88,
+        "shape_name": "Freeform 31",
+        "shape_type": "FREEFORM (5)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "default",
+      "position": {
+        "x": 243,
+        "y": 179
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "default",
+      "position": {
+        "x": 274,
+        "y": 309
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 2",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "default",
+      "position": {
+        "x": 390,
+        "y": 309
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 3",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "default",
+      "position": {
+        "x": 604,
+        "y": 148
+      },
+      "data": {
+        "label": "4",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 4",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "default",
+      "position": {
+        "x": 560,
+        "y": 443
+      },
+      "data": {
+        "label": "5",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 5",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "default",
+      "position": {
+        "x": 430,
+        "y": 486
+      },
+      "data": {
+        "label": "6",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 6",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "default",
+      "position": {
+        "x": 684,
+        "y": 487
+      },
+      "data": {
+        "label": "7",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "default",
+      "position": {
+        "x": 914,
+        "y": 361
+      },
+      "data": {
+        "label": "8",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "default",
+      "position": {
+        "x": 777,
+        "y": 287
+      },
+      "data": {
+        "label": "9",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "default",
+      "position": {
+        "x": 327,
+        "y": 410
+      },
+      "data": {
+        "label": "10",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "default",
+      "position": {
+        "x": 617,
+        "y": 311
+      },
+      "data": {
+        "label": "11",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "default",
+      "position": {
+        "x": 242,
+        "y": 502
+      },
+      "data": {
+        "label": "12",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "default",
+      "position": {
+        "x": 546,
+        "y": 615
+      },
+      "data": {
+        "label": "13",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 25",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 25"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 28",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 28"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 25",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 25"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 25",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 25"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 11",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 11"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 11",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 11"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 11",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 11"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 25",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 25"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 25",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 25"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "multiplayer-session-based-game-hosting-on-aws.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

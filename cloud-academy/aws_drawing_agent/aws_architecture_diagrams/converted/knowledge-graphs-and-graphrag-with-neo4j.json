@@ -1,0 +1,813 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 96,
+        "y": 738
+      },
+      "data": {
+        "label": "Reviewed for technical accuracy November 2024\n\u00a9 2024, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 409,
+        "height": 30,
+        "shape_name": "object 2",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "label",
+      "position": {
+        "x": 532,
+        "y": 742
+      },
+      "data": {
+        "label": "AWS Reference Architecture",
+        "width": 249,
+        "height": 23,
+        "shape_name": "object 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "group",
+      "position": {
+        "x": 10,
+        "y": 0
+      },
+      "data": {
+        "label": "",
+        "width": 1268,
+        "height": 720,
+        "shape_name": "object 4",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "default",
+      "position": {
+        "x": 919,
+        "y": 8
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 618",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "default",
+      "position": {
+        "x": 921,
+        "y": 150
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 619",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "default",
+      "position": {
+        "x": 921,
+        "y": 194
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 621",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "awsService",
+      "position": {
+        "x": 945,
+        "y": 6
+      },
+      "data": {
+        "label": "Structured, unstructured, and semi-structured data exists in a wide variety of systems, including Amazon Redshift, Amazon Simple Storage Service (Amazon S3) and Amazon Managed Streaming for Apache Kafka (Amazon MSK). Other systems can be accessed through an integration layer such as AWS Glue. Some subset of this data is highly connected.  Insights can be uncovered by modeling it as a graph.\nScripts running in Amazon SageMaker pull connected data from these source systems.\nOnce in SageMaker, the data is passed to an Amazon Bedrock process managed by LangChain. Large language models (LLMs) extract entities and format the result as Cypher, the Neo4j query language.  SageMaker passes that Cypher to the Neo4j driver.\nCypher statements wrapping the extracted data and entities are fed into the Neo4j graph database to create a knowledge graph.  The Graph Database is one  component of Neo4j AuraDB, a Neo4j SaaS running on AWS.  \nUsers can explore the resulting knowledge graph in Neo4j Bloom, a BI tool designed specifically for graphs. \nEnrichment can be done with Neo4j Graph Data Science. Entity resolution algorithms resolve duplicate entries. Community detection algorithms can be used to identify clusters and generate local cluster summaries for GraphRAG. Graph embedding algorithms help map and identify topologically similar entities for GraphRAG.\nWith a knowledge graph created, applications can then make use of that graph in a GraphRAG architecture to provide grounded results with fewer hallucinations than alternative approaches.  Those applications can run in a variety of AWS platforms, including AWS Lambda, Amazon Elastic Compute Cloud (Amazon EC2) and Amazon Elastic Kubernetes Service (Amazon EKS).\nClient applications can make calls into functions hosted in Amazon SageMaker.  Those functions query Amazon Bedrock. \nAmazon Bedrock responses are grounded using Neo4j Graph Database with data gathered from the wider enterprise. Using a graph for grounding provides a vector RAG approach with the additional ability to use the structure of the graph to improve responses.",
+        "width": 269,
+        "height": 718,
+        "shape_name": "object 12",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "group",
+      "position": {
+        "x": 60,
+        "y": 156
+      },
+      "data": {
+        "label": "AWS Cloud",
+        "width": 909,
+        "height": 506,
+        "shape_name": "Google Shape;169;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "awsService",
+      "position": {
+        "x": 60,
+        "y": 156
+      },
+      "data": {
+        "label": "",
+        "width": 32,
+        "height": 33,
+        "shape_name": "Google Shape;171;g27fb0a1e8c5_0_174",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "default",
+      "position": {
+        "x": 254,
+        "y": 214
+      },
+      "data": {
+        "label": "Parsing",
+        "width": 130,
+        "height": 430,
+        "shape_name": "Google Shape;180;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 97,
+        "y": 604
+      },
+      "data": {
+        "label": "",
+        "width": 82,
+        "height": 74,
+        "shape_name": "Google Shape;186;g27fb0a1e8c5_0_174",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 91,
+        "y": 489
+      },
+      "data": {
+        "label": "",
+        "width": 96,
+        "height": 71,
+        "shape_name": "Google Shape;192;g27fb0a1e8c5_0_174",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "default",
+      "position": {
+        "x": 214,
+        "y": 425
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;195;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "awsService",
+      "position": {
+        "x": 283,
+        "y": 577
+      },
+      "data": {
+        "label": "",
+        "width": 63,
+        "height": 96,
+        "shape_name": "Group 124",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "default",
+      "position": {
+        "x": 265,
+        "y": 249
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;203;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 448,
+        "y": 248
+      },
+      "data": {
+        "label": "",
+        "width": 94,
+        "height": 33,
+        "shape_name": "Google Shape;209;g27fb0a1e8c5_0_174",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "awsService",
+      "position": {
+        "x": 444,
+        "y": 445
+      },
+      "data": {
+        "label": "",
+        "width": 101,
+        "height": 78,
+        "shape_name": "Group 118",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 448,
+        "y": 584
+      },
+      "data": {
+        "label": "",
+        "width": 93,
+        "height": 90,
+        "shape_name": "Group 119",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "awsService",
+      "position": {
+        "x": 262,
+        "y": 273
+      },
+      "data": {
+        "label": "",
+        "width": 109,
+        "height": 81,
+        "shape_name": "Group 122",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "awsService",
+      "position": {
+        "x": 798,
+        "y": 293
+      },
+      "data": {
+        "label": "",
+        "width": 94,
+        "height": 72,
+        "shape_name": "Group 582",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "label",
+      "position": {
+        "x": 13,
+        "y": 74
+      },
+      "data": {
+        "label": "This reference architecture demonstrates how AWS services and Neo4j can be used to create knowledge graphs.  Those graphs can then be used in a GraphRAG architecture.",
+        "width": 911,
+        "height": 42,
+        "shape_name": "object 12",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "default",
+      "position": {
+        "x": 919,
+        "y": 281
+      },
+      "data": {
+        "label": "4",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;202;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "default",
+      "position": {
+        "x": 919,
+        "y": 360
+      },
+      "data": {
+        "label": "5",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;204;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "default",
+      "position": {
+        "x": 920,
+        "y": 415
+      },
+      "data": {
+        "label": "6",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;215;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "default",
+      "position": {
+        "x": 918,
+        "y": 661
+      },
+      "data": {
+        "label": "8",
+        "width": 28,
+        "height": 29,
+        "shape_name": "Google Shape;218;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "default",
+      "position": {
+        "x": 920,
+        "y": 714
+      },
+      "data": {
+        "label": "9",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;219;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "awsService",
+      "position": {
+        "x": 98,
+        "y": 375
+      },
+      "data": {
+        "label": "",
+        "width": 80,
+        "height": 71,
+        "shape_name": "Group 116",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 87,
+        "y": 266
+      },
+      "data": {
+        "label": "",
+        "width": 105,
+        "height": 66,
+        "shape_name": "Group 114",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "awsService",
+      "position": {
+        "x": 262,
+        "y": 421
+      },
+      "data": {
+        "label": "",
+        "width": 108,
+        "height": 89,
+        "shape_name": "Group 123",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "default",
+      "position": {
+        "x": 78,
+        "y": 214
+      },
+      "data": {
+        "label": "Data sources",
+        "width": 130,
+        "height": 430,
+        "shape_name": "Google Shape;180;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "default",
+      "position": {
+        "x": 429,
+        "y": 214
+      },
+      "data": {
+        "label": "Knowledge graph",
+        "width": 130,
+        "height": 430,
+        "shape_name": "Google Shape;180;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "default",
+      "position": {
+        "x": 605,
+        "y": 220
+      },
+      "data": {
+        "label": "GraphRAG",
+        "width": 130,
+        "height": 425,
+        "shape_name": "Google Shape;180;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "default",
+      "position": {
+        "x": 781,
+        "y": 220
+      },
+      "data": {
+        "label": "Applications",
+        "width": 130,
+        "height": 425,
+        "shape_name": "Google Shape;180;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "awsService",
+      "position": {
+        "x": 465,
+        "y": 302
+      },
+      "data": {
+        "label": "",
+        "width": 56,
+        "height": 82,
+        "shape_name": "Group 121",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "awsService",
+      "position": {
+        "x": 798,
+        "y": 427
+      },
+      "data": {
+        "label": "",
+        "width": 94,
+        "height": 72,
+        "shape_name": "Group 586",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "awsService",
+      "position": {
+        "x": 798,
+        "y": 561
+      },
+      "data": {
+        "label": "",
+        "width": 94,
+        "height": 74,
+        "shape_name": "Group 592",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "awsService",
+      "position": {
+        "x": 637,
+        "y": 577
+      },
+      "data": {
+        "label": "",
+        "width": 63,
+        "height": 96,
+        "shape_name": "Group 614",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "awsService",
+      "position": {
+        "x": 615,
+        "y": 273
+      },
+      "data": {
+        "label": "",
+        "width": 109,
+        "height": 81,
+        "shape_name": "Group 617",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "awsService",
+      "position": {
+        "x": 615,
+        "y": 421
+      },
+      "data": {
+        "label": "",
+        "width": 108,
+        "height": 89,
+        "shape_name": "Group 623",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "default",
+      "position": {
+        "x": 87,
+        "y": 250
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;173;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "default",
+      "position": {
+        "x": 393,
+        "y": 310
+      },
+      "data": {
+        "label": "4",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;202;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "default",
+      "position": {
+        "x": 438,
+        "y": 297
+      },
+      "data": {
+        "label": "5",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;204;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "default",
+      "position": {
+        "x": 785,
+        "y": 257
+      },
+      "data": {
+        "label": "7",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;215;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "default",
+      "position": {
+        "x": 742,
+        "y": 411
+      },
+      "data": {
+        "label": "8",
+        "width": 28,
+        "height": 29,
+        "shape_name": "Google Shape;218;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-44",
+      "type": "default",
+      "position": {
+        "x": 573,
+        "y": 314
+      },
+      "data": {
+        "label": "9",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;219;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-45",
+      "type": "default",
+      "position": {
+        "x": 438,
+        "y": 570
+      },
+      "data": {
+        "label": "6",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;215;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-46",
+      "type": "default",
+      "position": {
+        "x": 920,
+        "y": 531
+      },
+      "data": {
+        "label": "7",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Google Shape;215;g27fb0a1e8c5_0_174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Google Shape;196;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;196;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;197;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;197;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;198;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;198;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;196;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;196;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;196;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;196;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;196;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;196;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;196;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;196;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;196;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;196;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;196;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;196;g27fb0a1e8c5_0_174"
+      }
+    },
+    {
+      "id": "edge-Google Shape;198;g27fb0a1e8c5_0_174",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Google Shape;198;g27fb0a1e8c5_0_174"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "knowledge-graphs-and-graphrag-with-neo4j.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

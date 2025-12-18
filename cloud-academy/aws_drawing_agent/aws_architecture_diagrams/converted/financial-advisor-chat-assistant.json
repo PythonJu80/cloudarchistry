@@ -1,0 +1,1048 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Financial Advisor Chat Assistant",
+        "width": 658,
+        "height": 42,
+        "shape_name": "TextBox 71",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2023, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "default",
+      "position": {
+        "x": 289,
+        "y": 469
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 3",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "default",
+      "position": {
+        "x": 518,
+        "y": 469
+      },
+      "data": {
+        "label": "4",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 4",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "default",
+      "position": {
+        "x": 648,
+        "y": 614
+      },
+      "data": {
+        "label": "9",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 9",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "group",
+      "position": {
+        "x": 238,
+        "y": 142
+      },
+      "data": {
+        "label": "AWS Cloud",
+        "width": 668,
+        "height": 516,
+        "shape_name": "Rectangle 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "awsService",
+      "position": {
+        "x": 238,
+        "y": 142
+      },
+      "data": {
+        "label": "",
+        "width": 40,
+        "height": 40,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "default",
+      "position": {
+        "x": 880,
+        "y": 390
+      },
+      "data": {
+        "label": "",
+        "width": 126,
+        "height": 228,
+        "shape_name": "Rectangle 9",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "default",
+      "position": {
+        "x": 308,
+        "y": 183
+      },
+      "data": {
+        "label": "",
+        "width": 327,
+        "height": 230,
+        "shape_name": "Rectangle 10",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 308,
+        "y": 182
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 10",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "label",
+      "position": {
+        "x": 323,
+        "y": 187
+      },
+      "data": {
+        "label": "AWS Amplify",
+        "width": 95,
+        "height": 22,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "awsService",
+      "position": {
+        "x": 367,
+        "y": 219
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 49,
+        "shape_name": "Graphic 21",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "awsService",
+      "position": {
+        "x": 462,
+        "y": 219
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 49,
+        "shape_name": "Graphic 19",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 553,
+        "y": 219
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 49,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "awsService",
+      "position": {
+        "x": 462,
+        "y": 330
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 49,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 351,
+        "y": 277
+      },
+      "data": {
+        "label": "Amazon Route 53",
+        "width": 79,
+        "height": 35,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "route53"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "awsService",
+      "position": {
+        "x": 443,
+        "y": 277
+      },
+      "data": {
+        "label": "Amazon CloudFront",
+        "width": 90,
+        "height": 35,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cloudfront"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "awsService",
+      "position": {
+        "x": 528,
+        "y": 276
+      },
+      "data": {
+        "label": "Amazon S3\nweb app\nHTML, CSS, JS",
+        "width": 95,
+        "height": 48,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "awsService",
+      "position": {
+        "x": 420,
+        "y": 384
+      },
+      "data": {
+        "label": "Amazon Cognito\nuser directory and authentication",
+        "width": 134,
+        "height": 48,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cognito"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "awsService",
+      "position": {
+        "x": 460,
+        "y": 459
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "awsService",
+      "position": {
+        "x": 559,
+        "y": 458
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 16",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "awsService",
+      "position": {
+        "x": 680,
+        "y": 254
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 49,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "awsService",
+      "position": {
+        "x": 681,
+        "y": 498
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 16",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "awsService",
+      "position": {
+        "x": 681,
+        "y": 615
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "label",
+      "position": {
+        "x": 438,
+        "y": 513
+      },
+      "data": {
+        "label": "Amazon Lex\nconversational AI for chatbots",
+        "width": 95,
+        "height": 48,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "label",
+      "position": {
+        "x": 535,
+        "y": 513
+      },
+      "data": {
+        "label": "Amazon Kendra intelligent search service",
+        "width": 105,
+        "height": 48,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "awsService",
+      "position": {
+        "x": 654,
+        "y": 307
+      },
+      "data": {
+        "label": "Amazon S3 \u000bobject storage\ndata to index HTML, MS Word, MS PowerPoint, PDF, TXT",
+        "width": 105,
+        "height": 87,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "awsService",
+      "position": {
+        "x": 643,
+        "y": 665
+      },
+      "data": {
+        "label": "AWS Secrets Manager\nsalesforce consumer key and secret",
+        "width": 126,
+        "height": 48,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "secrets-manager"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "awsService",
+      "position": {
+        "x": 745,
+        "y": 260
+      },
+      "data": {
+        "label": "",
+        "width": 31,
+        "height": 31,
+        "shape_name": "Graphic 16",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "awsService",
+      "position": {
+        "x": 746,
+        "y": 313
+      },
+      "data": {
+        "label": "",
+        "width": 31,
+        "height": 31,
+        "shape_name": "Graphic 16",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "awsService",
+      "position": {
+        "x": 745,
+        "y": 209
+      },
+      "data": {
+        "label": "",
+        "width": 31,
+        "height": 31,
+        "shape_name": "Graphic 16",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "label",
+      "position": {
+        "x": 765,
+        "y": 205
+      },
+      "data": {
+        "label": "financial planning guides",
+        "width": 107,
+        "height": 35,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "label",
+      "position": {
+        "x": 766,
+        "y": 259
+      },
+      "data": {
+        "label": "financial product guides",
+        "width": 99,
+        "height": 35,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "label",
+      "position": {
+        "x": 767,
+        "y": 306
+      },
+      "data": {
+        "label": "local tax authority manuals",
+        "width": 103,
+        "height": 48,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "awsService",
+      "position": {
+        "x": 916,
+        "y": 530
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 49,
+        "shape_name": "Graphic 21",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "awsService",
+      "position": {
+        "x": 926,
+        "y": 443
+      },
+      "data": {
+        "label": "",
+        "width": 27,
+        "height": 27,
+        "shape_name": "Graphic 15",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "label",
+      "position": {
+        "x": 880,
+        "y": 472
+      },
+      "data": {
+        "label": "Salesforce connected app (OAuth enabled)",
+        "width": 123,
+        "height": 35,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "label",
+      "position": {
+        "x": 879,
+        "y": 585
+      },
+      "data": {
+        "label": "Salesforce API v48",
+        "width": 123,
+        "height": 22,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "awsService",
+      "position": {
+        "x": 159,
+        "y": 357
+      },
+      "data": {
+        "label": "",
+        "width": 32,
+        "height": 32,
+        "shape_name": "Graphic 24",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "awsService",
+      "position": {
+        "x": 185,
+        "y": 378
+      },
+      "data": {
+        "label": "",
+        "width": 30,
+        "height": 30,
+        "shape_name": "Graphic 15",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "default",
+      "position": {
+        "x": 146,
+        "y": 313
+      },
+      "data": {
+        "label": "",
+        "width": 82,
+        "height": 95,
+        "shape_name": "Rectangle 42",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "label",
+      "position": {
+        "x": 140,
+        "y": 310
+      },
+      "data": {
+        "label": "client\ndevices",
+        "width": 95,
+        "height": 35,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-44",
+      "type": "label",
+      "position": {
+        "x": 344,
+        "y": 376
+      },
+      "data": {
+        "label": "temporary\nsecurity\ncredentials",
+        "width": 95,
+        "height": 48,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-45",
+      "type": "awsService",
+      "position": {
+        "x": 766,
+        "y": 446
+      },
+      "data": {
+        "label": "Salesforce consumer\nkey and secret\n(read-only access)",
+        "width": 110,
+        "height": 61,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ecr"
+      }
+    },
+    {
+      "id": "node-46",
+      "type": "default",
+      "position": {
+        "x": 289,
+        "y": 230
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-47",
+      "type": "default",
+      "position": {
+        "x": 289,
+        "y": 341
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 2",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-48",
+      "type": "default",
+      "position": {
+        "x": 749,
+        "y": 493
+      },
+      "data": {
+        "label": "7",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-49",
+      "type": "default",
+      "position": {
+        "x": 635,
+        "y": 422
+      },
+      "data": {
+        "label": "5",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 5",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-50",
+      "type": "default",
+      "position": {
+        "x": 622,
+        "y": 484
+      },
+      "data": {
+        "label": "6",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 6",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-51",
+      "type": "default",
+      "position": {
+        "x": 746,
+        "y": 199
+      },
+      "data": {
+        "label": "",
+        "width": 120,
+        "height": 143,
+        "shape_name": "Rectangle 66",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-52",
+      "type": "default",
+      "position": {
+        "x": 374,
+        "y": 347
+      },
+      "data": {
+        "label": "",
+        "width": 33,
+        "height": 22,
+        "shape_name": "Rectangle 67",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-53",
+      "type": "awsService",
+      "position": {
+        "x": 374,
+        "y": 340
+      },
+      "data": {
+        "label": "",
+        "width": 31,
+        "height": 31,
+        "shape_name": "Graphic 68",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-54",
+      "type": "awsService",
+      "position": {
+        "x": 762,
+        "y": 542
+      },
+      "data": {
+        "label": "Salesforce consumer\nkey and secret (read-only access)",
+        "width": 117,
+        "height": 61,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ecr"
+      }
+    },
+    {
+      "id": "node-55",
+      "type": "label",
+      "position": {
+        "x": 880,
+        "y": 390
+      },
+      "data": {
+        "label": "Salesforce",
+        "width": 126,
+        "height": 25,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-56",
+      "type": "label",
+      "position": {
+        "x": 640,
+        "y": 560
+      },
+      "data": {
+        "label": "Amazon Kendra connector for Salesforce",
+        "width": 137,
+        "height": 25,
+        "shape_name": "TextBox 15",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-57",
+      "type": "default",
+      "position": {
+        "x": 749,
+        "y": 530
+      },
+      "data": {
+        "label": "8",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 8",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 1",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 1"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 121",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 121"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 118",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 118"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 48",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 48"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 49",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 49"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 51",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 51"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 52",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 52"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 53",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 53"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 54",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 54"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 56",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 56"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 57",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 57"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 58",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 58"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 59",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 59"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 60",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 60"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 61",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 61"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 63",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 63"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 65",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 65"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "financial-advisor-chat-assistant.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

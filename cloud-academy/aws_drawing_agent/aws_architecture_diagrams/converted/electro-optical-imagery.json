@@ -1,0 +1,1478 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Electro-Optical Imagery Reference Architecture",
+        "width": 658,
+        "height": 42,
+        "shape_name": "TextBox 71",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2022, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "awsService",
+      "position": {
+        "x": 267,
+        "y": 127
+      },
+      "data": {
+        "label": "",
+        "width": 60,
+        "height": 56,
+        "shape_name": "Picture 1",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "label",
+      "position": {
+        "x": 264,
+        "y": 182
+      },
+      "data": {
+        "label": "satellite",
+        "width": 68,
+        "height": 25,
+        "shape_name": "TextBox 2",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "default",
+      "position": {
+        "x": 179,
+        "y": 221
+      },
+      "data": {
+        "label": "",
+        "width": 258,
+        "height": 403,
+        "shape_name": "Rectangle 4",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "awsService",
+      "position": {
+        "x": 178,
+        "y": 220
+      },
+      "data": {
+        "label": "",
+        "width": 32,
+        "height": 32,
+        "shape_name": "Graphic 5",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "default",
+      "position": {
+        "x": 197,
+        "y": 467
+      },
+      "data": {
+        "label": "",
+        "width": 214,
+        "height": 161,
+        "shape_name": "Rectangle 6",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "default",
+      "position": {
+        "x": 202,
+        "y": 326
+      },
+      "data": {
+        "label": "",
+        "width": 214,
+        "height": 90,
+        "shape_name": "Rectangle 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 239,
+        "y": 341
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 11",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 339,
+        "y": 335
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Picture 9",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "label",
+      "position": {
+        "x": 307,
+        "y": 218
+      },
+      "data": {
+        "label": "signal processing",
+        "width": 123,
+        "height": 25,
+        "shape_name": "TextBox 10",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "label",
+      "position": {
+        "x": 300,
+        "y": 283
+      },
+      "data": {
+        "label": "frames downlinked",
+        "width": 136,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "label",
+      "position": {
+        "x": 197,
+        "y": 391
+      },
+      "data": {
+        "label": "AWS Ground Station",
+        "width": 132,
+        "height": 24,
+        "shape_name": "TextBox 12",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "label",
+      "position": {
+        "x": 313,
+        "y": 378
+      },
+      "data": {
+        "label": "demodulation/\ndecode",
+        "width": 102,
+        "height": 38,
+        "shape_name": "TextBox 13",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "awsService",
+      "position": {
+        "x": 339,
+        "y": 480
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Picture 14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 338,
+        "y": 558
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Picture 15",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "awsService",
+      "position": {
+        "x": 242,
+        "y": 492
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "awsService",
+      "position": {
+        "x": 218,
+        "y": 535
+      },
+      "data": {
+        "label": "Amazon EC2 \ninstance",
+        "width": 91,
+        "height": 38,
+        "shape_name": "TextBox 17",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "label",
+      "position": {
+        "x": 324,
+        "y": 517
+      },
+      "data": {
+        "label": "record bits",
+        "width": 77,
+        "height": 24,
+        "shape_name": "TextBox 18",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "awsService",
+      "position": {
+        "x": 303,
+        "y": 592
+      },
+      "data": {
+        "label": "compute/demux\ndecryption",
+        "width": 110,
+        "height": 38,
+        "shape_name": "TextBox 19",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ecr"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "default",
+      "position": {
+        "x": 437,
+        "y": 221
+      },
+      "data": {
+        "label": "",
+        "width": 308,
+        "height": 435,
+        "shape_name": "Rectangle 22",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "default",
+      "position": {
+        "x": 744,
+        "y": 223
+      },
+      "data": {
+        "label": "",
+        "width": 259,
+        "height": 326,
+        "shape_name": "Rectangle 23",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "awsService",
+      "position": {
+        "x": 492,
+        "y": 244
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 63",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "awsService",
+      "position": {
+        "x": 621,
+        "y": 246
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 39,
+        "shape_name": "Picture 25",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "awsService",
+      "position": {
+        "x": 456,
+        "y": 355
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 523,
+        "y": 355
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 7",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "awsService",
+      "position": {
+        "x": 586,
+        "y": 356
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 13",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "awsService",
+      "position": {
+        "x": 651,
+        "y": 349
+      },
+      "data": {
+        "label": "",
+        "width": 46,
+        "height": 38,
+        "shape_name": "Picture 29",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "awsService",
+      "position": {
+        "x": 456,
+        "y": 479
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 63",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "awsService",
+      "position": {
+        "x": 516,
+        "y": 477
+      },
+      "data": {
+        "label": "",
+        "width": 46,
+        "height": 38,
+        "shape_name": "Picture 31",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "awsService",
+      "position": {
+        "x": 601,
+        "y": 485
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "awsService",
+      "position": {
+        "x": 655,
+        "y": 479
+      },
+      "data": {
+        "label": "",
+        "width": 49,
+        "height": 38,
+        "shape_name": "Picture 33",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "awsService",
+      "position": {
+        "x": 558,
+        "y": 593
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 66",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "awsService",
+      "position": {
+        "x": 455,
+        "y": 593
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 65",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "awsService",
+      "position": {
+        "x": 650,
+        "y": 588
+      },
+      "data": {
+        "label": "",
+        "width": 46,
+        "height": 38,
+        "shape_name": "Picture 36",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "awsService",
+      "position": {
+        "x": 475,
+        "y": 284
+      },
+      "data": {
+        "label": "Amazon S3\nbucket",
+        "width": 81,
+        "height": 38,
+        "shape_name": "TextBox 37",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "label",
+      "position": {
+        "x": 543,
+        "y": 215
+      },
+      "data": {
+        "label": "inventory",
+        "width": 77,
+        "height": 25,
+        "shape_name": "TextBox 38",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "label",
+      "position": {
+        "x": 611,
+        "y": 281
+      },
+      "data": {
+        "label": "store raw\nimages",
+        "width": 70,
+        "height": 38,
+        "shape_name": "TextBox 39",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "awsService",
+      "position": {
+        "x": 444,
+        "y": 399
+      },
+      "data": {
+        "label": "AWS \nFargate",
+        "width": 61,
+        "height": 38,
+        "shape_name": "TextBox 40",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "fargate"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "awsService",
+      "position": {
+        "x": 509,
+        "y": 398
+      },
+      "data": {
+        "label": "AWS \nLambda",
+        "width": 63,
+        "height": 38,
+        "shape_name": "TextBox 41",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "label",
+      "position": {
+        "x": 578,
+        "y": 398
+      },
+      "data": {
+        "label": "AWS \nBatch",
+        "width": 50,
+        "height": 38,
+        "shape_name": "TextBox 42",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "label",
+      "position": {
+        "x": 625,
+        "y": 383
+      },
+      "data": {
+        "label": "process raw images and perform QA review",
+        "width": 110,
+        "height": 67,
+        "shape_name": "TextBox 43",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-44",
+      "type": "awsService",
+      "position": {
+        "x": 439,
+        "y": 516
+      },
+      "data": {
+        "label": "Amazon S3\nbucket",
+        "width": 81,
+        "height": 38,
+        "shape_name": "TextBox 44",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-45",
+      "type": "label",
+      "position": {
+        "x": 493,
+        "y": 512
+      },
+      "data": {
+        "label": "store pre-processed images",
+        "width": 95,
+        "height": 53,
+        "shape_name": "TextBox 45",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-46",
+      "type": "awsService",
+      "position": {
+        "x": 583,
+        "y": 531
+      },
+      "data": {
+        "label": "Amazon \nDynamoDB",
+        "width": 81,
+        "height": 38,
+        "shape_name": "TextBox 46",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "dynamodb"
+      }
+    },
+    {
+      "id": "node-47",
+      "type": "label",
+      "position": {
+        "x": 642,
+        "y": 514
+      },
+      "data": {
+        "label": "store\n metadata",
+        "width": 75,
+        "height": 38,
+        "shape_name": "TextBox 47",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-48",
+      "type": "awsService",
+      "position": {
+        "x": 438,
+        "y": 634
+      },
+      "data": {
+        "label": "Amazon S3 \nGlacier Deep \nArchive",
+        "width": 92,
+        "height": 53,
+        "shape_name": "TextBox 48",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-49",
+      "type": "label",
+      "position": {
+        "x": 589,
+        "y": 626
+      },
+      "data": {
+        "label": "store pre-\nprocessed\n image with \nplacement tags",
+        "width": 185,
+        "height": 67,
+        "shape_name": "TextBox 49",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-50",
+      "type": "awsService",
+      "position": {
+        "x": 538,
+        "y": 632
+      },
+      "data": {
+        "label": "Amazon S3\nGlacier",
+        "width": 81,
+        "height": 38,
+        "shape_name": "TextBox 50",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-51",
+      "type": "default",
+      "position": {
+        "x": 445,
+        "y": 590
+      },
+      "data": {
+        "label": "",
+        "width": 292,
+        "height": 98,
+        "shape_name": "Rectangle 51",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-52",
+      "type": "label",
+      "position": {
+        "x": 802,
+        "y": 218
+      },
+      "data": {
+        "label": "post processing",
+        "width": 114,
+        "height": 25,
+        "shape_name": "TextBox 52",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-53",
+      "type": "default",
+      "position": {
+        "x": 480,
+        "y": 240
+      },
+      "data": {
+        "label": "",
+        "width": 214,
+        "height": 80,
+        "shape_name": "Rectangle 53",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-54",
+      "type": "awsService",
+      "position": {
+        "x": 777,
+        "y": 357
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-55",
+      "type": "awsService",
+      "position": {
+        "x": 843,
+        "y": 357
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 7",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-56",
+      "type": "awsService",
+      "position": {
+        "x": 902,
+        "y": 359
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 43,
+        "shape_name": "Picture 56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-57",
+      "type": "awsService",
+      "position": {
+        "x": 753,
+        "y": 399
+      },
+      "data": {
+        "label": "AWS \nFargate",
+        "width": 90,
+        "height": 38,
+        "shape_name": "TextBox 57",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "fargate"
+      }
+    },
+    {
+      "id": "node-58",
+      "type": "awsService",
+      "position": {
+        "x": 833,
+        "y": 400
+      },
+      "data": {
+        "label": "AWS \nLambda",
+        "width": 63,
+        "height": 38,
+        "shape_name": "TextBox 58",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-59",
+      "type": "label",
+      "position": {
+        "x": 892,
+        "y": 396
+      },
+      "data": {
+        "label": "complete \npost\n processing",
+        "width": 80,
+        "height": 53,
+        "shape_name": "TextBox 59",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-60",
+      "type": "awsService",
+      "position": {
+        "x": 780,
+        "y": 474
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 63",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-61",
+      "type": "awsService",
+      "position": {
+        "x": 763,
+        "y": 512
+      },
+      "data": {
+        "label": "Amazon S3\nbucket",
+        "width": 81,
+        "height": 38,
+        "shape_name": "TextBox 61",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-62",
+      "type": "awsService",
+      "position": {
+        "x": 899,
+        "y": 472
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 43,
+        "shape_name": "Picture 62",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-63",
+      "type": "label",
+      "position": {
+        "x": 875,
+        "y": 511
+      },
+      "data": {
+        "label": "store \npost-processed \nimages",
+        "width": 106,
+        "height": 53,
+        "shape_name": "TextBox 63",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-64",
+      "type": "default",
+      "position": {
+        "x": 765,
+        "y": 468
+      },
+      "data": {
+        "label": "",
+        "width": 214,
+        "height": 89,
+        "shape_name": "Rectangle 64",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-65",
+      "type": "default",
+      "position": {
+        "x": 760,
+        "y": 352
+      },
+      "data": {
+        "label": "",
+        "width": 224,
+        "height": 88,
+        "shape_name": "Rectangle 65",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-66",
+      "type": "awsService",
+      "position": {
+        "x": 849,
+        "y": 614
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 22",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-67",
+      "type": "label",
+      "position": {
+        "x": 833,
+        "y": 650
+      },
+      "data": {
+        "label": "customer",
+        "width": 70,
+        "height": 24,
+        "shape_name": "TextBox 67",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-68",
+      "type": "default",
+      "position": {
+        "x": 446,
+        "y": 349
+      },
+      "data": {
+        "label": "",
+        "width": 291,
+        "height": 91,
+        "shape_name": "Rectangle 75",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-69",
+      "type": "default",
+      "position": {
+        "x": 445,
+        "y": 479
+      },
+      "data": {
+        "label": "",
+        "width": 136,
+        "height": 80,
+        "shape_name": "Rectangle 78",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-70",
+      "type": "label",
+      "position": {
+        "x": 593,
+        "y": 445
+      },
+      "data": {
+        "label": "yes",
+        "width": 37,
+        "height": 24,
+        "shape_name": "TextBox 79",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-71",
+      "type": "default",
+      "position": {
+        "x": 589,
+        "y": 480
+      },
+      "data": {
+        "label": "",
+        "width": 138,
+        "height": 79,
+        "shape_name": "Rectangle 82",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-72",
+      "type": "label",
+      "position": {
+        "x": 751,
+        "y": 339
+      },
+      "data": {
+        "label": "",
+        "width": 19,
+        "height": 38,
+        "shape_name": "TextBox 87",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-73",
+      "type": "label",
+      "position": {
+        "x": 437,
+        "y": 147
+      },
+      "data": {
+        "label": "yes\u2014flush buffers or // no\u2014retry image capture",
+        "width": 287,
+        "height": 24,
+        "shape_name": "TextBox 93",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-74",
+      "type": "default",
+      "position": {
+        "x": 387,
+        "y": 315
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-75",
+      "type": "default",
+      "position": {
+        "x": 387,
+        "y": 450
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 2",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-76",
+      "type": "default",
+      "position": {
+        "x": 704,
+        "y": 334
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 3",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-77",
+      "type": "default",
+      "position": {
+        "x": 704,
+        "y": 459
+      },
+      "data": {
+        "label": "4",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 4",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-78",
+      "type": "default",
+      "position": {
+        "x": 706,
+        "y": 586
+      },
+      "data": {
+        "label": "5",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 5",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-79",
+      "type": "default",
+      "position": {
+        "x": 959,
+        "y": 337
+      },
+      "data": {
+        "label": "6",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 6",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-80",
+      "type": "default",
+      "position": {
+        "x": 954,
+        "y": 462
+      },
+      "data": {
+        "label": "7",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 7",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-81",
+      "type": "default",
+      "position": {
+        "x": 895,
+        "y": 619
+      },
+      "data": {
+        "label": "8",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 8",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-82",
+      "type": "awsService",
+      "position": {
+        "x": 437,
+        "y": 220
+      },
+      "data": {
+        "label": "",
+        "width": 32,
+        "height": 32,
+        "shape_name": "Graphic 107",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-83",
+      "type": "awsService",
+      "position": {
+        "x": 744,
+        "y": 222
+      },
+      "data": {
+        "label": "",
+        "width": 32,
+        "height": 32,
+        "shape_name": "Graphic 108",
+        "shape_type": "PICTURE (13)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 20",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 20"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 21",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 21"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 68",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 68"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 69",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 69"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 70",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 70"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 72",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 72"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 73",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 73"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 74",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 74"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 76",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 76"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 77",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 77"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 80",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 80"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 81",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 81"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 83",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 83"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 84",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 84"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 85",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 85"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 86",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 86"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 88",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 88"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 89",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 89"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 90",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 90"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 91",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 91"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 92",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 92"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "electro-optical-imagery.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

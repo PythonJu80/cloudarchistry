@@ -1,0 +1,1122 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2024, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "default",
+      "position": {
+        "x": 135,
+        "y": 161
+      },
+      "data": {
+        "label": "OCPP connection handler",
+        "width": 296,
+        "height": 210,
+        "shape_name": "Rectangle 105",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "default",
+      "position": {
+        "x": 585,
+        "y": 572
+      },
+      "data": {
+        "label": "Transaction management and audit",
+        "width": 505,
+        "height": 117,
+        "shape_name": "Rectangle 109",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Electric Vehicle Charging Station Management System (Option 1)",
+        "width": 1033,
+        "height": 42,
+        "shape_name": "TextBox 50",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 51",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "default",
+      "position": {
+        "x": 141,
+        "y": 136
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 87",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "default",
+      "position": {
+        "x": 138,
+        "y": 413
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 88",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "default",
+      "position": {
+        "x": 587,
+        "y": 259
+      },
+      "data": {
+        "label": "4",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 90",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "awsService",
+      "position": {
+        "x": 5,
+        "y": 469
+      },
+      "data": {
+        "label": "",
+        "width": 129,
+        "height": 94,
+        "shape_name": "Group 153",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "default",
+      "position": {
+        "x": 582,
+        "y": 117
+      },
+      "data": {
+        "label": "EVSE registry",
+        "width": 508,
+        "height": 95,
+        "shape_name": "Rectangle 17",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 320,
+        "y": 307
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 10",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "awsService",
+      "position": {
+        "x": 279,
+        "y": 354
+      },
+      "data": {
+        "label": "AWS Lambda",
+        "width": 125,
+        "height": 25,
+        "shape_name": "TextBox 20",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "awsService",
+      "position": {
+        "x": 320,
+        "y": 450
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "awsService",
+      "position": {
+        "x": 261,
+        "y": 501
+      },
+      "data": {
+        "label": "Amazon API Gateway",
+        "width": 163,
+        "height": 25,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "api-gateway"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 183,
+        "y": 553
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "awsService",
+      "position": {
+        "x": 145,
+        "y": 595
+      },
+      "data": {
+        "label": "Amazon Cognito",
+        "width": 120,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cognito"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 320,
+        "y": 551
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "awsService",
+      "position": {
+        "x": 292,
+        "y": 592
+      },
+      "data": {
+        "label": "Amazon S3",
+        "width": 98,
+        "height": 25,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "awsService",
+      "position": {
+        "x": 805,
+        "y": 156
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "awsService",
+      "position": {
+        "x": 742,
+        "y": 197
+      },
+      "data": {
+        "label": "Amazon DynamoDB",
+        "width": 184,
+        "height": 25,
+        "shape_name": "TextBox 12",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "dynamodb"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "awsService",
+      "position": {
+        "x": 876,
+        "y": 306
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "awsService",
+      "position": {
+        "x": 803,
+        "y": 353
+      },
+      "data": {
+        "label": "Amazon CloudWatch",
+        "width": 187,
+        "height": 25,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cloudwatch"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "awsService",
+      "position": {
+        "x": 183,
+        "y": 307
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "awsService",
+      "position": {
+        "x": 105,
+        "y": 353
+      },
+      "data": {
+        "label": "Amazon DynamoDB",
+        "width": 205,
+        "height": 25,
+        "shape_name": "TextBox 12",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "dynamodb"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "default",
+      "position": {
+        "x": 593,
+        "y": 581
+      },
+      "data": {
+        "label": "6",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 136",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "awsService",
+      "position": {
+        "x": 734,
+        "y": 307
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 681,
+        "y": 353
+      },
+      "data": {
+        "label": "Amazon DynamoDB",
+        "width": 148,
+        "height": 25,
+        "shape_name": "TextBox 12",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "dynamodb"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "default",
+      "position": {
+        "x": 587,
+        "y": 126
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 89",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "default",
+      "position": {
+        "x": 595,
+        "y": 435
+      },
+      "data": {
+        "label": "5",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 91",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "awsService",
+      "position": {
+        "x": 183,
+        "y": 215
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 6",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "label",
+      "position": {
+        "x": 118,
+        "y": 259
+      },
+      "data": {
+        "label": "Elastic Load Balancing",
+        "width": 187,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "awsService",
+      "position": {
+        "x": 320,
+        "y": 216
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "awsService",
+      "position": {
+        "x": 287,
+        "y": 260
+      },
+      "data": {
+        "label": "AWS Fargate",
+        "width": 108,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "fargate"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "awsService",
+      "position": {
+        "x": 183,
+        "y": 455
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 19",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "awsService",
+      "position": {
+        "x": 125,
+        "y": 501
+      },
+      "data": {
+        "label": "Amazon CloudFront",
+        "width": 162,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cloudfront"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "awsService",
+      "position": {
+        "x": 895,
+        "y": 617
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "label",
+      "position": {
+        "x": 864,
+        "y": 666
+      },
+      "data": {
+        "label": "Amazon QLDB",
+        "width": 108,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "awsService",
+      "position": {
+        "x": 964,
+        "y": 156
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 20",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "label",
+      "position": {
+        "x": 895,
+        "y": 196
+      },
+      "data": {
+        "label": "AWS Certificate Manager",
+        "width": 184,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "awsService",
+      "position": {
+        "x": 40,
+        "y": 252
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 155",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "awsService",
+      "position": {
+        "x": 1108,
+        "y": 450
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 156",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "default",
+      "position": {
+        "x": 136,
+        "y": 407
+      },
+      "data": {
+        "label": "Web application",
+        "width": 295,
+        "height": 210,
+        "shape_name": "Rectangle 157",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "default",
+      "position": {
+        "x": 582,
+        "y": 249
+      },
+      "data": {
+        "label": "EVSE management",
+        "width": 508,
+        "height": 129,
+        "shape_name": "Rectangle 158",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-44",
+      "type": "default",
+      "position": {
+        "x": 584,
+        "y": 428
+      },
+      "data": {
+        "label": "Smart charging",
+        "width": 505,
+        "height": 95,
+        "shape_name": "Rectangle 159",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-45",
+      "type": "awsService",
+      "position": {
+        "x": 639,
+        "y": 156
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-46",
+      "type": "awsService",
+      "position": {
+        "x": 607,
+        "y": 197
+      },
+      "data": {
+        "label": "AWS Fargate",
+        "width": 108,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "fargate"
+      }
+    },
+    {
+      "id": "node-47",
+      "type": "awsService",
+      "position": {
+        "x": 617,
+        "y": 306
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-48",
+      "type": "awsService",
+      "position": {
+        "x": 584,
+        "y": 353
+      },
+      "data": {
+        "label": "AWS Fargate",
+        "width": 108,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "fargate"
+      }
+    },
+    {
+      "id": "node-49",
+      "type": "awsService",
+      "position": {
+        "x": 980,
+        "y": 303
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-50",
+      "type": "awsService",
+      "position": {
+        "x": 954,
+        "y": 353
+      },
+      "data": {
+        "label": "Amazon S3",
+        "width": 98,
+        "height": 25,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-51",
+      "type": "awsService",
+      "position": {
+        "x": 692,
+        "y": 458
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-52",
+      "type": "awsService",
+      "position": {
+        "x": 662,
+        "y": 500
+      },
+      "data": {
+        "label": "AWS Fargate",
+        "width": 108,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "fargate"
+      }
+    },
+    {
+      "id": "node-53",
+      "type": "awsService",
+      "position": {
+        "x": 895,
+        "y": 458
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-54",
+      "type": "awsService",
+      "position": {
+        "x": 840,
+        "y": 498
+      },
+      "data": {
+        "label": "Amazon DynamoDB",
+        "width": 151,
+        "height": 25,
+        "shape_name": "TextBox 12",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "dynamodb"
+      }
+    },
+    {
+      "id": "node-55",
+      "type": "awsService",
+      "position": {
+        "x": 691,
+        "y": 617
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 14",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-56",
+      "type": "awsService",
+      "position": {
+        "x": 658,
+        "y": 662
+      },
+      "data": {
+        "label": "AWS Fargate",
+        "width": 108,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "fargate"
+      }
+    },
+    {
+      "id": "node-57",
+      "type": "label",
+      "position": {
+        "x": 2,
+        "y": 302
+      },
+      "data": {
+        "label": "charging station (EVSE)",
+        "width": 129,
+        "height": 42,
+        "shape_name": "TextBox 40",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-58",
+      "type": "awsService",
+      "position": {
+        "x": 486,
+        "y": 378
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 6",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-59",
+      "type": "label",
+      "position": {
+        "x": 421,
+        "y": 423
+      },
+      "data": {
+        "label": "Elastic Load Balancing",
+        "width": 187,
+        "height": 25,
+        "shape_name": "TextBox 11",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-60",
+      "type": "awsService",
+      "position": {
+        "x": 1108,
+        "y": 295
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 179",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-61",
+      "type": "awsService",
+      "position": {
+        "x": 1108,
+        "y": 597
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 180",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-62",
+      "type": "label",
+      "position": {
+        "x": 1085,
+        "y": 350
+      },
+      "data": {
+        "label": "fleet management",
+        "width": 98,
+        "height": 42,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-63",
+      "type": "label",
+      "position": {
+        "x": 1089,
+        "y": 502
+      },
+      "data": {
+        "label": "smart meters",
+        "width": 98,
+        "height": 25,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-64",
+      "type": "label",
+      "position": {
+        "x": 1089,
+        "y": 650
+      },
+      "data": {
+        "label": "roaming networks",
+        "width": 98,
+        "height": 42,
+        "shape_name": "TextBox 9",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-65",
+      "type": "default",
+      "position": {
+        "x": 467,
+        "y": 339
+      },
+      "data": {
+        "label": "7",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 202",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 124",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 124"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 176",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 176"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 79",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 79"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 184",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 184"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 185",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 185"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 189",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 189"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 193",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 193"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 196",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 196"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 199",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 199"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 200",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 200"
+      }
+    },
+    {
+      "id": "edge-Connector: Elbow 201",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Connector: Elbow 201"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "electric-vehicle-charging-station-management-software.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

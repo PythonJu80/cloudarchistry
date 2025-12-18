@@ -1,0 +1,380 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "default",
+      "position": {
+        "x": 27,
+        "y": 102
+      },
+      "data": {
+        "label": "",
+        "width": 97,
+        "height": 576,
+        "shape_name": "Rectangle 266",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 27,
+        "y": 103
+      },
+      "data": {
+        "label": "",
+        "width": 39,
+        "height": 38,
+        "shape_name": "Graphic 267",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "default",
+      "position": {
+        "x": 71,
+        "y": 103
+      },
+      "data": {
+        "label": "Data\nCenter",
+        "width": 57,
+        "height": 38,
+        "shape_name": "Rectangle 268",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "awsService",
+      "position": {
+        "x": 51,
+        "y": 245
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 285,
+        "shape_name": "Group 405",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2023, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Exploring Real-Time Streaming for Retrieval Augmented Generation in GenerativeAI",
+        "width": 1157,
+        "height": 42,
+        "shape_name": "TextBox 50",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 51",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "default",
+      "position": {
+        "x": 1048,
+        "y": 384
+      },
+      "data": {
+        "label": "Generative AI application",
+        "width": 118,
+        "height": 67,
+        "shape_name": "Rectangle 273",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "default",
+      "position": {
+        "x": 34,
+        "y": 180
+      },
+      "data": {
+        "label": "",
+        "width": 201,
+        "height": 442,
+        "shape_name": "Rectangle 282",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 122,
+        "y": 240
+      },
+      "data": {
+        "label": "",
+        "width": 115,
+        "height": 337,
+        "shape_name": "Group 409",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 701,
+        "y": 218
+      },
+      "data": {
+        "label": "",
+        "width": 19,
+        "height": 384,
+        "shape_name": "Group 333",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "default",
+      "position": {
+        "x": 36,
+        "y": 181
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "awsService",
+      "position": {
+        "x": 431,
+        "y": 111
+      },
+      "data": {
+        "label": "",
+        "width": 256,
+        "height": 569,
+        "shape_name": "Group 31",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "awsService",
+      "position": {
+        "x": 722,
+        "y": 116
+      },
+      "data": {
+        "label": "",
+        "width": 309,
+        "height": 544,
+        "shape_name": "Group 36",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 263,
+        "y": 150
+      },
+      "data": {
+        "label": "",
+        "width": 144,
+        "height": 500,
+        "shape_name": "Group 35",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "group",
+      "position": {
+        "x": 130,
+        "y": 102
+      },
+      "data": {
+        "label": "AWS Cloud",
+        "width": 1124,
+        "height": 576,
+        "shape_name": "Rectangle 8",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 129,
+        "y": 103
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Graphic 9",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "default",
+      "position": {
+        "x": 70,
+        "y": 192
+      },
+      "data": {
+        "label": "Data Sources",
+        "width": 124,
+        "height": 24,
+        "shape_name": "Rectangle 293",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "default",
+      "position": {
+        "x": 1146,
+        "y": 366
+      },
+      "data": {
+        "label": "10",
+        "width": 33,
+        "height": 33,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Elbow Connector 294",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 294"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 295",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 295"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 296",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 296"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 340",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 340"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 347",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 347"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 58",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 58"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 47",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 47"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "exploring-real-time-streaming-for-retrieval-augmented-generation.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

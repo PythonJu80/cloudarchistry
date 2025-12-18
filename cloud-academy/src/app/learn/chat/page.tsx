@@ -15,7 +15,16 @@ import {
   Trash2,
   Plus,
   Pencil,
+  PenTool,
+  MessageSquare,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+
+// Dynamically import DiagramMessage to avoid SSR issues with React Flow
+const DiagramMessage = dynamic(
+  () => import("@/components/chat/diagram-message").then((mod) => mod.DiagramMessage),
+  { ssr: false, loading: () => <div className="h-[400px] bg-muted/50 rounded-xl animate-pulse" /> }
+);
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 
@@ -26,6 +35,11 @@ interface Message {
   timestamp: Date;
   error?: boolean;
   keyTerms?: Array<{ term: string; category: string }>;
+  diagram?: {
+    nodes: Array<{ id: string; type?: string; position: { x: number; y: number }; data: Record<string, unknown> }>;
+    edges: Array<{ id: string; source: string; target: string; type?: string }>;
+    metadata?: Record<string, unknown>;
+  };
 }
 
 interface Thread {
@@ -64,6 +78,9 @@ function ChatContent() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showKeywords, setShowKeywords] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  
+  // Drawing mode state
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
   
   // Edit/delete state
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
@@ -245,7 +262,7 @@ function ChatContent() {
     const userMessage: Message = {
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       role: "user",
-      content: text,
+      content: isDrawingMode ? `🎨 ${text}` : text,
       timestamp: new Date(),
     };
 
@@ -254,37 +271,72 @@ function ChatContent() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          context: {
-            mode: "learning_assistant",
-            // Send more history for better context
-            history: messages.slice(-20).map(m => ({
-              role: m.role,
-              content: m.content
-            })),
+      if (isDrawingMode) {
+        // Call AWS Drawing Agent for diagram generation
+        const response = await fetch("http://localhost:6098/diagrams/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: text,
+            difficulty: "intermediate", // Could be dynamic based on user profile
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.metadata?.status === "error") {
+          throw new Error(data.metadata?.error || data.error || "Failed to generate diagram");
+        }
+
+        // Use the explanation from the agent, or fallback to a simple message
+        const explanation = data.explanation || `Here's your AWS architecture diagram for: "${text}"`;
+
+        const assistantMessage: Message = {
+          id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+          role: "assistant",
+          content: explanation,
+          timestamp: new Date(),
+          diagram: {
+            nodes: data.nodes || [],
+            edges: data.edges || [],
+            metadata: data.metadata,
           },
-        }),
-      });
+        };
 
-      const data = await response.json();
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else {
+        // Regular chat with Learning Agent
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            context: {
+              mode: "learning_assistant",
+              history: messages.slice(-20).map(m => ({
+                role: m.role,
+                content: m.content
+              })),
+            },
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(data.message || data.error || "Failed to get response");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || data.error || "Failed to get response");
+        }
+
+        const assistantMessage: Message = {
+          id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+          role: "assistant",
+          content: data.response || data.message || "I couldn't generate a response.",
+          timestamp: new Date(),
+          keyTerms: data.key_terms || [],
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
       }
-
-      const assistantMessage: Message = {
-        id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-        role: "assistant",
-        content: data.response || data.message || "I couldn't generate a response.",
-        timestamp: new Date(),
-        keyTerms: data.key_terms || [],
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       const errorMessage: Message = {
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
@@ -297,7 +349,7 @@ function ChatContent() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages]);
+  }, [input, loading, messages, isDrawingMode]);
 
   useEffect(() => {
     if (initialQuestion && messages.length === 0) {
@@ -531,32 +583,43 @@ function ChatContent() {
                           </div>
                         </div>
                       ) : (
-                        <ReactMarkdown
-                          components={{
-                            p: ({ children }) => <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>,
-                            ul: ({ children }) => <ul className="mb-4 space-y-2 list-disc list-inside">{children}</ul>,
-                            ol: ({ children }) => <ol className="mb-4 space-y-2 list-decimal list-inside">{children}</ol>,
-                            li: ({ children }) => <li className="text-muted-foreground">{children}</li>,
-                            strong: ({ children }) => <strong className="text-foreground font-semibold">{children}</strong>,
-                            code: ({ children, className }) => {
-                              const isBlock = className?.includes("language-");
-                              return isBlock ? (
-                                <code className="block bg-muted/50 rounded-lg p-4 text-sm overflow-x-auto mb-4">
-                                  {children}
-                                </code>
-                              ) : (
-                                <code className="bg-muted/50 px-1.5 py-0.5 rounded text-sm">
-                                  {children}
-                                </code>
-                              );
-                            },
-                            h1: ({ children }) => <h1 className="text-xl font-bold mb-4 mt-6 first:mt-0">{children}</h1>,
-                            h2: ({ children }) => <h2 className="text-lg font-semibold mb-3 mt-5 first:mt-0">{children}</h2>,
-                            h3: ({ children }) => <h3 className="text-base font-semibold mb-2 mt-4 first:mt-0">{children}</h3>,
-                          }}
-                        >
-                          {message.content}
-                        </ReactMarkdown>
+                        <>
+                          <ReactMarkdown
+                            components={{
+                              p: ({ children }) => <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>,
+                              ul: ({ children }) => <ul className="mb-4 space-y-2 list-disc list-inside">{children}</ul>,
+                              ol: ({ children }) => <ol className="mb-4 space-y-2 list-decimal list-inside">{children}</ol>,
+                              li: ({ children }) => <li className="text-muted-foreground">{children}</li>,
+                              strong: ({ children }) => <strong className="text-foreground font-semibold">{children}</strong>,
+                              code: ({ children, className }) => {
+                                const isBlock = className?.includes("language-");
+                                return isBlock ? (
+                                  <code className="block bg-muted/50 rounded-lg p-4 text-sm overflow-x-auto mb-4">
+                                    {children}
+                                  </code>
+                                ) : (
+                                  <code className="bg-muted/50 px-1.5 py-0.5 rounded text-sm">
+                                    {children}
+                                  </code>
+                                );
+                              },
+                              h1: ({ children }) => <h1 className="text-xl font-bold mb-4 mt-6 first:mt-0">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-lg font-semibold mb-3 mt-5 first:mt-0">{children}</h2>,
+                              h3: ({ children }) => <h3 className="text-base font-semibold mb-2 mt-4 first:mt-0">{children}</h3>,
+                            }}
+                          >
+                            {message.content}
+                          </ReactMarkdown>
+                          
+                          {/* Render diagram if present */}
+                          {message.diagram && message.diagram.nodes.length > 0 && (
+                            <div className="mt-4">
+                              <DiagramMessage 
+                                diagram={message.diagram}
+                              />
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -609,12 +672,30 @@ function ChatContent() {
         <div className="border-t border-border/50 bg-background p-4">
           <div className="max-w-3xl mx-auto">
             <div className="relative flex items-end gap-2 bg-muted/50 rounded-2xl border border-border/50 focus-within:border-primary/50 transition-colors">
+              {/* Drawing Mode Toggle */}
+              <button
+                onClick={() => setIsDrawingMode(!isDrawingMode)}
+                className={`ml-2 mb-2 p-2 rounded-lg transition-all ${
+                  isDrawingMode 
+                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg" 
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+                title={isDrawingMode ? "Switch to Chat Mode" : "Switch to Drawing Mode"}
+              >
+                {isDrawingMode ? (
+                  <PenTool className="w-4 h-4" />
+                ) : (
+                  <MessageSquare className="w-4 h-4" />
+                )}
+              </button>
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Message Learning Assistant..."
+                placeholder={isDrawingMode 
+                  ? "Describe your AWS architecture... (e.g., 3-tier web app with load balancer)" 
+                  : "Message Learning Assistant..."}
                 className="flex-1 bg-transparent px-4 py-3 text-sm resize-none focus:outline-none min-h-[48px] max-h-[200px]"
                 rows={1}
                 disabled={loading}
@@ -623,19 +704,32 @@ function ChatContent() {
                 onClick={() => handleSend()}
                 disabled={!input.trim() || loading}
                 size="icon"
-                className="m-1.5 h-9 w-9 rounded-xl shrink-0"
+                className={`m-1.5 h-9 w-9 rounded-xl shrink-0 ${
+                  isDrawingMode ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600" : ""
+                }`}
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isDrawingMode ? (
+                  <PenTool className="w-4 h-4" />
                 ) : (
                   <Send className="w-4 h-4" />
                 )}
               </Button>
             </div>
             <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-muted-foreground">
-                AI can make mistakes. Verify important information.
-              </p>
+              <div className="flex items-center gap-2">
+                {isDrawingMode && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-400 border border-purple-500/30">
+                    🎨 Drawing Mode
+                  </span>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {isDrawingMode 
+                    ? "Describe your architecture and I'll draw it for you." 
+                    : "AI can make mistakes. Verify important information."}
+                </p>
+              </div>
               <div className="flex items-center gap-3">
                 {syncing && (
                   <span className="text-xs text-muted-foreground flex items-center gap-1">

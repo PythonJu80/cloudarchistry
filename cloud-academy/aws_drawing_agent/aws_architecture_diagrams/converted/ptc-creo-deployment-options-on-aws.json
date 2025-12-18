@@ -1,0 +1,831 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "awsService",
+      "position": {
+        "x": 10,
+        "y": 2
+      },
+      "data": {
+        "label": "PTC Creo on Amazon AppStream 2.0 \u2013 EC2-based File Share for Users",
+        "width": 901,
+        "height": 42,
+        "shape_name": "TextBox 71",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2022, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "awsService",
+      "position": {
+        "x": 166,
+        "y": 493
+      },
+      "data": {
+        "label": "",
+        "width": 57,
+        "height": 55,
+        "shape_name": "Graphic 1",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "group",
+      "position": {
+        "x": 318,
+        "y": 134
+      },
+      "data": {
+        "label": "AWS Cloud",
+        "width": 723,
+        "height": 532,
+        "shape_name": "Rectangle 2",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "awsService",
+      "position": {
+        "x": 318,
+        "y": 136
+      },
+      "data": {
+        "label": "",
+        "width": 36,
+        "height": 36,
+        "shape_name": "Graphic 4",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "awsService",
+      "position": {
+        "x": 427,
+        "y": 183
+      },
+      "data": {
+        "label": "VPC",
+        "width": 590,
+        "height": 473,
+        "shape_name": "Rectangle 5",
+        "shape_type": "AUTO_SHAPE (1)",
+        "service_id": "vpc"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "awsService",
+      "position": {
+        "x": 427,
+        "y": 183
+      },
+      "data": {
+        "label": "",
+        "width": 37,
+        "height": 37,
+        "shape_name": "Graphic 6",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "awsService",
+      "position": {
+        "x": 360,
+        "y": 577
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 7",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 309,
+        "y": 610
+      },
+      "data": {
+        "label": "Amazon Simple Storage Service (Amazon S3)\n Users\u2019 home folders",
+        "width": 132,
+        "height": 67,
+        "shape_name": "TextBox 8",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "default",
+      "position": {
+        "x": 480,
+        "y": 400
+      },
+      "data": {
+        "label": "Private subnet",
+        "width": 267,
+        "height": 260,
+        "shape_name": "Rectangle 9",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "default",
+      "position": {
+        "x": 480,
+        "y": 262
+      },
+      "data": {
+        "label": "Public subnet",
+        "width": 267,
+        "height": 117,
+        "shape_name": "Rectangle 10",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "awsService",
+      "position": {
+        "x": 480,
+        "y": 262
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 11",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "awsService",
+      "position": {
+        "x": 479,
+        "y": 398
+      },
+      "data": {
+        "label": "",
+        "width": 26,
+        "height": 22,
+        "shape_name": "Graphic 12",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "default",
+      "position": {
+        "x": 471,
+        "y": 225
+      },
+      "data": {
+        "label": "Availability Zone 1",
+        "width": 283,
+        "height": 425,
+        "shape_name": "Rectangle 13",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "default",
+      "position": {
+        "x": 743,
+        "y": 225
+      },
+      "data": {
+        "label": "Availability Zone 2",
+        "width": 241,
+        "height": 425,
+        "shape_name": "Rectangle 14",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "default",
+      "position": {
+        "x": 748,
+        "y": 400
+      },
+      "data": {
+        "label": "Private subnet",
+        "width": 226,
+        "height": 257,
+        "shape_name": "Rectangle 15",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "awsService",
+      "position": {
+        "x": 749,
+        "y": 399
+      },
+      "data": {
+        "label": "",
+        "width": 26,
+        "height": 22,
+        "shape_name": "Graphic 16",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "awsService",
+      "position": {
+        "x": 536,
+        "y": 287
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "default",
+      "position": {
+        "x": 479,
+        "y": 446
+      },
+      "data": {
+        "label": "",
+        "width": 514,
+        "height": 148,
+        "shape_name": "Rectangle 18",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "awsService",
+      "position": {
+        "x": 479,
+        "y": 446
+      },
+      "data": {
+        "label": "",
+        "width": 26,
+        "height": 26,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "default",
+      "position": {
+        "x": 501,
+        "y": 485
+      },
+      "data": {
+        "label": "Fleet",
+        "width": 104,
+        "height": 93,
+        "shape_name": "Rectangle 20",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "default",
+      "position": {
+        "x": 769,
+        "y": 485
+      },
+      "data": {
+        "label": "fleet",
+        "width": 156,
+        "height": 93,
+        "shape_name": "Rectangle 21",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "default",
+      "position": {
+        "x": 610,
+        "y": 486
+      },
+      "data": {
+        "label": "",
+        "width": 118,
+        "height": 93,
+        "shape_name": "Rectangle 22",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "awsService",
+      "position": {
+        "x": 515,
+        "y": 519
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "awsService",
+      "position": {
+        "x": 787,
+        "y": 520
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 24",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 827,
+        "y": 521
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 25",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "awsService",
+      "position": {
+        "x": 555,
+        "y": 520
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 26",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "awsService",
+      "position": {
+        "x": 867,
+        "y": 520
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 27",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "label",
+      "position": {
+        "x": 495,
+        "y": 446
+      },
+      "data": {
+        "label": "Amazon AppStream 2.0",
+        "width": 185,
+        "height": 27,
+        "shape_name": "TextBox 28",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "awsService",
+      "position": {
+        "x": 652,
+        "y": 287
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 13",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "awsService",
+      "position": {
+        "x": 604,
+        "y": 316
+      },
+      "data": {
+        "label": "NAT gateway",
+        "width": 126,
+        "height": 24,
+        "shape_name": "TextBox 31",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "nat-gateway"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "default",
+      "position": {
+        "x": 618,
+        "y": 267
+      },
+      "data": {
+        "label": "1",
+        "width": 24,
+        "height": 24,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "default",
+      "position": {
+        "x": 693,
+        "y": 490
+      },
+      "data": {
+        "label": "2",
+        "width": 24,
+        "height": 24,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "default",
+      "position": {
+        "x": 568,
+        "y": 491
+      },
+      "data": {
+        "label": "4",
+        "width": 24,
+        "height": 24,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "default",
+      "position": {
+        "x": 863,
+        "y": 488
+      },
+      "data": {
+        "label": "4",
+        "width": 24,
+        "height": 24,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "default",
+      "position": {
+        "x": 551,
+        "y": 612
+      },
+      "data": {
+        "label": "6",
+        "width": 24,
+        "height": 24,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "default",
+      "position": {
+        "x": 395,
+        "y": 546
+      },
+      "data": {
+        "label": "7",
+        "width": 24,
+        "height": 24,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "default",
+      "position": {
+        "x": 250,
+        "y": 486
+      },
+      "data": {
+        "label": "5",
+        "width": 24,
+        "height": 24,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "awsService",
+      "position": {
+        "x": 642,
+        "y": 613
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 39",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "default",
+      "position": {
+        "x": 694,
+        "y": 613
+      },
+      "data": {
+        "label": "3",
+        "width": 24,
+        "height": 24,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "awsService",
+      "position": {
+        "x": 652,
+        "y": 503
+      },
+      "data": {
+        "label": "",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Graphic 11",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "awsService",
+      "position": {
+        "x": 507,
+        "y": 622
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 27",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-44",
+      "type": "label",
+      "position": {
+        "x": 485,
+        "y": 657
+      },
+      "data": {
+        "label": "File share",
+        "width": 85,
+        "height": 24,
+        "shape_name": "TextBox 43",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-45",
+      "type": "default",
+      "position": {
+        "x": 413,
+        "y": 370
+      },
+      "data": {
+        "label": "",
+        "width": 33,
+        "height": 65,
+        "shape_name": "Rectangle 44",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-46",
+      "type": "awsService",
+      "position": {
+        "x": 384,
+        "y": 409
+      },
+      "data": {
+        "label": "Internet gateway",
+        "width": 93,
+        "height": 38,
+        "shape_name": "TextBox 18",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "internet-gateway"
+      }
+    },
+    {
+      "id": "node-47",
+      "type": "awsService",
+      "position": {
+        "x": 410,
+        "y": 379
+      },
+      "data": {
+        "label": "",
+        "width": 33,
+        "height": 33,
+        "shape_name": "Graphic 19",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-48",
+      "type": "awsService",
+      "position": {
+        "x": 484,
+        "y": 311
+      },
+      "data": {
+        "label": "Amazon Elastic Compute Cloud (Amazon EC2) \ninstance\nbastion host",
+        "width": 144,
+        "height": 82,
+        "shape_name": "TextBox 47",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-49",
+      "type": "awsService",
+      "position": {
+        "x": 514,
+        "y": 550
+      },
+      "data": {
+        "label": "EC2 instances",
+        "width": 70,
+        "height": 38,
+        "shape_name": "TextBox 48",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-50",
+      "type": "awsService",
+      "position": {
+        "x": 798,
+        "y": 555
+      },
+      "data": {
+        "label": "EC2 instances",
+        "width": 100,
+        "height": 24,
+        "shape_name": "TextBox 49",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-51",
+      "type": "awsService",
+      "position": {
+        "x": 603,
+        "y": 640
+      },
+      "data": {
+        "label": "EC2 instance Creo License Manager",
+        "width": 110,
+        "height": 50,
+        "shape_name": "TextBox 50",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    },
+    {
+      "id": "node-52",
+      "type": "awsService",
+      "position": {
+        "x": 621,
+        "y": 537
+      },
+      "data": {
+        "label": "Amazon EC2 Image Builder AMI",
+        "width": 94,
+        "height": 53,
+        "shape_name": "TextBox 51",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "ec2"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 29",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 29"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "ptc-creo-deployment-options-on-aws.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

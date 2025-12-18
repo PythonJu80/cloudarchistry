@@ -1,0 +1,144 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 0,
+        "y": 23
+      },
+      "data": {
+        "label": "Active/Active and Active/Passive Configurations in AWS Direct Connect\nA broad exploration of hybrid connectivity options can be found here: Hybrid Connectivity.",
+        "width": 1280,
+        "height": 74,
+        "shape_name": "Title text box",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "label",
+      "position": {
+        "x": 517,
+        "y": 306
+      },
+      "data": {
+        "label": "AWS Direct Connect \u2013 Max resiliency - Active/Active with Private/Transit VIF\n\nAWS Direct Connect \u2013 Max resiliency - Active/Passive with Private/Transit VIF\n\nAWS Direct Connect \u2013 Max resiliency - Active/Active with Public VIF\n\nAWS Direct Connect \u2013 Max resiliency - Active/Passive with Public VIF",
+        "width": 728,
+        "height": 173,
+        "shape_name": "TextBox 4",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "awsService",
+      "position": {
+        "x": 25,
+        "y": 173
+      },
+      "data": {
+        "label": "AWS offers customers the ability to achieve highly-resilient network connections between Amazon Virtual Private Cloud (Amazon VPC) and their on-premises infrastructure. The Amazon Web Services (AWS) Direct Connect Resiliency Toolkit provides a connection wizard with multiple resiliency models. These models help you to determine, and then place an order for the number of dedicated connections to achieve your SLA objective. \n\nThis reference architecture focuses on the Maximum Resiliency model, which provides you with a way to order dedicated connections to achieve an SLA of 99.99%. You can find the requirements in the AWS Direct Connect Service Level Agreement.",
+        "width": 459,
+        "height": 203,
+        "shape_name": "Boilerplate instruction text ",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "vpc"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 26,
+        "y": 449
+      },
+      "data": {
+        "label": "For Active/Active mode, you can leverage LAGs for dedicated Direct Connect connections, terminating on the same AWS Direct Connect endpoint. This will load balance traffic across all connections in the LAG on layer 2. This will not protect against failure on the Direct Connect endpoint or the whole Direct Connect location.\n\nWith ECMP, you can load balance traffic across multiple connections and Direct Connect locations on layer 3. You can influence path behaviour by longest prefix match and Border Gateway Protocol (BGP) attributes. This allows for setting up Active/Active or Active/Passive configurations.",
+        "width": 459,
+        "height": 171,
+        "shape_name": "Boilerplate instruction text ",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "label",
+      "position": {
+        "x": 25,
+        "y": 143
+      },
+      "data": {
+        "label": "Service Level Agreement (SLA)",
+        "width": 490,
+        "height": 29,
+        "shape_name": "Boilerplate instruction text ",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "label",
+      "position": {
+        "x": 25,
+        "y": 401
+      },
+      "data": {
+        "label": "Link aggregation groups (LAGs) and Equal Cost Multi Path (ECMP)",
+        "width": 459,
+        "height": 48,
+        "shape_name": "Boilerplate instruction text ",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Separator",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Separator"
+      }
+    },
+    {
+      "id": "edge-Separator",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Separator"
+      }
+    },
+    {
+      "id": "edge-Separator",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Separator"
+      }
+    },
+    {
+      "id": "edge-Separator",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Separator"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "active-active-and-active-passive-configurations-in-aws-direct-connect.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

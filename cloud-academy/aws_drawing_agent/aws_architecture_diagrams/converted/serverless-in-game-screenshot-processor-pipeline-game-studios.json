@@ -1,0 +1,773 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Serverless In-Game Screenshot Processor Pipeline for Game Studios",
+        "width": 784,
+        "height": 42,
+        "shape_name": "TextBox 71",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2021, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "label",
+      "position": {
+        "x": 11,
+        "y": 56
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 3",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "group",
+      "position": {
+        "x": 206,
+        "y": 103
+      },
+      "data": {
+        "label": "AWS Cloud",
+        "width": 753,
+        "height": 529,
+        "shape_name": "Rectangle 116",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "awsService",
+      "position": {
+        "x": 205,
+        "y": 103
+      },
+      "data": {
+        "label": "",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Graphic 117",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "awsService",
+      "position": {
+        "x": 238,
+        "y": 321
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 24",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "label",
+      "position": {
+        "x": 211,
+        "y": 377
+      },
+      "data": {
+        "label": "Game client",
+        "width": 110,
+        "height": 25,
+        "shape_name": "TextBox 200",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "awsService",
+      "position": {
+        "x": 237,
+        "y": 455
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 24",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "label",
+      "position": {
+        "x": 206,
+        "y": 508
+      },
+      "data": {
+        "label": "Community site",
+        "width": 119,
+        "height": 21,
+        "shape_name": "TextBox 211",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "default",
+      "position": {
+        "x": 242,
+        "y": 279
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 461,
+        "y": 394
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "awsService",
+      "position": {
+        "x": 415,
+        "y": 453
+      },
+      "data": {
+        "label": "Amazon API Gateway",
+        "width": 148,
+        "height": 21,
+        "shape_name": "TextBox 216",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "api-gateway"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "default",
+      "position": {
+        "x": 465,
+        "y": 358
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 29,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "awsService",
+      "position": {
+        "x": 461,
+        "y": 507
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 17",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "awsService",
+      "position": {
+        "x": 427,
+        "y": 565
+      },
+      "data": {
+        "label": "Amazon Cognito",
+        "width": 120,
+        "height": 25,
+        "shape_name": "TextBox 219",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cognito"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "default",
+      "position": {
+        "x": 429,
+        "y": 479
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "awsService",
+      "position": {
+        "x": 619,
+        "y": 321
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 10",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "awsService",
+      "position": {
+        "x": 560,
+        "y": 376
+      },
+      "data": {
+        "label": "Lambda function\u000bimage uploader/processor",
+        "width": 186,
+        "height": 37,
+        "shape_name": "TextBox 222",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "default",
+      "position": {
+        "x": 588,
+        "y": 312
+      },
+      "data": {
+        "label": "4",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "awsService",
+      "position": {
+        "x": 619,
+        "y": 176
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 18",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "label",
+      "position": {
+        "x": 573,
+        "y": 232
+      },
+      "data": {
+        "label": "Amazon Rekognition\nprofanity filter",
+        "width": 150,
+        "height": 37,
+        "shape_name": "TextBox 226",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "default",
+      "position": {
+        "x": 588,
+        "y": 169
+      },
+      "data": {
+        "label": "5",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "awsService",
+      "position": {
+        "x": 800,
+        "y": 176
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "awsService",
+      "position": {
+        "x": 771,
+        "y": 232
+      },
+      "data": {
+        "label": "Amazon S3\nraw screenshots",
+        "width": 115,
+        "height": 42,
+        "shape_name": "TextBox 229",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "default",
+      "position": {
+        "x": 768,
+        "y": 169
+      },
+      "data": {
+        "label": "7",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "awsService",
+      "position": {
+        "x": 801,
+        "y": 321
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "awsService",
+      "position": {
+        "x": 744,
+        "y": 375
+      },
+      "data": {
+        "label": "Amazon S3\nprocessed screenshots",
+        "width": 174,
+        "height": 42,
+        "shape_name": "TextBox 232",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "default",
+      "position": {
+        "x": 768,
+        "y": 302
+      },
+      "data": {
+        "label": "8",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "awsService",
+      "position": {
+        "x": 801,
+        "y": 455
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 23",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "awsService",
+      "position": {
+        "x": 783,
+        "y": 511
+      },
+      "data": {
+        "label": "DynamoDB",
+        "width": 90,
+        "height": 25,
+        "shape_name": "TextBox 235",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "dynamodb"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "default",
+      "position": {
+        "x": 768,
+        "y": 443
+      },
+      "data": {
+        "label": "9",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "awsService",
+      "position": {
+        "x": 619,
+        "y": 455
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 10",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "awsService",
+      "position": {
+        "x": 590,
+        "y": 511
+      },
+      "data": {
+        "label": "Lambda function\nimage retrieval",
+        "width": 123,
+        "height": 42,
+        "shape_name": "TextBox 238",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "default",
+      "position": {
+        "x": 588,
+        "y": 442
+      },
+      "data": {
+        "label": "11",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "default",
+      "position": {
+        "x": 238,
+        "y": 418
+      },
+      "data": {
+        "label": "10",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "awsService",
+      "position": {
+        "x": 461,
+        "y": 176
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 24",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "default",
+      "position": {
+        "x": 429,
+        "y": 168
+      },
+      "data": {
+        "label": "6",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "awsService",
+      "position": {
+        "x": 417,
+        "y": 232
+      },
+      "data": {
+        "label": "Amazon SNS\nfiltering notification",
+        "width": 143,
+        "height": 42,
+        "shape_name": "TextBox 243",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "sns"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "awsService",
+      "position": {
+        "x": 619,
+        "y": 588
+      },
+      "data": {
+        "label": "",
+        "width": 51,
+        "height": 51,
+        "shape_name": "Graphic 19",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "default",
+      "position": {
+        "x": 678,
+        "y": 572
+      },
+      "data": {
+        "label": "12",
+        "width": 28,
+        "height": 28,
+        "shape_name": "NumBox 1",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "awsService",
+      "position": {
+        "x": 572,
+        "y": 645
+      },
+      "data": {
+        "label": "Amazon CloudFront\nCDN",
+        "width": 150,
+        "height": 42,
+        "shape_name": "TextBox 246",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "cloudfront"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 29",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 29"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 121",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 121"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 64",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 64"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "serverless-in-game-screenshot-processor-pipeline-game-studios.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}

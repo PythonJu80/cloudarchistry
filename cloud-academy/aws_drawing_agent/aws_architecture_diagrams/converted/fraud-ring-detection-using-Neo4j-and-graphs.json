@@ -1,0 +1,1363 @@
+{
+  "nodes": [
+    {
+      "id": "node-0",
+      "type": "awsService",
+      "position": {
+        "x": 46,
+        "y": 747
+      },
+      "data": {
+        "label": "",
+        "width": 61,
+        "height": 36,
+        "shape_name": "Graphic 102",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-1",
+      "type": "label",
+      "position": {
+        "x": 112,
+        "y": 772
+      },
+      "data": {
+        "label": "\u00a9 2023, Amazon Web Services, Inc. or its affiliates. All rights reserved.",
+        "width": 423,
+        "height": 15,
+        "shape_name": "AWS copyright text",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "default",
+      "position": {
+        "x": 220,
+        "y": 171
+      },
+      "data": {
+        "label": "Data sources",
+        "width": 135,
+        "height": 416,
+        "shape_name": "Rectangle 109",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "group",
+      "position": {
+        "x": 199,
+        "y": 100
+      },
+      "data": {
+        "label": "AWS Cloud",
+        "width": 951,
+        "height": 548,
+        "shape_name": "Rectangle 111",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "awsService",
+      "position": {
+        "x": 199,
+        "y": 100
+      },
+      "data": {
+        "label": "",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Graphic 20",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 15
+      },
+      "data": {
+        "label": "Fraud Ring Detection using Neo4j and Graphs",
+        "width": 658,
+        "height": 42,
+        "shape_name": "TextBox 50",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "label",
+      "position": {
+        "x": 9,
+        "y": 53
+      },
+      "data": {
+        "label": "For the architecture description, refer to the full diagram.",
+        "width": 510,
+        "height": 32,
+        "shape_name": "TextBox 51",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "default",
+      "position": {
+        "x": 240,
+        "y": 220
+      },
+      "data": {
+        "label": "",
+        "width": 92,
+        "height": 154,
+        "shape_name": "Google Shape;346;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "default",
+      "position": {
+        "x": 635,
+        "y": 262
+      },
+      "data": {
+        "label": "",
+        "width": 152,
+        "height": 298,
+        "shape_name": "Google Shape;347;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "awsService",
+      "position": {
+        "x": 984,
+        "y": 474
+      },
+      "data": {
+        "label": "AWS \u000bLambda",
+        "width": 83,
+        "height": 36,
+        "shape_name": "Google Shape;350;p56",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "lambda"
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "awsService",
+      "position": {
+        "x": 246,
+        "y": 549
+      },
+      "data": {
+        "label": "",
+        "width": 80,
+        "height": 67,
+        "shape_name": "Google Shape;354;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-11",
+      "type": "awsService",
+      "position": {
+        "x": 251,
+        "y": 235
+      },
+      "data": {
+        "label": "",
+        "width": 67,
+        "height": 67,
+        "shape_name": "Google Shape;355;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-12",
+      "type": "awsService",
+      "position": {
+        "x": 241,
+        "y": 423
+      },
+      "data": {
+        "label": "",
+        "width": 82,
+        "height": 70,
+        "shape_name": "Google Shape;356;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-13",
+      "type": "default",
+      "position": {
+        "x": 240,
+        "y": 419
+      },
+      "data": {
+        "label": "",
+        "width": 92,
+        "height": 75,
+        "shape_name": "Google Shape;357;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-14",
+      "type": "label",
+      "position": {
+        "x": 650,
+        "y": 505
+      },
+      "data": {
+        "label": "Neo4j Aura\nGraph Database",
+        "width": 122,
+        "height": 36,
+        "shape_name": "Google Shape;359;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-15",
+      "type": "label",
+      "position": {
+        "x": 959,
+        "y": 301
+      },
+      "data": {
+        "label": "Amazon SageMaker",
+        "width": 116,
+        "height": 21,
+        "shape_name": "Google Shape;362;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-16",
+      "type": "label",
+      "position": {
+        "x": 689,
+        "y": 206
+      },
+      "data": {
+        "label": "Graph embeddings data",
+        "width": 153,
+        "height": 21,
+        "shape_name": "Google Shape;363;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-17",
+      "type": "label",
+      "position": {
+        "x": 872,
+        "y": 661
+      },
+      "data": {
+        "label": "Neo4j Bloom",
+        "width": 92,
+        "height": 21,
+        "shape_name": "Google Shape;384;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-18",
+      "type": "default",
+      "position": {
+        "x": 378,
+        "y": 208
+      },
+      "data": {
+        "label": "",
+        "width": 92,
+        "height": 131,
+        "shape_name": "Google Shape;385;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-19",
+      "type": "label",
+      "position": {
+        "x": 368,
+        "y": 352
+      },
+      "data": {
+        "label": "Batch data",
+        "width": 111,
+        "height": 21,
+        "shape_name": "Google Shape;386;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-20",
+      "type": "default",
+      "position": {
+        "x": 377,
+        "y": 397
+      },
+      "data": {
+        "label": "",
+        "width": 92,
+        "height": 176,
+        "shape_name": "Google Shape;387;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-21",
+      "type": "label",
+      "position": {
+        "x": 372,
+        "y": 593
+      },
+      "data": {
+        "label": "Data streams",
+        "width": 101,
+        "height": 21,
+        "shape_name": "Google Shape;388;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-22",
+      "type": "awsService",
+      "position": {
+        "x": 367,
+        "y": 323
+      },
+      "data": {
+        "label": "Amazon EMR",
+        "width": 112,
+        "height": 21,
+        "shape_name": "Google Shape;389;p56",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "emr"
+      }
+    },
+    {
+      "id": "node-23",
+      "type": "default",
+      "position": {
+        "x": 563,
+        "y": 168
+      },
+      "data": {
+        "label": "",
+        "width": 136,
+        "height": 50,
+        "shape_name": "Google Shape;390;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-24",
+      "type": "awsService",
+      "position": {
+        "x": 615,
+        "y": 183
+      },
+      "data": {
+        "label": "Amazon S3",
+        "width": 74,
+        "height": 21,
+        "shape_name": "Google Shape;391;p56",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "s3"
+      }
+    },
+    {
+      "id": "node-25",
+      "type": "default",
+      "position": {
+        "x": 242,
+        "y": 527
+      },
+      "data": {
+        "label": "",
+        "width": 91,
+        "height": 83,
+        "shape_name": "Google Shape;393;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-26",
+      "type": "label",
+      "position": {
+        "x": 260,
+        "y": 390
+      },
+      "data": {
+        "label": "SQL DB",
+        "width": 63,
+        "height": 21,
+        "shape_name": "Google Shape;394;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-27",
+      "type": "label",
+      "position": {
+        "x": 238,
+        "y": 218
+      },
+      "data": {
+        "label": "Customer\u000btransactions",
+        "width": 94,
+        "height": 36,
+        "shape_name": "Google Shape;395;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-28",
+      "type": "label",
+      "position": {
+        "x": 243,
+        "y": 484
+      },
+      "data": {
+        "label": "NoSQL DB",
+        "width": 83,
+        "height": 21,
+        "shape_name": "Google Shape;397;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-29",
+      "type": "label",
+      "position": {
+        "x": 242,
+        "y": 424
+      },
+      "data": {
+        "label": "Geo data",
+        "width": 85,
+        "height": 21,
+        "shape_name": "Google Shape;398;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-30",
+      "type": "label",
+      "position": {
+        "x": 236,
+        "y": 526
+      },
+      "data": {
+        "label": "Banking app transactions",
+        "width": 99,
+        "height": 36,
+        "shape_name": "Google Shape;399;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-31",
+      "type": "awsService",
+      "position": {
+        "x": 368,
+        "y": 456
+      },
+      "data": {
+        "label": "Amazon Kinesis",
+        "width": 109,
+        "height": 21,
+        "shape_name": "Google Shape;400;p56",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "kinesis"
+      }
+    },
+    {
+      "id": "node-32",
+      "type": "label",
+      "position": {
+        "x": 240,
+        "y": 302
+      },
+      "data": {
+        "label": "Customer accounts",
+        "width": 90,
+        "height": 36,
+        "shape_name": "Google Shape;403;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-33",
+      "type": "awsService",
+      "position": {
+        "x": 384,
+        "y": 257
+      },
+      "data": {
+        "label": "AWS Glue",
+        "width": 77,
+        "height": 21,
+        "shape_name": "Google Shape;412;p56",
+        "shape_type": "TEXT_BOX (17)",
+        "service_id": "glue"
+      }
+    },
+    {
+      "id": "node-34",
+      "type": "label",
+      "position": {
+        "x": 649,
+        "y": 264
+      },
+      "data": {
+        "label": "Neo4j Aura\nGraph Data Science",
+        "width": 122,
+        "height": 36,
+        "shape_name": "Google Shape;416;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-35",
+      "type": "label",
+      "position": {
+        "x": 854,
+        "y": 301
+      },
+      "data": {
+        "label": "Amazon SageMaker \nStudio",
+        "width": 119,
+        "height": 36,
+        "shape_name": "Google Shape;425;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-36",
+      "type": "label",
+      "position": {
+        "x": 955,
+        "y": 661
+      },
+      "data": {
+        "label": "Customer apps",
+        "width": 101,
+        "height": 21,
+        "shape_name": "Google Shape;426;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-37",
+      "type": "awsService",
+      "position": {
+        "x": 666,
+        "y": 558
+      },
+      "data": {
+        "label": "",
+        "width": 85,
+        "height": 28,
+        "shape_name": "Google Shape;427;p56",
+        "shape_type": "GROUP (6)"
+      }
+    },
+    {
+      "id": "node-38",
+      "type": "awsService",
+      "position": {
+        "x": 265,
+        "y": 339
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Google Shape;432;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-39",
+      "type": "awsService",
+      "position": {
+        "x": 538,
+        "y": 352
+      },
+      "data": {
+        "label": "",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Google Shape;420;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-40",
+      "type": "awsService",
+      "position": {
+        "x": 974,
+        "y": 612
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Google Shape;433;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-41",
+      "type": "default",
+      "position": {
+        "x": 656,
+        "y": 416
+      },
+      "data": {
+        "label": "",
+        "width": 9,
+        "height": 25,
+        "shape_name": "Google Shape;434;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-42",
+      "type": "awsService",
+      "position": {
+        "x": 876,
+        "y": 434
+      },
+      "data": {
+        "label": "",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Google Shape;440;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-43",
+      "type": "label",
+      "position": {
+        "x": 377,
+        "y": 560
+      },
+      "data": {
+        "label": "Amazon MSK",
+        "width": 90,
+        "height": 21,
+        "shape_name": "Google Shape;441;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-44",
+      "type": "awsService",
+      "position": {
+        "x": 539,
+        "y": 515
+      },
+      "data": {
+        "label": "",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Google Shape;438;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-45",
+      "type": "awsService",
+      "position": {
+        "x": 538,
+        "y": 434
+      },
+      "data": {
+        "label": "",
+        "width": 34,
+        "height": 34,
+        "shape_name": "Google Shape;445;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-46",
+      "type": "default",
+      "position": {
+        "x": 941,
+        "y": 435
+      },
+      "data": {
+        "label": "",
+        "width": 30,
+        "height": 33,
+        "shape_name": "Google Shape;446;p56",
+        "shape_type": "FREEFORM (5)"
+      }
+    },
+    {
+      "id": "node-47",
+      "type": "awsService",
+      "position": {
+        "x": 682,
+        "y": 305
+      },
+      "data": {
+        "label": "",
+        "width": 52,
+        "height": 52,
+        "shape_name": "Google Shape;448;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-48",
+      "type": "awsService",
+      "position": {
+        "x": 893,
+        "y": 612
+      },
+      "data": {
+        "label": "",
+        "width": 48,
+        "height": 48,
+        "shape_name": "Google Shape;449;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-49",
+      "type": "default",
+      "position": {
+        "x": 675,
+        "y": 414
+      },
+      "data": {
+        "label": "",
+        "width": 9,
+        "height": 9,
+        "shape_name": "Google Shape;436;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-50",
+      "type": "default",
+      "position": {
+        "x": 675,
+        "y": 483
+      },
+      "data": {
+        "label": "",
+        "width": 9,
+        "height": 9,
+        "shape_name": "Google Shape;439;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-51",
+      "type": "default",
+      "position": {
+        "x": 728,
+        "y": 483
+      },
+      "data": {
+        "label": "",
+        "width": 9,
+        "height": 9,
+        "shape_name": "Google Shape;460;p56",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-52",
+      "type": "label",
+      "position": {
+        "x": 910,
+        "y": 469
+      },
+      "data": {
+        "label": "Neo4j GraphQL \nLibrary",
+        "width": 98,
+        "height": 36,
+        "shape_name": "Google Shape;463;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-53",
+      "type": "label",
+      "position": {
+        "x": 870,
+        "y": 469
+      },
+      "data": {
+        "label": "Neo4j \nDriver",
+        "width": 47,
+        "height": 36,
+        "shape_name": "Google Shape;464;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-54",
+      "type": "awsService",
+      "position": {
+        "x": 668,
+        "y": 409
+      },
+      "data": {
+        "label": "",
+        "width": 80,
+        "height": 80,
+        "shape_name": "Google Shape;465;p56",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-55",
+      "type": "default",
+      "position": {
+        "x": 364,
+        "y": 169
+      },
+      "data": {
+        "label": "Ingest",
+        "width": 121,
+        "height": 418,
+        "shape_name": "Rectangle 244",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-56",
+      "type": "default",
+      "position": {
+        "x": 503,
+        "y": 291
+      },
+      "data": {
+        "label": "Neo4j Connectors",
+        "width": 106,
+        "height": 254,
+        "shape_name": "Rectangle 246",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-57",
+      "type": "label",
+      "position": {
+        "x": 704,
+        "y": 156
+      },
+      "data": {
+        "label": "Training and model data",
+        "width": 153,
+        "height": 21,
+        "shape_name": "Google Shape;363;p56",
+        "shape_type": "TEXT_BOX (17)"
+      }
+    },
+    {
+      "id": "node-58",
+      "type": "default",
+      "position": {
+        "x": 850,
+        "y": 196
+      },
+      "data": {
+        "label": "Fraud detection predictive engine",
+        "width": 231,
+        "height": 133,
+        "shape_name": "Rectangle 271",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-59",
+      "type": "default",
+      "position": {
+        "x": 850,
+        "y": 375
+      },
+      "data": {
+        "label": "Fraud detection application service",
+        "width": 231,
+        "height": 142,
+        "shape_name": "Rectangle 273",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-60",
+      "type": "default",
+      "position": {
+        "x": 850,
+        "y": 560
+      },
+      "data": {
+        "label": "Analyst tools",
+        "width": 229,
+        "height": 118,
+        "shape_name": "Rectangle 275",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-61",
+      "type": "awsService",
+      "position": {
+        "x": 400,
+        "y": 211
+      },
+      "data": {
+        "label": "",
+        "width": 40,
+        "height": 40,
+        "shape_name": "Graphic 6",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-62",
+      "type": "awsService",
+      "position": {
+        "x": 400,
+        "y": 275
+      },
+      "data": {
+        "label": "",
+        "width": 39,
+        "height": 41,
+        "shape_name": "Graphic 22",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-63",
+      "type": "awsService",
+      "position": {
+        "x": 399,
+        "y": 411
+      },
+      "data": {
+        "label": "",
+        "width": 42,
+        "height": 42,
+        "shape_name": "Graphic 24",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-64",
+      "type": "awsService",
+      "position": {
+        "x": 399,
+        "y": 507
+      },
+      "data": {
+        "label": "",
+        "width": 43,
+        "height": 43,
+        "shape_name": "Graphic 6",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-65",
+      "type": "awsService",
+      "position": {
+        "x": 579,
+        "y": 175
+      },
+      "data": {
+        "label": "",
+        "width": 38,
+        "height": 38,
+        "shape_name": "Graphic 8",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-66",
+      "type": "awsService",
+      "position": {
+        "x": 899,
+        "y": 255
+      },
+      "data": {
+        "label": "",
+        "width": 40,
+        "height": 40,
+        "shape_name": "Graphic 9",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-67",
+      "type": "awsService",
+      "position": {
+        "x": 986,
+        "y": 255
+      },
+      "data": {
+        "label": "",
+        "width": 43,
+        "height": 43,
+        "shape_name": "Graphic 22",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-68",
+      "type": "awsService",
+      "position": {
+        "x": 1005,
+        "y": 430
+      },
+      "data": {
+        "label": "",
+        "width": 40,
+        "height": 40,
+        "shape_name": "lambda",
+        "shape_type": "PICTURE (13)"
+      }
+    },
+    {
+      "id": "node-69",
+      "type": "default",
+      "position": {
+        "x": 1065,
+        "y": 181
+      },
+      "data": {
+        "label": "",
+        "width": 10,
+        "height": 94,
+        "shape_name": "Freeform 62",
+        "shape_type": "FREEFORM (5)"
+      }
+    },
+    {
+      "id": "node-70",
+      "type": "default",
+      "position": {
+        "x": 208,
+        "y": 158
+      },
+      "data": {
+        "label": "1",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 174",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-71",
+      "type": "default",
+      "position": {
+        "x": 353,
+        "y": 158
+      },
+      "data": {
+        "label": "2",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 175",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-72",
+      "type": "default",
+      "position": {
+        "x": 491,
+        "y": 280
+      },
+      "data": {
+        "label": "3",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 176",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-73",
+      "type": "default",
+      "position": {
+        "x": 489,
+        "y": 416
+      },
+      "data": {
+        "label": "4",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 177",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-74",
+      "type": "default",
+      "position": {
+        "x": 624,
+        "y": 248
+      },
+      "data": {
+        "label": "5",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 178",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-75",
+      "type": "default",
+      "position": {
+        "x": 840,
+        "y": 182
+      },
+      "data": {
+        "label": "6",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 179",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-76",
+      "type": "default",
+      "position": {
+        "x": 840,
+        "y": 362
+      },
+      "data": {
+        "label": "7",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 180",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    },
+    {
+      "id": "node-77",
+      "type": "default",
+      "position": {
+        "x": 840,
+        "y": 552
+      },
+      "data": {
+        "label": "8",
+        "width": 28,
+        "height": 28,
+        "shape_name": "Oval 181",
+        "shape_type": "AUTO_SHAPE (1)"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-Straight Arrow Connector 59",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 59"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 87",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 87"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 88",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 88"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 94",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 94"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 101",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 101"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 104",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 104"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 125",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 125"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 138",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 138"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 152",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 152"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 160",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 160"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 25",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 25"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 31",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 31"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 28",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 28"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 22",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 22"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 22",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 22"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 22",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 22"
+      }
+    },
+    {
+      "id": "edge-Elbow Connector 25",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Elbow Connector 25"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 219",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 219"
+      }
+    },
+    {
+      "id": "edge-Straight Arrow Connector 21",
+      "source": "unknown",
+      "target": "unknown",
+      "type": "smoothstep",
+      "data": {
+        "shape_name": "Straight Arrow Connector 21"
+      }
+    }
+  ],
+  "metadata": {
+    "source_file": "fraud-ring-detection-using-Neo4j-and-graphs.pptx",
+    "slide_dimensions": {
+      "width": 12192000,
+      "height": 6858000
+    },
+    "canvas_dimensions": {
+      "width": 1200,
+      "height": 800
+    }
+  }
+}
