@@ -6,6 +6,7 @@ based on user's target certification, skill level, and study needs.
 """
 
 import json
+import os
 import uuid
 from typing import List, Optional, Dict
 from pydantic import BaseModel
@@ -66,10 +67,11 @@ async def _chat_json(
     api_key: Optional[str] = None
 ) -> Dict:
     """JSON chat completion with request-scoped key support."""
-    key = api_key or get_request_api_key()
+    # Priority: explicit param > request context > environment variable
+    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings."
+            "OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file."
         )
     
     model = model or get_request_model() or "gpt-4o"

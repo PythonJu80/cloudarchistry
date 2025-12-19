@@ -5,6 +5,11 @@
 import { Server as SocketIOServer } from "socket.io";
 import { Server as HTTPServer } from "http";
 
+// Declare global socketIO from server.js
+declare global {
+  var socketIO: SocketIOServer | undefined;
+}
+
 // Global socket server instance
 let io: SocketIOServer | null = null;
 
@@ -154,20 +159,25 @@ export function initSocketServer(httpServer: HTTPServer): SocketIOServer {
 }
 
 export function getSocketServer(): SocketIOServer | null {
-  return io;
+  return global.socketIO || io;
 }
 
 // Helper to emit to a specific match room from API routes
 export function emitToMatch(matchCode: string, event: string, data: unknown) {
-  if (io) {
-    io.to(`match:${matchCode}`).emit(event, data);
+  const socketServer = global.socketIO || io;
+  if (socketServer) {
+    socketServer.to(`match:${matchCode}`).emit(event, data);
+    console.log(`[Socket] Emitted ${event} to match:${matchCode}`);
+  } else {
+    console.warn(`[Socket] Cannot emit ${event} - socket server not initialized`);
   }
 }
 
 // Helper to emit to a specific user's dashboard
 export function emitToUser(userId: string, event: string, data: unknown) {
-  if (io) {
-    io.to(`dashboard:${userId}`).emit(event, data);
+  const socketServer = global.socketIO || io;
+  if (socketServer) {
+    socketServer.to(`dashboard:${userId}`).emit(event, data);
   }
 }
 

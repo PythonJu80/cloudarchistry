@@ -17,6 +17,7 @@ import logging
 sys.path.insert(0, str(Path(__file__).parent))
 
 from agent import AWSDrawingAgent
+from bug_bounty_generator import BugBountyGenerator
 import db
 
 # Configure logging
@@ -47,6 +48,12 @@ agent = AWSDrawingAgent(
     openai_api_key=OPENAI_API_KEY
 )
 
+# Initialize Bug Bounty Generator
+bug_bounty_generator = BugBountyGenerator(openai_api_key=OPENAI_API_KEY)
+
+# Store active challenges (in production, use Redis or database)
+active_challenges = {}
+
 # Pydantic models
 class ServiceSearchRequest(BaseModel):
     query: str
@@ -63,6 +70,21 @@ class DiagramGenerationRequest(BaseModel):
     tenant_id: Optional[str] = None
     certification_code: Optional[str] = None
     difficulty: Optional[str] = None  # beginner, intermediate, advanced
+
+class BugBountyGenerateRequest(BaseModel):
+    difficulty: str = "intermediate"  # beginner, intermediate, advanced
+    certification_code: Optional[str] = None
+    scenario_type: str = "ecommerce"
+    openai_api_key: Optional[str] = None
+
+class BugBountyValidateRequest(BaseModel):
+    challenge_id: str
+    target_id: str
+    bug_type: str
+    severity: str
+    claim: str
+    evidence: List[str]
+    confidence: int
 
 
 @app.on_event("startup")
@@ -217,6 +239,106 @@ async def generate_diagram(request: DiagramGenerationRequest):
     except Exception as e:
         logger.error(f"Diagram generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+
+
+@app.post("/bug-bounty/generate")
+async def generate_bug_bounty(request: BugBountyGenerateRequest):
+    """
+    Generate a Bug Bounty challenge with flawed architecture and fake AWS logs.
+    Returns diagram, description, AWS environment (logs, metrics, etc.), and metadata.
+    Hidden bugs are stored server-side for validation.
+    """
+    try:
+        # Use provided API key or default
+        api_key = request.openai_api_key or OPENAI_API_KEY
+        generator = BugBountyGenerator(openai_api_key=api_key)
+        
+        # Generate challenge
+        challenge = generator.generate_challenge(
+            difficulty=request.difficulty,
+            certification_code=request.certification_code,
+            scenario_type=request.scenario_type,
+        )
+        
+        # Store challenge for validation (use challenge_id as key)
+        active_challenges[challenge.challenge_id] = challenge
+        
+        # Return challenge WITHOUT hidden bugs (those are secret!)
+        return {
+            "challenge_id": challenge.challenge_id,
+            "diagram": challenge.diagram,
+            "description": challenge.description,
+            "aws_environment": {
+                "cloudwatch_logs": [log.model_dump() for log in challenge.aws_environment.cloudwatch_logs],
+                "cloudwatch_metrics": {k: v.model_dump() for k, v in challenge.aws_environment.cloudwatch_metrics.items()},
+                "vpc_flow_logs": challenge.aws_environment.vpc_flow_logs,
+                "iam_policies": challenge.aws_environment.iam_policies,
+                "cost_data": challenge.aws_environment.cost_data,
+                "xray_traces": [trace.model_dump() for trace in challenge.aws_environment.xray_traces],
+                "config_compliance": [rule.model_dump() for rule in challenge.aws_environment.config_compliance],
+            },
+            "difficulty": challenge.difficulty,
+            "bounty_value": challenge.bounty_value,
+            "time_limit": challenge.time_limit,
+            "bug_count": len(challenge.hidden_bugs),  # Tell them how many bugs exist
+        }
+    except Exception as e:
+        logger.error(f"Bug Bounty generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+
+
+@app.post("/bug-bounty/validate")
+async def validate_bug_claim(request: BugBountyValidateRequest):
+    """
+    Validate a user's bug claim against the hidden bugs in the challenge.
+    Returns whether the claim is correct, points awarded, and explanation.
+    """
+    try:
+        # Get challenge
+        challenge = active_challenges.get(request.challenge_id)
+        if not challenge:
+            raise HTTPException(status_code=404, detail="Challenge not found or expired")
+        
+        # Validate claim
+        claim_data = {
+            "target_id": request.target_id,
+            "bug_type": request.bug_type,
+            "severity": request.severity,
+            "claim": request.claim,
+            "evidence": request.evidence,
+            "confidence": request.confidence,
+        }
+        
+        result = bug_bounty_generator.validate_claim(challenge, claim_data)
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Bug claim validation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+
+
+@app.get("/bug-bounty/{challenge_id}/reveal")
+async def reveal_bugs(challenge_id: str):
+    """
+    Reveal all bugs in a challenge (after time expires or user gives up).
+    Returns the complete list of bugs with explanations.
+    """
+    try:
+        challenge = active_challenges.get(challenge_id)
+        if not challenge:
+            raise HTTPException(status_code=404, detail="Challenge not found")
+        
+        return {
+            "challenge_id": challenge_id,
+            "bugs": [bug.model_dump() for bug in challenge.hidden_bugs],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Bug reveal failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Reveal failed: {str(e)}")
 
 
 if __name__ == "__main__":

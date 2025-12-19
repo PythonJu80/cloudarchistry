@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
+import { emitToMatch } from "@/lib/socket";
 
 const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
-const TOTAL_FUSE = 60; // Total fuse time in seconds
+const TOTAL_FUSE = 10; // Total fuse time in seconds
 
 interface QuestionFromAPI {
   id: string;
@@ -23,7 +24,7 @@ interface QuestionFromAPI {
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { matchCode: string } }
+  { params }: { params: Promise<{ matchCode: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -31,7 +32,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { matchCode } = params;
+    const { matchCode } = await params;
     const body = await req.json();
     const { action } = body;
 
@@ -141,6 +142,9 @@ export async function POST(
         },
       });
 
+      // Notify all players that game has started
+      emitToMatch(matchCode, "match-update", { matchState });
+
       return NextResponse.json({ success: true, matchState });
     }
 
@@ -201,6 +205,9 @@ export async function POST(
           },
         });
 
+        // Notify all players that game is over
+        emitToMatch(matchCode, "match-status", { status: "completed", winnerId: winner.id });
+
         return NextResponse.json({ success: true, gameOver: true, winnerId: winner.id });
       }
 
@@ -217,6 +224,76 @@ export async function POST(
         where: { matchCode },
         data: { matchState: newState as object },
       });
+
+      // Notify all players that bomb was passed
+      emitToMatch(matchCode, "match-update", { matchState: newState });
+
+      return NextResponse.json({ success: true, matchState: newState });
+    }
+
+    // Handle WRONG action - player got answer wrong, move to next question but keep bomb
+    if (action === "wrong") {
+      const currentState = match.matchState as {
+        questions: Array<{ id: string; question: string; options: string[]; correctIndex: number; topic: string; difficulty: string }>;
+        currentQuestion: number;
+        currentBombHolder: string;
+        fuseTime: number;
+        players: Array<{ id: string; name: string; isAlive: boolean; score: number; correctAnswers: number }>;
+      };
+
+      if (!currentState) {
+        return NextResponse.json({ error: "Game not started" }, { status: 400 });
+      }
+
+      // Verify current user has the bomb
+      if (currentState.currentBombHolder !== academyUser.id) {
+        return NextResponse.json({ error: "You don't have the bomb" }, { status: 400 });
+      }
+
+      // Move to next question (no score update for wrong answer)
+      const nextQuestion = currentState.currentQuestion + 1;
+
+      // Check if we've run out of questions
+      if (nextQuestion >= currentState.questions.length) {
+        // Game over - determine winner by most correct answers
+        const winner = currentState.players.reduce((a, b) => 
+          a.correctAnswers > b.correctAnswers ? a : b
+        );
+
+        await prisma.versusMatch.update({
+          where: { matchCode },
+          data: {
+            status: "completed",
+            winnerId: winner.id,
+            completedAt: new Date(),
+            matchState: {
+              ...currentState,
+              currentBombHolder: null,
+            } as object,
+          },
+        });
+
+        // Notify all players that game is over
+        emitToMatch(matchCode, "match-status", { status: "completed", winnerId: winner.id });
+
+        return NextResponse.json({ success: true, gameOver: true, winnerId: winner.id });
+      }
+
+      // Update match state - move to next question, keep bomb with same player
+      const newState = {
+        ...currentState,
+        currentQuestion: nextQuestion,
+        // currentBombHolder stays the same
+        // fuseTime stays the same (continues counting down)
+      };
+
+      await prisma.versusMatch.update({
+        where: { matchCode },
+        data: { matchState: newState as object },
+      });
+
+      // Notify all players that question changed
+      emitToMatch(matchCode, "match-update", { matchState: newState });
 
       return NextResponse.json({ success: true, matchState: newState });
     }
@@ -263,6 +340,9 @@ export async function POST(
           },
         });
 
+        // Notify all players that game is over
+        emitToMatch(matchCode, "match-status", { status: "completed", winnerId: winner?.id });
+
         return NextResponse.json({ success: true, gameOver: true, winnerId: winner?.id });
       }
 
@@ -281,6 +361,9 @@ export async function POST(
         where: { matchCode },
         data: { matchState: newState as object },
       });
+
+      // Notify all players that bomb exploded and was passed
+      emitToMatch(matchCode, "match-update", { matchState: newState });
 
       return NextResponse.json({ success: true, matchState: newState });
     }

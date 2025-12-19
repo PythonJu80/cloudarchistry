@@ -52,6 +52,7 @@ interface UseSocketOptions {
   onNewQuestion?: (question: unknown) => void;
   onRoomUpdate?: (update: RoomUpdate) => void;
   onPlayerDisconnected?: (data: { userId: string; userName: string }) => void;
+  onMatchUpdate?: (data: unknown) => void;
 }
 
 export function useSocket({
@@ -66,6 +67,7 @@ export function useSocket({
   onNewQuestion,
   onRoomUpdate,
   onPlayerDisconnected,
+  onMatchUpdate,
 }: UseSocketOptions) {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -137,6 +139,10 @@ export function useSocket({
 
     socket.on("player-disconnected", (data: { userId: string; userName: string }) => {
       onPlayerDisconnected?.(data);
+    });
+
+    socket.on("match-update", (data: unknown) => {
+      onMatchUpdate?.(data);
     });
 
     // Cleanup on unmount

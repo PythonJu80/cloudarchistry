@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 6098
 
 # Run the application
-CMD ["python", "main.py"]
+CMD ["python3", "main.py"]

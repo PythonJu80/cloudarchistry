@@ -303,7 +303,7 @@ const GameCard = ({
 
   return (
     <div
-      className={`relative flex-shrink-0 w-[300px] md:w-[400px] aspect-[4/5] rounded-3xl overflow-hidden cursor-pointer group ${
+      className={`relative w-full aspect-[4/5] rounded-3xl overflow-hidden cursor-pointer group ${
         comingSoon ? 'opacity-50' : ''
       }`}
       onMouseEnter={() => setIsHovered(true)}
@@ -375,7 +375,12 @@ const GameCard = ({
 
 // Horizontal scrolling game selector
 const GameSelector = () => {
+  const router = useRouter();
   const otherGames = GAME_MODES.filter(m => m.slug !== "quiz_battle");
+
+  const handleGameClick = (slug: string) => {
+    router.push(`/game/modes/${slug}`);
+  };
 
   return (
     <section className="relative py-16 px-8 md:px-16">
@@ -391,8 +396,8 @@ const GameSelector = () => {
         </div>
       </div>
 
-      {/* Horizontal scroll container */}
-      <div className="flex gap-6 overflow-x-auto pb-6 -mx-8 px-8 scrollbar-hide">
+      {/* 2-column grid container */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
         {otherGames.map((game) => (
           <GameCard
             key={game.slug}
@@ -403,15 +408,10 @@ const GameSelector = () => {
             isLive={game.isLive}
             comingSoon={game.comingSoon}
             players={game.players}
-            onClick={() => {}}
+            onClick={() => handleGameClick(game.slug)}
           />
         ))}
       </div>
-
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </section>
   );
 };

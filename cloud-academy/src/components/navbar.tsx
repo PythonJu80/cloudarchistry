@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { Swords, Brain, Boxes } from "lucide-react";
+import { Swords, Brain } from "lucide-react";
 import { UserNav } from "@/components/user-nav";
 
 interface NavbarProps {
@@ -71,10 +71,6 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
             <Link href="/learn" className={specialLinkClass("amber")}>
               <Brain className="w-4 h-4" />
               Learning Centre
-            </Link>
-            <Link href="/archub" className={`${linkClass("/archub")} flex items-center gap-1.5`}>
-              <Boxes className="w-4 h-4" />
-              ArcHub
             </Link>
             <Link href="/game" className={specialLinkClass("red")}>
               <Swords className="w-4 h-4" />

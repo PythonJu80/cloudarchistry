@@ -9,7 +9,7 @@ import { emitVersusUpdate } from "@/lib/socket";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { matchCode: string } }
+  { params }: { params: Promise<{ matchCode: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { matchCode } = params;
+    const { matchCode } = await params;
 
     let match = await prisma.versusMatch.findUnique({
       where: { matchCode },
@@ -162,7 +162,7 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { matchCode: string } }
+  { params }: { params: Promise<{ matchCode: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -170,7 +170,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { matchCode } = params;
+    const { matchCode } = await params;
     const body = await req.json();
     const { action, data } = body;
 

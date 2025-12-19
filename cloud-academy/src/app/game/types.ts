@@ -149,7 +149,7 @@ export type GameModeSlug =
   | "cloud_tycoon"
   | "ticking_bomb"
   | "tournament"
-  | "daily_jackpot"
+  | "bug_bounty"
   | "architect_arena";
 
 export interface GameMode {
@@ -235,25 +235,25 @@ export const GAME_MODES: GameMode[] = [
     isLive: true,
     comingSoon: false,
   },
+  // {
+  //   slug: "tournament",
+  //   title: "Tournament",
+  //   icon: "🏆",
+  //   description: "Bracket-style elimination. Fight your way to the championship!",
+  //   players: "8-64",
+  //   gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
+  //   isLive: false,
+  //   comingSoon: true,
+  // },
   {
-    slug: "tournament",
-    title: "Tournament",
-    icon: "🏆",
-    description: "Bracket-style elimination. Fight your way to the championship!",
-    players: "8-64",
-    gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
-    isLive: false,
-    comingSoon: true,
-  },
-  {
-    slug: "daily_jackpot",
-    title: "Daily Jackpot",
-    icon: "🎲",
-    description: "One chance per day. Massive prize pool. Don't miss out!",
-    players: "Global",
+    slug: "bug_bounty",
+    title: "Bug Bounty",
+    icon: "🐛",
+    description: "Find Bugs in Architecture to win cash prizes",
+    players: "Solo",
     gradient: "linear-gradient(135deg, #ec4899, #db2777)",
-    isLive: false,
-    comingSoon: true,
+    isLive: true,
+    comingSoon: false,
   },
   {
     slug: "architect_arena",

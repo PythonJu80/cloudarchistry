@@ -78,13 +78,13 @@ interface MatchData {
 // ANIMATED BOMB COMPONENT
 // =============================================================================
 
-const TOTAL_FUSE = 60; // Total time in seconds
-const VISIBLE_THRESHOLD = 30; // Show ticker when this many seconds remain
+const TOTAL_FUSE = 10; // Total time in seconds
+const VISIBLE_THRESHOLD = 10; // Show ticker from start (countdown from 10)
 
 const AnimatedBomb = ({ fuseTime }: { fuseTime: number }) => {
   const showTicker = fuseTime <= VISIBLE_THRESHOLD;
-  const isLow = fuseTime <= 15;
-  const isCritical = fuseTime <= 10;
+  const isLow = fuseTime <= 5;
+  const isCritical = fuseTime <= 3;
 
   return (
     <div className="relative">
@@ -190,12 +190,17 @@ export default function TickingBombMatchPage() {
   const [fuseTime, setFuseTime] = useState(TOTAL_FUSE);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerLocked, setAnswerLocked] = useState(false);
+  const [answerFeedback, setAnswerFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [showExplosion, setShowExplosion] = useState(false);
   const [eliminatedPlayer, setEliminatedPlayer] = useState<string | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [showTargetSelect, setShowTargetSelect] = useState(false);
+  const [bombIncoming, setBombIncoming] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [throwingBomb, setThrowingBomb] = useState(false);
+  const [bombFlightTarget, setBombFlightTarget] = useState<string | null>(null);
+  const [screenShake, setScreenShake] = useState(false);
 
   // Chat
   const [chatMessages, setChatMessages] = useState<Array<{ playerName: string; message: string }>>([]);
@@ -243,6 +248,24 @@ export default function TickingBombMatchPage() {
     fetchMatch();
   }, [fetchMatch]);
 
+  const handleSocketMatchUpdate = useCallback((data: unknown) => {
+    // When bomb is passed or game state changes, refresh immediately
+    const updateData = data as { matchState?: unknown };
+    if (updateData.matchState) {
+      // Show bomb incoming alert if we're receiving the bomb
+      const state = updateData.matchState as { currentBombHolder?: string };
+      if (state.currentBombHolder === match?.myPlayerId) {
+        // Screen shake effect
+        setScreenShake(true);
+        setTimeout(() => setScreenShake(false), 500);
+        
+        setBombIncoming(true);
+        setTimeout(() => setBombIncoming(false), 3000); // Show for 3 seconds
+      }
+      fetchMatch();
+    }
+  }, [fetchMatch, match?.myPlayerId]);
+
   // Initialize socket
   const {
     isConnected,
@@ -257,6 +280,7 @@ export default function TickingBombMatchPage() {
     onMatchStatus: handleSocketMatchStatus,
     onScoreUpdate: handleSocketScoreUpdate,
     onRoomUpdate: handleSocketRoomUpdate,
+    onMatchUpdate: handleSocketMatchUpdate,
     onChatMessage: (msg) => {
       setChatMessages((prev) => [...prev.slice(-49), { playerName: msg.playerName, message: msg.message }]);
     },
@@ -388,39 +412,78 @@ export default function TickingBombMatchPage() {
     const isCorrect = currentQ?.correctIndex === answerIndex;
 
     if (isCorrect) {
+      setAnswerFeedback('correct');
       setShowTargetSelect(true);
-      toast({ title: "✓ Correct! Choose who to throw the bomb at!" });
+      toast({ title: "✅ Correct! Choose who to throw the bomb at!", description: "Click on a player to pass the bomb" });
     } else {
-      toast({ title: "✗ Wrong! Bomb stays with you!", variant: "destructive" });
-      setAnswerLocked(false);
-      setSelectedAnswer(null);
+      setAnswerFeedback('wrong');
+      toast({ title: "❌ Wrong Answer!", description: "Bomb stays with you. Moving to next question...", variant: "destructive" });
+      
+      // Wait 2 seconds to show the wrong answer feedback, then call API to move to next question
+      setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/versus/${matchCode}/ticking-bomb`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "wrong" }),
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            if (data.gameOver) {
+              setShowResults(true);
+            }
+            fetchMatch();
+          }
+        } catch (err) {
+          console.error("Failed to submit wrong answer:", err);
+        } finally {
+          setAnswerLocked(false);
+          setSelectedAnswer(null);
+          setAnswerFeedback(null);
+        }
+      }, 2000);
     }
   };
 
-  // Pass bomb
+  // Pass bomb - called when throw bomb button is clicked
   const handlePassBomb = async () => {
     if (!selectedTarget) return;
 
-    try {
-      const res = await fetch(`/api/versus/${matchCode}/ticking-bomb`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "pass",
-          targetId: selectedTarget,
-        }),
-      });
-      if (res.ok) {
-        setShowTargetSelect(false);
-        setSelectedTarget(null);
-        setSelectedAnswer(null);
-        setAnswerLocked(false);
-        setFuseTime(TOTAL_FUSE); // Reset timer to 60 seconds
-        fetchMatch();
+    // Start bomb throwing animation
+    setThrowingBomb(true);
+    setBombFlightTarget(selectedTarget);
+
+    // Wait for animation to complete
+    setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/versus/${matchCode}/ticking-bomb`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "pass",
+            targetId: selectedTarget,
+          }),
+        });
+        if (res.ok) {
+          toast({ title: "💣 Bomb Passed!", description: "The bomb has been thrown!" });
+          setShowTargetSelect(false);
+          setSelectedTarget(null);
+          setSelectedAnswer(null);
+          setAnswerLocked(false);
+          setAnswerFeedback(null);
+          setFuseTime(TOTAL_FUSE);
+          setThrowingBomb(false);
+          setBombFlightTarget(null);
+          fetchMatch();
+        }
+      } catch (err) {
+        console.error("Failed to pass bomb:", err);
+        toast({ title: "Error", description: "Failed to pass bomb. Try again.", variant: "destructive" });
+        setThrowingBomb(false);
+        setBombFlightTarget(null);
       }
-    } catch (err) {
-      console.error("Failed to pass bomb:", err);
-    }
+    }, 800); // Animation duration
   };
 
   // Send chat
@@ -462,7 +525,9 @@ export default function TickingBombMatchPage() {
   const alivePlayers = players.filter((p) => p.isAlive);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className={`min-h-screen bg-gray-950 text-white relative transition-transform duration-100 ${
+      screenShake ? 'animate-shake' : ''
+    }`}>
       {/* Explosion overlay */}
       <AnimatePresence>
         {showExplosion && eliminatedPlayer && (
@@ -612,9 +677,20 @@ export default function TickingBombMatchPage() {
                 Players ({alivePlayers.length} alive)
               </h3>
               {players.map((player) => (
-                <div
+                <motion.div
                   key={player.id}
-                  onClick={() => showTargetSelect && player.isAlive && player.id !== match.myPlayerId && setSelectedTarget(player.id)}
+                  onClick={() => {
+                    if (showTargetSelect && player.isAlive && player.id !== match.myPlayerId) {
+                      setSelectedTarget(player.id);
+                    }
+                  }}
+                  animate={{
+                    scale: bombFlightTarget === player.id ? [1, 1.1, 1] : 1,
+                  }}
+                  transition={{
+                    duration: 0.3,
+                    repeat: bombFlightTarget === player.id ? 3 : 0
+                  }}
                   className={`relative p-4 rounded-xl border-2 transition-all ${
                     !player.isAlive
                       ? "bg-gray-900/50 border-gray-800 opacity-50"
@@ -665,30 +741,143 @@ export default function TickingBombMatchPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                  
+                  {/* Particle burst effect when bomb lands */}
+                  <AnimatePresence>
+                    {bombFlightTarget === player.id && (
+                      <>
+                        {[...Array(8)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ 
+                              x: 0, 
+                              y: 0, 
+                              scale: 1,
+                              opacity: 1 
+                            }}
+                            animate={{ 
+                              x: Math.cos((i * Math.PI * 2) / 8) * 100,
+                              y: Math.sin((i * Math.PI * 2) / 8) * 100,
+                              scale: 0,
+                              opacity: 0
+                            }}
+                            transition={{ duration: 0.6 }}
+                            className="absolute top-1/2 left-1/2 w-4 h-4 bg-orange-500 rounded-full"
+                          />
+                        ))}
+                        <motion.div
+                          initial={{ scale: 0, opacity: 1 }}
+                          animate={{ scale: 3, opacity: 0 }}
+                          transition={{ duration: 0.5 }}
+                          className="absolute inset-0 bg-red-500/50 rounded-xl"
+                        />
+                      </>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               ))}
 
+              {/* Throw Bomb Button */}
               {showTargetSelect && selectedTarget && (
-                <Button
-                  onClick={handlePassBomb}
-                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black"
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="mt-4"
                 >
-                  <Target className="w-5 h-5 mr-2" />
-                  THROW BOMB!
-                </Button>
+                  <Button
+                    onClick={handlePassBomb}
+                    className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-400 hover:via-red-400 hover:to-pink-400 text-white font-black text-lg py-6 shadow-lg shadow-red-500/50 border-2 border-yellow-400"
+                  >
+                    <Target className="w-6 h-6 mr-2 animate-pulse" />
+                    THROW BOMB!
+                  </Button>
+                </motion.div>
               )}
             </div>
 
+            {/* Flying Bomb Animation */}
+            <AnimatePresence>
+              {throwingBomb && bombFlightTarget && (
+                <motion.div
+                  initial={{ 
+                    x: 0, 
+                    y: 0,
+                    scale: 1,
+                    opacity: 1
+                  }}
+                  animate={{ 
+                    x: [0, 100, 200, 300, 400],
+                    y: [0, -150, -200, -150, 0],
+                    scale: [1, 1.5, 2, 1.5, 1],
+                    rotate: [0, 180, 360, 540, 720],
+                    opacity: [1, 1, 1, 1, 0]
+                  }}
+                  transition={{ 
+                    duration: 0.8,
+                    ease: "easeInOut"
+                  }}
+                  className="fixed top-1/2 left-1/4 z-50 pointer-events-none"
+                >
+                  <div className="relative">
+                    {/* Bomb emoji with glow */}
+                    <div className="text-8xl drop-shadow-2xl">💣</div>
+                    {/* Trailing particles */}
+                    <motion.div
+                      animate={{
+                        scale: [1, 2, 1],
+                        opacity: [0.8, 0, 0.8]
+                      }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 0.3
+                      }}
+                      className="absolute inset-0 bg-orange-500/50 rounded-full blur-xl"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Center: Bomb & Question */}
             <div className="lg:col-span-2">
+              {/* Bomb Incoming Alert */}
+              <AnimatePresence>
+                {bombIncoming && (
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0, y: -20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.8, opacity: 0, y: -20 }}
+                    className="mb-6 p-6 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl border-4 border-yellow-400 shadow-2xl shadow-red-500/50"
+                  >
+                    <div className="text-center">
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: Infinity, duration: 0.5 }}
+                        className="text-6xl mb-2"
+                      >
+                        💣
+                      </motion.div>
+                      <motion.h2
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 0.8 }}
+                        className="text-3xl font-black text-white uppercase tracking-wider"
+                      >
+                        BOMB INCOMING!
+                      </motion.h2>
+                      <p className="text-white/90 font-bold mt-2">You have the bomb! Answer quickly!</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className="flex justify-center mb-8">
                 <AnimatedBomb fuseTime={fuseTime} />
               </div>
 
               <div className="text-center mb-6">
                 {iHaveBomb ? (
-                  <p className={`text-xl font-bold ${fuseTime <= VISIBLE_THRESHOLD ? 'text-red-400 animate-pulse' : 'text-yellow-400'}`}>
-                    💣 YOU HAVE THE BOMB! {fuseTime <= VISIBLE_THRESHOLD ? 'HURRY!' : 'Answer to throw it!'}
+                  <p className={`text-xl font-bold ${fuseTime <= 5 ? 'text-red-400 animate-pulse' : 'text-yellow-400'}`}>
+                    💣 YOU HAVE THE BOMB! {fuseTime <= 5 ? 'HURRY!' : 'Answer to throw it!'}
                   </p>
                 ) : (
                   <p className="text-gray-400">
@@ -725,7 +914,11 @@ export default function TickingBombMatchPage() {
                         onClick={() => handleAnswer(idx)}
                         disabled={!iHaveBomb || answerLocked}
                         className={`p-4 rounded-xl border-2 text-left transition-all ${
-                          selectedAnswer === idx
+                          selectedAnswer === idx && answerFeedback === 'correct'
+                            ? "border-green-500 bg-green-500/20 ring-2 ring-green-400"
+                            : selectedAnswer === idx && answerFeedback === 'wrong'
+                            ? "border-red-500 bg-red-500/20 ring-2 ring-red-400"
+                            : selectedAnswer === idx
                             ? "border-yellow-500 bg-yellow-500/20"
                             : iHaveBomb && !answerLocked
                             ? "border-gray-700 bg-gray-800/50 hover:border-gray-500 hover:bg-gray-800"
