@@ -413,8 +413,18 @@ export default function TickingBombMatchPage() {
 
     if (isCorrect) {
       setAnswerFeedback('correct');
-      setShowTargetSelect(true);
-      toast({ title: "✅ Correct! Choose who to throw the bomb at!", description: "Click on a player to pass the bomb" });
+      toast({ title: "✅ Correct! Throwing bomb...", description: "Auto-passing to random opponent" });
+      
+      // Auto-select random alive opponent and throw bomb
+      const alivePlayers = match?.matchState?.players?.filter((p: { isAlive: boolean; id: string }) => p.isAlive && p.id !== match.myPlayerId) || [];
+      if (alivePlayers.length > 0) {
+        const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+        setSelectedTarget(randomTarget.id);
+        // Auto-throw after short delay for visual feedback
+        setTimeout(() => {
+          handlePassBomb();
+        }, 1000);
+      }
     } else {
       setAnswerFeedback('wrong');
       toast({ title: "❌ Wrong Answer!", description: "Bomb stays with you. Moving to next question...", variant: "destructive" });
