@@ -1023,7 +1023,7 @@ export default function WorldPage() {
                 </Link>
 
                 {/* System Challenges Section */}
-                <div className="rounded-lg border border-border/50 overflow-hidden">
+                {/* <div className="rounded-lg border border-border/50 overflow-hidden">
                   <button
                     onClick={() => setSystemChallengesOpen(!systemChallengesOpen)}
                     className="w-full p-3 bg-secondary/30 flex items-center justify-between hover:bg-secondary/50 transition-colors"
@@ -1039,7 +1039,7 @@ export default function WorldPage() {
                   {systemChallengesOpen && (
                     <>
                   {/* Beginner */}
-                  {beginnerLocations.length > 0 && (
+                  {/* {beginnerLocations.length > 0 && (
                     <DifficultySection
                       title="Beginner"
                       locations={beginnerLocations}
@@ -1049,10 +1049,10 @@ export default function WorldPage() {
                       onLocationSelect={handleLocationSelect}
                       colorClass={difficultyColors.beginner}
                     />
-                  )}
+                  )} */}
                   
                   {/* Intermediate */}
-                  {intermediateLocations.length > 0 && (
+                  {/* {intermediateLocations.length > 0 && (
                     <DifficultySection
                       title="Intermediate"
                       locations={intermediateLocations}
@@ -1062,10 +1062,10 @@ export default function WorldPage() {
                       onLocationSelect={handleLocationSelect}
                       colorClass={difficultyColors.intermediate}
                     />
-                  )}
+                  )} */}
                   
                   {/* Advanced */}
-                  {advancedLocations.length > 0 && (
+                  {/* {advancedLocations.length > 0 && (
                     <DifficultySection
                       title="Advanced"
                       locations={advancedLocations}
@@ -1075,10 +1075,10 @@ export default function WorldPage() {
                       onLocationSelect={handleLocationSelect}
                       colorClass={difficultyColors.advanced}
                     />
-                  )}
+                  )} */}
                   
                   {/* Expert */}
-                  {expertLocations.length > 0 && (
+                  {/* {expertLocations.length > 0 && (
                     <DifficultySection
                       title="Expert"
                       locations={expertLocations}
@@ -1088,10 +1088,10 @@ export default function WorldPage() {
                       onLocationSelect={handleLocationSelect}
                       colorClass={difficultyColors.expert}
                     />
+                  )} */}
+                    {/* </>
                   )}
-                    </>
-                  )}
-                </div>
+                </div> */}
               </div>
             </div>
 

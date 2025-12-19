@@ -101,37 +101,37 @@ function FloatingIcons() {
   );
 }
 
-// Skill classes
-const classes = [
+// Core platform features
+const features = [
   {
-    name: "Solutions Architect",
-    icon: Building2,
+    name: "World Map",
+    icon: Globe,
     color: "from-cyan-500 to-blue-600",
     glowColor: "shadow-cyan-500/25",
     borderColor: "border-cyan-500/50",
     textColor: "text-cyan-400",
-    desc: "Design scalable infrastructure",
-    skills: ["VPC", "HA", "Cost"],
+    desc: "Discover real businesses and generate custom AWS scenarios",
+    skills: ["Real Scenarios", "Business Context", "Practical Learning"],
   },
   {
-    name: "DevOps Engineer",
-    icon: Rocket,
-    color: "from-purple-500 to-pink-600",
-    glowColor: "shadow-purple-500/25",
-    borderColor: "border-purple-500/50",
-    textColor: "text-purple-400",
-    desc: "Automate everything",
-    skills: ["CI/CD", "IaC", "K8s"],
+    name: "Learning Centre",
+    icon: Target,
+    color: "from-amber-500 to-orange-600",
+    glowColor: "shadow-amber-500/25",
+    borderColor: "border-amber-500/50",
+    textColor: "text-amber-400",
+    desc: "AI-powered assistant for personalized AWS guidance",
+    skills: ["AI Tutor", "Cert Prep", "Q&A"],
   },
   {
-    name: "Security Specialist",
-    icon: Shield,
-    color: "from-red-500 to-orange-600",
+    name: "Game Zone",
+    icon: Swords,
+    color: "from-red-500 to-pink-600",
     glowColor: "shadow-red-500/25",
     borderColor: "border-red-500/50",
     textColor: "text-red-400",
-    desc: "Protect & comply",
-    skills: ["IAM", "KMS", "WAF"],
+    desc: "Test your knowledge with competitive challenges",
+    skills: ["Quiz Battles", "Leaderboards", "Skill Tests"],
   },
 ];
 
@@ -145,11 +145,11 @@ const achievements = [
   { name: "World Champion", icon: "👑", rarity: "legendary", color: "from-yellow-500 to-amber-600" },
 ];
 
-// Daily quests
-const quests = [
-  { name: "Daily Mission", xp: 100, icon: Target, difficulty: "Easy", color: "text-green-400 border-green-500/30 bg-green-500/10", glowColor: "hover:shadow-green-500/20" },
-  { name: "Boss Battle", xp: 500, icon: Swords, difficulty: "Hard", color: "text-red-400 border-red-500/30 bg-red-500/10", glowColor: "hover:shadow-red-500/20" },
-  { name: "Speed Run", xp: 250, icon: Zap, difficulty: "Medium", color: "text-amber-400 border-amber-500/30 bg-amber-500/10", glowColor: "hover:shadow-amber-500/20" },
+// Learning steps
+const learningSteps = [
+  { name: "Discover Scenarios", xp: "Real Businesses", icon: Globe, difficulty: "Step 1", color: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10", glowColor: "hover:shadow-cyan-500/20" },
+  { name: "Build Solutions", xp: "Architecture Design", icon: Building2, difficulty: "Step 2", color: "text-purple-400 border-purple-500/30 bg-purple-500/10", glowColor: "hover:shadow-purple-500/20" },
+  { name: "Get Certified", xp: "AWS Exams", icon: Trophy, difficulty: "Step 3", color: "text-amber-400 border-amber-500/30 bg-amber-500/10", glowColor: "hover:shadow-amber-500/20" },
 ];
 
 // Leaderboard
@@ -242,25 +242,25 @@ export default function Home() {
         <div className="absolute inset-0 z-20 flex items-center justify-center">
           <div className="text-center max-w-4xl mx-auto px-6">
             {/* Animated badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 text-cyan-400 text-sm font-bold mb-6 backdrop-blur-md animate-pulse-glow">
-              <Sparkles className="w-4 h-4 animate-spin" style={{ animationDuration: '3s' }} />
-              SEASON 1 NOW LIVE
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 text-sm font-bold mb-6 backdrop-blur-md animate-pulse-glow">
+              <Shield className="w-4 h-4" />
+              PRIVATE BETA • INVITATION ONLY
+              <Lock className="w-3 h-3" />
             </div>
             
             {/* Main Title with animated gradient */}
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-6">
               <span className="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">CLOUD</span>
               <br />
-              <span className="bg-gradient-to-r from-cyan-400 via-blue-400 via-purple-400 to-pink-500 bg-clip-text text-transparent animate-gradient-x drop-shadow-[0_0_30px_rgba(6,182,212,0.5)]">
+              <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent animate-gradient-x drop-shadow-[0_0_30px_rgba(6,182,212,0.5)]">
                 ARCHISTRY
               </span>
             </h1>
             
             <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-8 font-medium leading-relaxed">
-              Explore the world. Complete missions. Master AWS.
+              Master AWS through real-world business scenarios.
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 font-bold">The RPG for Cloud Architects.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 font-bold">AI-Powered Learning for Serious Architects.</span>
             </p>
             
             {/* Animated XP Bar */}
@@ -284,15 +284,15 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/world">
                 <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white font-bold px-10 py-7 text-lg rounded-2xl shadow-2xl shadow-cyan-500/30 group transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/50 border border-white/10">
-                  <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  START GAME
+                  <Rocket className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  BEGIN LEARNING
                   <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Link href="/leaderboard">
+              <Link href="/learn">
                 <Button variant="outline" size="lg" className="gap-2 border-white/20 hover:border-amber-400/50 text-white hover:bg-amber-500/10 font-bold px-10 py-7 text-lg rounded-2xl backdrop-blur-md transition-all duration-300 hover:scale-105 group">
-                  <Trophy className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform" />
-                  LEADERBOARD
+                  <Target className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
+                  EXPLORE FEATURES
                 </Button>
               </Link>
             </div>
@@ -328,7 +328,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== CHOOSE YOUR CLASS ===== */}
+      {/* ===== CORE FEATURES ===== */}
       <section className="py-24 px-6 bg-slate-950 relative overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent" />
@@ -337,48 +337,48 @@ export default function Home() {
         <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs font-bold mb-6 backdrop-blur-sm">
-              <Users className="w-3 h-3" />
-              CHOOSE YOUR PATH
+              <Sparkles className="w-3 h-3" />
+              LEARNING PLATFORM
             </div>
             <h2 className="text-4xl md:text-6xl font-black text-white mb-4">
-              SELECT YOUR <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">CLASS</span>
+              COMPREHENSIVE <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">TRAINING</span>
             </h2>
-            <p className="text-white/60 max-w-xl mx-auto text-lg">
-              Each path unlocks unique challenges and certifications
+            <p className="text-white/60 max-w-2xl mx-auto text-lg">
+              Real-world scenarios, AI-powered guidance, and hands-on practice for AWS certification and professional development
             </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {classes.map((cls, i) => (
+            {features.map((feature, idx) => (
               <Card 
-                key={cls.name}
+                key={feature.name}
                 className={`bg-slate-900/80 border-2 transition-all duration-500 cursor-pointer backdrop-blur-sm group relative overflow-hidden ${
-                  selectedClass === i 
-                    ? `${cls.borderColor} scale-105 shadow-2xl ${cls.glowColor}` 
+                  selectedClass === idx 
+                    ? `${feature.borderColor} scale-105 shadow-2xl ${feature.glowColor}` 
                     : 'border-white/10 hover:border-white/30 hover:shadow-xl'
                 }`}
-                onClick={() => setSelectedClass(i)}
+                onClick={() => setSelectedClass(idx)}
               >
                 {/* Glow effect on hover */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${cls.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
                 
                 <CardContent className="p-8 relative">
-                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${cls.color} flex items-center justify-center mb-6 shadow-xl group-hover:scale-110 transition-transform duration-300 ${cls.glowColor} shadow-lg`}>
-                    <cls.icon className="w-10 h-10 text-white" />
+                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-xl group-hover:scale-110 transition-transform duration-300 ${feature.glowColor} shadow-lg`}>
+                    <feature.icon className="w-10 h-10 text-white" />
                   </div>
-                  <h3 className={`text-2xl font-bold ${cls.textColor} mb-3`}>{cls.name}</h3>
-                  <p className="text-white/60 text-sm mb-6">{cls.desc}</p>
+                  <h3 className={`text-2xl font-bold ${feature.textColor} mb-3`}>{feature.name}</h3>
+                  <p className="text-white/60 text-sm mb-6">{feature.desc}</p>
                   <div className="flex flex-wrap gap-2">
-                    {cls.skills.map(skill => (
+                    {feature.skills.map((skill: string) => (
                       <span key={skill} className={`px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/80 text-xs font-semibold group-hover:border-white/20 transition-colors`}>
                         {skill}
                       </span>
                     ))}
                   </div>
-                  {selectedClass === i && (
+                  {selectedClass === idx && (
                     <div className={`mt-6 pt-6 border-t border-white/10 flex items-center justify-between`}>
-                      <span className="text-xs text-white/50 uppercase tracking-wider font-bold">SELECTED</span>
-                      <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${cls.color} animate-pulse shadow-lg`} />
+                      <span className="text-xs text-white/50 uppercase tracking-wider font-bold">ACTIVE</span>
+                      <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${feature.color} animate-pulse shadow-lg`} />
                     </div>
                   )}
                 </CardContent>
@@ -388,7 +388,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== DAILY QUESTS ===== */}
+      {/* ===== HOW IT WORKS ===== */}
       <section className="py-24 px-6 bg-gradient-to-b from-slate-950 via-slate-900/50 to-slate-950 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
@@ -398,33 +398,33 @@ export default function Home() {
         
         <div className="max-w-6xl mx-auto relative">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Quests */}
+            {/* Learning Path */}
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold mb-6 backdrop-blur-sm">
-                <Flame className="w-3 h-3 animate-pulse" />
-                DAILY QUESTS
+                <Rocket className="w-3 h-3" />
+                LEARNING PATH
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-white mb-8">
-                COMPLETE MISSIONS.<br />
-                <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">EARN XP.</span>
+                STRUCTURED LEARNING.<br />
+                <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">REAL RESULTS.</span>
               </h2>
               
               <div className="space-y-4">
-                {quests.map((quest, i) => (
+                {learningSteps.map((step, stepIdx) => (
                   <div 
-                    key={quest.name}
-                    className={`p-5 rounded-2xl border ${quest.color} ${quest.glowColor} flex items-center gap-4 group hover:scale-[1.02] transition-all duration-300 cursor-pointer backdrop-blur-sm hover:shadow-lg`}
-                    style={{ animationDelay: `${i * 100}ms` }}
+                    key={step.name}
+                    className={`p-5 rounded-2xl border ${step.color} ${step.glowColor} flex items-center gap-4 group hover:scale-[1.02] transition-all duration-300 cursor-pointer backdrop-blur-sm hover:shadow-lg`}
+                    style={{ animationDelay: `${stepIdx * 100}ms` }}
                   >
                     <div className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <quest.icon className="w-7 h-7" />
+                      <step.icon className="w-7 h-7" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-lg">{quest.name}</span>
-                        <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 font-semibold">{quest.difficulty}</span>
+                        <span className="font-bold text-white text-lg">{step.name}</span>
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 font-semibold">{step.difficulty}</span>
                       </div>
-                      <div className="text-sm text-white/50 font-medium">+{quest.xp} XP</div>
+                      <div className="text-sm text-white/50 font-medium">{step.xp}</div>
                     </div>
                     <ChevronRight className="w-6 h-6 text-white/30 group-hover:text-white/70 group-hover:translate-x-2 transition-all" />
                   </div>
@@ -432,47 +432,54 @@ export default function Home() {
               </div>
             </div>
             
-            {/* Leaderboard Preview */}
+            {/* Beta Access Info */}
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-bold mb-6 backdrop-blur-sm">
-                <Trophy className="w-3 h-3" />
-                TOP PLAYERS
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold mb-6 backdrop-blur-sm">
+                <Shield className="w-3 h-3" />
+                EXCLUSIVE ACCESS
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-white mb-8">
-                CLIMB THE <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">RANKS</span>
+                JOIN THE <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">BETA</span>
               </h2>
               
-              <div className="bg-slate-900/80 rounded-3xl border border-white/10 overflow-hidden backdrop-blur-md shadow-2xl">
-                {leaderboard.map((player, i) => (
-                  <div 
-                    key={player.name}
-                    className={`p-5 flex items-center gap-4 hover:bg-white/5 transition-colors ${i !== leaderboard.length - 1 ? 'border-b border-white/5' : ''}`}
-                  >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl shadow-lg ${
-                      i === 0 ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-amber-500/30' :
-                      i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500 text-white shadow-slate-400/30' :
-                      i === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800 text-white shadow-amber-700/30' :
-                      'bg-white/5 text-white/50'
-                    }`}>
-                      {player.rank}
+              <div className="bg-slate-900/80 rounded-3xl border border-amber-500/20 overflow-hidden backdrop-blur-md shadow-2xl p-8">
+                <div className="space-y-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                      <Lock className="w-6 h-6 text-white" />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-lg">{player.name}</span>
-                        {i === 0 && <Crown className="w-5 h-5 text-amber-400 animate-pulse" />}
-                      </div>
-                      <div className="text-sm text-white/50">Level {player.level} • {player.xp} XP</div>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-orange-400 bg-orange-500/10 px-3 py-1.5 rounded-full">
-                      <Flame className="w-4 h-4" />
-                      <span className="text-sm font-bold">{player.streak}</span>
+                    <div>
+                      <h3 className="font-bold text-white text-lg mb-2">Limited Beta Access</h3>
+                      <p className="text-white/60 text-sm">
+                        You&apos;ve been selected to join a small group of cloud architects testing our platform. Your feedback will shape the future of AWS learning.
+                      </p>
                     </div>
                   </div>
-                ))}
-                <Link href="/leaderboard" className="block p-5 text-center text-cyan-400 hover:bg-cyan-500/10 transition-colors font-bold text-sm group">
-                  View Full Leaderboard 
-                  <ChevronRight className="w-4 h-4 inline ml-1 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                  
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center flex-shrink-0">
+                      <Target className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-lg mb-2">Real-World Focus</h3>
+                      <p className="text-white/60 text-sm">
+                        Learn through actual business scenarios, not generic tutorials. Build solutions that matter.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-lg mb-2">AI-Powered Guidance</h3>
+                      <p className="text-white/60 text-sm">
+                        Get personalized help from our AI assistant trained on AWS best practices and certification requirements.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -539,21 +546,21 @@ export default function Home() {
         </div>
         
         <div className="max-w-4xl mx-auto text-center relative">
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 text-cyan-400 text-sm font-bold mb-8 backdrop-blur-md animate-pulse-glow">
-            <Rocket className="w-4 h-4" />
-            FREE TO PLAY
-            <Sparkles className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 text-sm font-bold mb-8 backdrop-blur-md animate-pulse-glow">
+            <Shield className="w-4 h-4" />
+            PRIVATE BETA ACCESS
+            <Lock className="w-4 h-4" />
           </div>
           <h2 className="text-5xl md:text-7xl font-black text-white mb-8">
-            READY TO <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent animate-gradient-x">BEGIN?</span>
+            START YOUR <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent animate-gradient-x">JOURNEY</span>
           </h2>
           <p className="text-xl md:text-2xl text-white/70 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Join thousands of cloud architects leveling up their skills
+            Join an exclusive group of architects mastering AWS through real-world scenarios
           </p>
           <Link href="/world">
             <Button size="lg" className="gap-3 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white font-bold px-14 py-8 text-xl rounded-2xl shadow-2xl shadow-cyan-500/40 transition-all duration-300 hover:scale-110 hover:shadow-cyan-500/60 border border-white/10 group">
-              <Play className="w-7 h-7 group-hover:scale-110 transition-transform" />
-              PLAY NOW
+              <Rocket className="w-7 h-7 group-hover:scale-110 transition-transform" />
+              ACCESS PLATFORM
               <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
@@ -571,7 +578,7 @@ export default function Home() {
             <span className="font-bold text-white text-lg">CloudArchistry</span>
           </div>
           <p className="text-sm text-white/40">
-            Part of the CloudFabric ecosystem. © 2024
+            Part of the CloudFabric ecosystem. © 2026
           </p>
           <div className="flex items-center gap-8 text-sm text-white/40">
             <Link href="/privacy" className="hover:text-cyan-400 transition-colors">Privacy</Link>

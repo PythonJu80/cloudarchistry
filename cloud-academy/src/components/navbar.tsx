@@ -65,9 +65,6 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
             <Link href="/world" className={linkClass("/world")}>
               World Map
             </Link>
-            <Link href="/challenges" className={linkClass("/challenges")}>
-              Challenges
-            </Link>
             <Link href="/learn" className={specialLinkClass("amber")}>
               <Brain className="w-4 h-4" />
               Learning Centre
@@ -75,9 +72,6 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
             <Link href="/game" className={specialLinkClass("red")}>
               <Swords className="w-4 h-4" />
               Game Zone
-            </Link>
-            <Link href="/leaderboard" className={linkClass("/leaderboard")}>
-              Leaderboard
             </Link>
             <Link href="/pricing" className={linkClass("/pricing")}>
               Pricing
