@@ -51,7 +51,7 @@ function getIconPath(serviceId: string): string {
     "application-load-balancer": "elb",
     "network-load-balancer": "elb",
     "elastic-load-balancer": "elb",
-    "iot-core": "kinesis", // IoT uses kinesis-like icon
+    "iot-core": "kinesis",
     "iot": "kinesis",
     "iot_core": "kinesis",
     "elastic-beanstalk": "elastic-beanstalk",
@@ -60,6 +60,27 @@ function getIconPath(serviceId: string): string {
     "ssm": "systems-manager",
     "direct-connect": "direct-connect",
     "directconnect": "direct-connect",
+    // Database variants
+    "rds-mysql": "rds",
+    "rds-postgres": "rds",
+    "rds-aurora": "rds",
+    "mysql": "rds",
+    "postgres": "rds",
+    "aurora": "rds",
+    // Networking
+    "security-group": "vpc",
+    "internet-gateway": "vpc",
+    "nat-gateway": "vpc",
+    "igw": "vpc",
+    "sg": "vpc",
+    // Generic/custom - fallback to generic icons
+    "dev-env": "cloud9",
+    "third-party-payment": "api-gateway",
+    "payment-gateway": "api-gateway",
+    "external-service": "api-gateway",
+    "user": "cognito",
+    "users": "cognito",
+    "client": "cognito",
   };
   
   // Apply alias if exists
@@ -191,7 +212,7 @@ const nodeTypes = {
 interface DiagramNode {
   id: string;
   type?: string;
-  position: { x: number; y: number };
+  position?: { x: number; y: number };  // Optional - buildAWSDiagram adds positions if missing
   data: Record<string, unknown>;
 }
 
@@ -253,6 +274,8 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
       const isLabel = node.type === "label";
       return {
         ...node,
+        // Ensure position exists (buildAWSDiagram adds it, but TypeScript needs assurance)
+        position: node.position || { x: 0, y: 0 },
         type: node.type || "awsService",
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
@@ -273,7 +296,7 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
     }
     
     const positions = diagramData.nodes
-      .filter(n => n.position)
+      .filter((n): n is typeof n & { position: { x: number; y: number } } => !!n.position)
       .map(n => ({ x: n.position.x, y: n.position.y }));
     
     if (positions.length === 0) {
@@ -307,8 +330,7 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
 
   return (
     <div 
-      className="relative w-full rounded-xl overflow-hidden border border-border/50 bg-gradient-to-br from-white to-slate-50"
-      style={{ height: Math.max(400, canvasSize.height) }}
+      className="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden border border-border/50 bg-gradient-to-br from-white to-slate-50"
     >
       {/* Header bar */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-slate-100 to-transparent">

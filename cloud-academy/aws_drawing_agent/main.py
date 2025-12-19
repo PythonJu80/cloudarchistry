@@ -7,6 +7,7 @@ FastAPI service for AWS architecture diagram operations.
 import sys
 import os
 from pathlib import Path
+from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -76,6 +77,7 @@ class BugBountyGenerateRequest(BaseModel):
     certification_code: Optional[str] = None
     scenario_type: str = "ecommerce"
     openai_api_key: Optional[str] = None
+    profile_id: Optional[str] = None  # For database persistence
 
 class BugBountyValidateRequest(BaseModel):
     challenge_id: str
@@ -85,6 +87,7 @@ class BugBountyValidateRequest(BaseModel):
     claim: str
     evidence: List[str]
     confidence: int
+    openai_api_key: Optional[str] = None
 
 
 @app.on_event("startup")
@@ -93,6 +96,10 @@ async def startup():
     try:
         await db.get_pool()
         logger.info("Database connection established")
+        # Clean up old abandoned challenges on startup
+        cleaned = await db.cleanup_old_bug_bounty_challenges(hours_old=24)
+        if cleaned > 0:
+            logger.info(f"Cleaned up {cleaned} old Bug Bounty challenges on startup")
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")
 
@@ -246,7 +253,7 @@ async def generate_bug_bounty(request: BugBountyGenerateRequest):
     """
     Generate a Bug Bounty challenge with flawed architecture and fake AWS logs.
     Returns diagram, description, AWS environment (logs, metrics, etc.), and metadata.
-    Hidden bugs are stored server-side for validation.
+    Challenge is persisted to database for validation and history.
     """
     try:
         # Use provided API key or default
@@ -260,7 +267,37 @@ async def generate_bug_bounty(request: BugBountyGenerateRequest):
             scenario_type=request.scenario_type,
         )
         
-        # Store challenge for validation (use challenge_id as key)
+        # Prepare AWS environment for storage
+        aws_env_dict = {
+            "cloudwatch_logs": [log.model_dump() for log in challenge.aws_environment.cloudwatch_logs],
+            "cloudwatch_metrics": {k: v.model_dump() for k, v in challenge.aws_environment.cloudwatch_metrics.items()},
+            "vpc_flow_logs": challenge.aws_environment.vpc_flow_logs,
+            "iam_policies": challenge.aws_environment.iam_policies,
+            "cost_data": challenge.aws_environment.cost_data,
+            "xray_traces": [trace.model_dump() for trace in challenge.aws_environment.xray_traces],
+            "config_compliance": [rule.model_dump() for rule in challenge.aws_environment.config_compliance],
+        }
+        
+        # Prepare hidden bugs for storage
+        hidden_bugs_list = [bug.model_dump() for bug in challenge.hidden_bugs]
+        
+        # Save challenge to database (persists answers for later validation)
+        await db.save_bug_bounty_challenge(
+            challenge_id=challenge.challenge_id,
+            profile_id=request.profile_id,
+            difficulty=challenge.difficulty,
+            scenario_type=request.scenario_type,
+            certification_code=request.certification_code,
+            description=challenge.description,
+            diagram=challenge.diagram,
+            aws_environment=aws_env_dict,
+            hidden_bugs=hidden_bugs_list,
+            bug_count=len(challenge.hidden_bugs),
+            bounty_value=challenge.bounty_value,
+            time_limit=challenge.time_limit,
+        )
+        
+        # Also keep in memory for faster access during active session
         active_challenges[challenge.challenge_id] = challenge
         
         # Return challenge WITHOUT hidden bugs (those are secret!)
@@ -268,19 +305,11 @@ async def generate_bug_bounty(request: BugBountyGenerateRequest):
             "challenge_id": challenge.challenge_id,
             "diagram": challenge.diagram,
             "description": challenge.description,
-            "aws_environment": {
-                "cloudwatch_logs": [log.model_dump() for log in challenge.aws_environment.cloudwatch_logs],
-                "cloudwatch_metrics": {k: v.model_dump() for k, v in challenge.aws_environment.cloudwatch_metrics.items()},
-                "vpc_flow_logs": challenge.aws_environment.vpc_flow_logs,
-                "iam_policies": challenge.aws_environment.iam_policies,
-                "cost_data": challenge.aws_environment.cost_data,
-                "xray_traces": [trace.model_dump() for trace in challenge.aws_environment.xray_traces],
-                "config_compliance": [rule.model_dump() for rule in challenge.aws_environment.config_compliance],
-            },
+            "aws_environment": aws_env_dict,
             "difficulty": challenge.difficulty,
             "bounty_value": challenge.bounty_value,
             "time_limit": challenge.time_limit,
-            "bug_count": len(challenge.hidden_bugs),  # Tell them how many bugs exist
+            "bug_count": len(challenge.hidden_bugs),
         }
     except Exception as e:
         logger.error(f"Bug Bounty generation failed: {e}")
@@ -291,13 +320,19 @@ async def generate_bug_bounty(request: BugBountyGenerateRequest):
 async def validate_bug_claim(request: BugBountyValidateRequest):
     """
     Validate a user's bug claim against the hidden bugs in the challenge.
+    Fetches challenge from database if not in memory.
     Returns whether the claim is correct, points awarded, and explanation.
     """
     try:
-        # Get challenge
+        # Try memory first, then database
         challenge = active_challenges.get(request.challenge_id)
+        challenge_data = None
+        
         if not challenge:
-            raise HTTPException(status_code=404, detail="Challenge not found or expired")
+            # Fetch from database
+            challenge_data = await db.get_bug_bounty_challenge(request.challenge_id)
+            if not challenge_data:
+                raise HTTPException(status_code=404, detail="Challenge not found or expired")
         
         # Validate claim
         claim_data = {
@@ -309,7 +344,42 @@ async def validate_bug_claim(request: BugBountyValidateRequest):
             "confidence": request.confidence,
         }
         
-        result = bug_bounty_generator.validate_claim(challenge, claim_data)
+        # Use provided API key or default for LLM-based validation
+        api_key = request.openai_api_key or OPENAI_API_KEY
+        generator = BugBountyGenerator(openai_api_key=api_key)
+        
+        # Validate using either in-memory challenge or database data
+        if challenge:
+            result = generator.validate_claim(challenge, claim_data)
+        else:
+            # Reconstruct minimal challenge object from database for validation
+            from bug_bounty_generator import BugBountyChallenge, BugDefinition, AWSEnvironment
+            hidden_bugs = [
+                BugDefinition(**bug) for bug in challenge_data["hidden_bugs"]
+            ]
+            result = generator.validate_claim_from_bugs(hidden_bugs, claim_data)
+        
+        # Update progress in database
+        if challenge_data:
+            new_bugs_found = challenge_data["bugs_found"] + (1 if result.get("correct") else 0)
+            new_score = challenge_data["score"] + result.get("points", 0)
+        else:
+            # Get current state from memory
+            new_bugs_found = result.get("correct", False) and 1 or 0
+            new_score = result.get("points", 0)
+        
+        claim_entry = {
+            "claim": claim_data,
+            "result": result,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        
+        await db.update_bug_bounty_progress(
+            challenge_id=request.challenge_id,
+            bugs_found=new_bugs_found,
+            score=new_score,
+            claim_entry=claim_entry,
+        )
         
         return result
     except HTTPException:
@@ -323,22 +393,60 @@ async def validate_bug_claim(request: BugBountyValidateRequest):
 async def reveal_bugs(challenge_id: str):
     """
     Reveal all bugs in a challenge (after time expires or user gives up).
+    Fetches from database if not in memory.
     Returns the complete list of bugs with explanations.
+    Then DELETES the challenge from database to keep it clean.
     """
     try:
+        # Try memory first
         challenge = active_challenges.get(challenge_id)
-        if not challenge:
-            raise HTTPException(status_code=404, detail="Challenge not found")
+        challenge_data = None
+        
+        if challenge:
+            bugs = [bug.model_dump() for bug in challenge.hidden_bugs]
+        else:
+            # Fetch from database
+            challenge_data = await db.get_bug_bounty_challenge(challenge_id)
+            if not challenge_data:
+                raise HTTPException(status_code=404, detail="Challenge not found")
+            bugs = challenge_data["hidden_bugs"]
+        
+        # Delete from database to keep it clean
+        await db.delete_bug_bounty_challenge(challenge_id)
+        
+        # Remove from memory too
+        if challenge_id in active_challenges:
+            del active_challenges[challenge_id]
         
         return {
             "challenge_id": challenge_id,
-            "bugs": [bug.model_dump() for bug in challenge.hidden_bugs],
+            "bugs": bugs,
         }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Bug reveal failed: {e}")
         raise HTTPException(status_code=500, detail=f"Reveal failed: {str(e)}")
+
+
+@app.delete("/bug-bounty/{challenge_id}")
+async def delete_challenge(challenge_id: str):
+    """
+    Delete a Bug Bounty challenge (user exits without finishing).
+    Cleans up database and memory.
+    """
+    try:
+        # Delete from database
+        await db.delete_bug_bounty_challenge(challenge_id)
+        
+        # Remove from memory
+        if challenge_id in active_challenges:
+            del active_challenges[challenge_id]
+        
+        return {"success": True, "message": "Challenge deleted"}
+    except Exception as e:
+        logger.error(f"Challenge delete failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
 
 
 if __name__ == "__main__":

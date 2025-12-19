@@ -413,18 +413,8 @@ export default function TickingBombMatchPage() {
 
     if (isCorrect) {
       setAnswerFeedback('correct');
-      toast({ title: "✅ Correct! Throwing bomb...", description: "Auto-passing to random opponent" });
-      
-      // Auto-select random alive opponent and throw bomb
-      const alivePlayers = match?.matchState?.players?.filter((p: { isAlive: boolean; id: string }) => p.isAlive && p.id !== match.myPlayerId) || [];
-      if (alivePlayers.length > 0) {
-        const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
-        setSelectedTarget(randomTarget.id);
-        // Auto-throw after short delay for visual feedback
-        setTimeout(() => {
-          handlePassBomb();
-        }, 1000);
-      }
+      setShowTargetSelect(true);
+      toast({ title: "✅ Correct! Click an opponent to throw the bomb!", description: "All opponents are now targets" });
     } else {
       setAnswerFeedback('wrong');
       toast({ title: "❌ Wrong Answer!", description: "Bomb stays with you. Moving to next question...", variant: "destructive" });
@@ -456,13 +446,14 @@ export default function TickingBombMatchPage() {
     }
   };
 
-  // Pass bomb - called when throw bomb button is clicked
-  const handlePassBomb = async () => {
-    if (!selectedTarget) return;
+  // Pass bomb - called directly when clicking an opponent
+  const handlePassBomb = async (targetId?: string) => {
+    const target = targetId || selectedTarget;
+    if (!target) return;
 
     // Start bomb throwing animation
     setThrowingBomb(true);
-    setBombFlightTarget(selectedTarget);
+    setBombFlightTarget(target);
 
     // Wait for animation to complete
     setTimeout(async () => {
@@ -472,7 +463,7 @@ export default function TickingBombMatchPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "pass",
-            targetId: selectedTarget,
+            targetId: target,
           }),
         });
         if (res.ok) {
@@ -691,7 +682,8 @@ export default function TickingBombMatchPage() {
                   key={player.id}
                   onClick={() => {
                     if (showTargetSelect && player.isAlive && player.id !== match.myPlayerId) {
-                      setSelectedTarget(player.id);
+                      // Immediately throw bomb when clicking opponent
+                      handlePassBomb(player.id);
                     }
                   }}
                   animate={{
@@ -786,23 +778,6 @@ export default function TickingBombMatchPage() {
                   </AnimatePresence>
                 </motion.div>
               ))}
-
-              {/* Throw Bomb Button */}
-              {showTargetSelect && selectedTarget && (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="mt-4"
-                >
-                  <Button
-                    onClick={handlePassBomb}
-                    className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-400 hover:via-red-400 hover:to-pink-400 text-white font-black text-lg py-6 shadow-lg shadow-red-500/50 border-2 border-yellow-400"
-                  >
-                    <Target className="w-6 h-6 mr-2 animate-pulse" />
-                    THROW BOMB!
-                  </Button>
-                </motion.div>
-              )}
             </div>
 
             {/* Flying Bomb Animation */}
@@ -950,7 +925,7 @@ export default function TickingBombMatchPage() {
 
         {/* COMPLETED STATE */}
         {match.status === "completed" && (
-          <div className="text-center">
+          <div className="text-center max-w-2xl mx-auto">
             <div className="mb-8">
               <div className="text-8xl mb-4">🏆</div>
               <h1 className="text-4xl font-black mb-2">
@@ -961,6 +936,57 @@ export default function TickingBombMatchPage() {
                   ? "Last one standing!"
                   : `${players.find((p) => p.id === match.winnerId)?.name || "Someone"} wins!`}
               </p>
+            </div>
+
+            {/* Game Stats */}
+            <div className="mb-8 bg-gray-900/50 border border-gray-800 rounded-xl p-6">
+              <h2 className="text-xl font-bold mb-4 text-gray-300">Game Stats</h2>
+              <div className="space-y-4">
+                {players.map((player) => {
+                  const questionsAnswered = (player as any).questionsAnswered || player.correctAnswers;
+                  const accuracy = questionsAnswered > 0 
+                    ? Math.round((player.correctAnswers / questionsAnswered) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div 
+                      key={player.id}
+                      className={`p-4 rounded-lg border-2 ${
+                        player.id === match.winnerId
+                          ? "bg-yellow-500/10 border-yellow-500"
+                          : "bg-gray-800/50 border-gray-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${
+                            player.id === match.winnerId
+                              ? "bg-yellow-500 text-black"
+                              : "bg-gray-700 text-white"
+                          }`}>
+                            {player.name[0]?.toUpperCase()}
+                          </div>
+                          <div className="text-left">
+                            <div className="font-bold flex items-center gap-2">
+                              {player.name}
+                              {player.id === match.winnerId && <span className="text-yellow-500">👑</span>}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              {player.correctAnswers} / {questionsAnswered} correct
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-black text-green-400">
+                            {accuracy}%
+                          </div>
+                          <div className="text-xs text-gray-500">Accuracy</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex justify-center gap-4">

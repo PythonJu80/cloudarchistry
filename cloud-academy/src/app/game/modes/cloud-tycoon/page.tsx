@@ -97,8 +97,8 @@ function loadLifetimeEarnings(): number {
   }
 }
 
-// Save journey to history
-function saveJourneyToHistory(journey: Journey, gameState: GameState): boolean {
+// Save journey to history AND database
+async function saveJourneyToHistory(journey: Journey, gameState: GameState): Promise<boolean> {
   if (typeof window === "undefined") return false;
   
   try {
@@ -127,6 +127,23 @@ function saveJourneyToHistory(journey: Journey, gameState: GameState): boolean {
     const limitedHistory = existingHistory.slice(-10);
     
     localStorage.setItem(JOURNEY_HISTORY_KEY, JSON.stringify(limitedHistory));
+    
+    // Save to database
+    try {
+      await fetch("/api/gaming/tycoon/stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          totalEarnings: gameState.totalEarnings,
+          journeysCompleted: 1,
+          perfectMatches: gameState.perfectMatches,
+        }),
+      });
+    } catch (dbError) {
+      console.error("Failed to save to database:", dbError);
+      // Continue even if DB save fails - localStorage is primary
+    }
+    
     return true;
   } catch (e) {
     console.error("Failed to save journey to history:", e);
@@ -343,10 +360,11 @@ export default function CloudTycoonPage() {
       
       // Check if journey is complete and save to history
       if (journey && newCompleted.size === journey.businesses.length) {
-        const saved = saveJourneyToHistory(journey, updatedState);
-        if (saved) {
-          setJourneyHistory(loadJourneyHistory()); // Refresh history list only if saved
-        }
+        saveJourneyToHistory(journey, updatedState).then((saved) => {
+          if (saved) {
+            setJourneyHistory(loadJourneyHistory()); // Refresh history list only if saved
+          }
+        });
       }
       
       return updatedState;

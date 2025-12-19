@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
         certification_code: profile.targetCertification,
         scenario_type: scenarioType,
         openai_api_key: aiConfig.key,
+        profile_id: profileId,  // For database persistence
       }),
     });
 

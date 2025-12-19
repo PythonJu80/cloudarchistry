@@ -1333,6 +1333,9 @@ model AcademyUserProfile {
   // External Resources (YouTube, docs, user-added)
   externalResources ExternalResource[]
   
+  // Bug Bounty Challenges
+  bugBountyChallenges BugBountyChallenge[]
+  
   @@index([academyUserId])
   @@index([academyTenantId])
   @@index([totalPoints])
@@ -2953,6 +2956,7 @@ model GameProfile {
   scrambleStats   Json     @default("{}")  // { games, wins, bestTime }
   defusalStats    Json     @default("{}")  // { games, wins, bombsDefused }
   serviceSlotsStats Json   @default("{}")  // { balance, totalWinnings, gamesPlayed, gamesWon, currentStreak, bestStreak }
+  cloudTycoonStats Json    @default("{}")  // { totalEarnings, journeysCompleted, perfectMatches, lifetimeRevenue }
   
   // Activity
   lastPlayedAt    DateTime?
@@ -3731,5 +3735,54 @@ model ArcHubDiagram {
   @@index([arcHubProfileId])
   @@index([status])
   @@index([visibility])
+  @@index([createdAt])
+}
+
+// ===========================================
+// BUG BOUNTY GAME
+// ===========================================
+
+// Bug Bounty Challenge - stores the complete generated challenge with answers
+model BugBountyChallenge {
+  id              String   @id  // challenge_id (e.g., "BB-12345")
+  
+  // Owner
+  profileId       String?
+  profile         AcademyUserProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  
+  // Challenge configuration
+  difficulty      String   // beginner, intermediate, advanced, expert
+  scenarioType    String   // ecommerce, data_pipeline, saas_platform, etc.
+  certificationCode String? // SAA-C03, SAP-C02, etc.
+  
+  // Generated content (stored as JSON for flexibility)
+  description     String   @db.Text  // The use case description
+  diagram         Json     // { nodes: [...], edges: [...] }
+  awsEnvironment  Json     // { cloudwatch_logs, metrics, vpc_flow_logs, iam_policies, cost_data, xray_traces, config_compliance }
+  
+  // Hidden bugs (the ANSWERS - only revealed after game ends)
+  hiddenBugs      Json     // Array of bug definitions with id, type, severity, location, description, evidence, fix_suggestion
+  
+  // Game state
+  bugCount        Int      // Total number of bugs to find
+  bountyValue     Int      // Total possible points
+  timeLimit       Int      // Seconds allowed
+  
+  // Session tracking
+  status          String   @default("active")  // active, completed, expired, abandoned
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  
+  // Results (updated as user plays)
+  bugsFound       Int      @default(0)
+  score           Int      @default(0)
+  claimsHistory   Json     @default("[]")  // Array of { claim, result, points, timestamp }
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([profileId])
+  @@index([status])
+  @@index([difficulty])
   @@index([createdAt])
 }

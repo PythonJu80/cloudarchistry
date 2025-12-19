@@ -1980,3 +1980,240 @@ async def update_user_persona(user_id: str, persona_id: str) -> bool:
         """, user_id, persona_id)
         
         return "UPDATE 1" in result
+
+
+# =============================================================================
+# BUG BOUNTY CHALLENGES
+# =============================================================================
+
+async def save_bug_bounty_challenge(
+    challenge_id: str,
+    profile_id: Optional[str],
+    difficulty: str,
+    scenario_type: str,
+    certification_code: Optional[str],
+    description: str,
+    diagram: dict,
+    aws_environment: dict,
+    hidden_bugs: list,
+    bug_count: int,
+    bounty_value: int,
+    time_limit: int,
+) -> str:
+    """
+    Save a generated Bug Bounty challenge to the database.
+    Stores the complete challenge including hidden bugs (answers).
+    """
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO "BugBountyChallenge" (
+                id, "profileId", difficulty, "scenarioType", "certificationCode",
+                description, diagram, "awsEnvironment", "hiddenBugs",
+                "bugCount", "bountyValue", "timeLimit",
+                status, "startedAt", "bugsFound", score, "claimsHistory",
+                "createdAt", "updatedAt"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), $14, $15, $16, NOW(), NOW())
+            ON CONFLICT (id) DO UPDATE SET
+                "updatedAt" = NOW()
+        """,
+            challenge_id,
+            profile_id,
+            difficulty,
+            scenario_type,
+            certification_code,
+            description,
+            json.dumps(diagram),
+            json.dumps(aws_environment),
+            json.dumps(hidden_bugs),
+            bug_count,
+            bounty_value,
+            time_limit,
+            "active",
+            0,  # bugsFound
+            0,  # score
+            json.dumps([]),  # claimsHistory
+        )
+    
+    logger.info(f"Saved Bug Bounty challenge {challenge_id} with {bug_count} bugs")
+    return challenge_id
+
+
+async def get_bug_bounty_challenge(challenge_id: str) -> Optional[dict]:
+    """
+    Get a Bug Bounty challenge by ID.
+    Returns the complete challenge including hidden bugs for validation.
+    """
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            SELECT * FROM "BugBountyChallenge" WHERE id = $1
+        """, challenge_id)
+        
+        if not row:
+            return None
+        
+        return {
+            "challenge_id": row["id"],
+            "profile_id": row["profileId"],
+            "difficulty": row["difficulty"],
+            "scenario_type": row["scenarioType"],
+            "certification_code": row["certificationCode"],
+            "description": row["description"],
+            "diagram": json.loads(row["diagram"]) if row["diagram"] else {},
+            "aws_environment": json.loads(row["awsEnvironment"]) if row["awsEnvironment"] else {},
+            "hidden_bugs": json.loads(row["hiddenBugs"]) if row["hiddenBugs"] else [],
+            "bug_count": row["bugCount"],
+            "bounty_value": row["bountyValue"],
+            "time_limit": row["timeLimit"],
+            "status": row["status"],
+            "started_at": row["startedAt"],
+            "completed_at": row["completedAt"],
+            "bugs_found": row["bugsFound"],
+            "score": row["score"],
+            "claims_history": json.loads(row["claimsHistory"]) if row["claimsHistory"] else [],
+        }
+
+
+async def update_bug_bounty_progress(
+    challenge_id: str,
+    bugs_found: int,
+    score: int,
+    claim_entry: Optional[dict] = None,
+) -> bool:
+    """
+    Update Bug Bounty challenge progress after a claim is validated.
+    Appends the claim to history and updates score/bugs_found.
+    """
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        if claim_entry:
+            # Append claim to history
+            result = await conn.execute("""
+                UPDATE "BugBountyChallenge"
+                SET "bugsFound" = $2,
+                    score = $3,
+                    "claimsHistory" = "claimsHistory"::jsonb || $4::jsonb,
+                    "updatedAt" = NOW()
+                WHERE id = $1
+            """, challenge_id, bugs_found, score, json.dumps([claim_entry]))
+        else:
+            result = await conn.execute("""
+                UPDATE "BugBountyChallenge"
+                SET "bugsFound" = $2,
+                    score = $3,
+                    "updatedAt" = NOW()
+                WHERE id = $1
+            """, challenge_id, bugs_found, score)
+        
+        return "UPDATE 1" in result
+
+
+async def complete_bug_bounty_challenge(
+    challenge_id: str,
+    final_score: int,
+    bugs_found: int,
+    status: str = "completed",
+) -> bool:
+    """
+    Mark a Bug Bounty challenge as completed (time expired or user finished).
+    """
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        result = await conn.execute("""
+            UPDATE "BugBountyChallenge"
+            SET status = $2,
+                "completedAt" = NOW(),
+                score = $3,
+                "bugsFound" = $4,
+                "updatedAt" = NOW()
+            WHERE id = $1
+        """, challenge_id, status, final_score, bugs_found)
+        
+        return "UPDATE 1" in result
+
+
+async def get_user_bug_bounty_history(
+    profile_id: str,
+    limit: int = 20,
+) -> List[dict]:
+    """
+    Get a user's Bug Bounty challenge history.
+    Returns recent challenges with scores and status.
+    """
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, difficulty, "scenarioType", "bugCount", "bountyValue",
+                   status, "startedAt", "completedAt", "bugsFound", score
+            FROM "BugBountyChallenge"
+            WHERE "profileId" = $1
+            ORDER BY "createdAt" DESC
+            LIMIT $2
+        """, profile_id, limit)
+        
+        return [
+            {
+                "challenge_id": row["id"],
+                "difficulty": row["difficulty"],
+                "scenario_type": row["scenarioType"],
+                "bug_count": row["bugCount"],
+                "bounty_value": row["bountyValue"],
+                "status": row["status"],
+                "started_at": row["startedAt"],
+                "completed_at": row["completedAt"],
+                "bugs_found": row["bugsFound"],
+                "score": row["score"],
+            }
+            for row in rows
+        ]
+
+
+async def delete_bug_bounty_challenge(challenge_id: str) -> bool:
+    """
+    Delete a Bug Bounty challenge from the database.
+    Called when user exits the game to keep DB clean.
+    """
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        result = await conn.execute("""
+            DELETE FROM "BugBountyChallenge" WHERE id = $1
+        """, challenge_id)
+        
+        deleted = "DELETE 1" in result
+        if deleted:
+            logger.info(f"Deleted Bug Bounty challenge {challenge_id}")
+        return deleted
+
+
+async def cleanup_old_bug_bounty_challenges(hours_old: int = 24) -> int:
+    """
+    Clean up old/abandoned Bug Bounty challenges.
+    Deletes challenges older than specified hours.
+    Can be called periodically or on startup.
+    """
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        result = await conn.execute("""
+            DELETE FROM "BugBountyChallenge"
+            WHERE "createdAt" < NOW() - INTERVAL '%s hours'
+        """ % hours_old)
+        
+        # Extract count from result like "DELETE 5"
+        count = 0
+        if "DELETE" in result:
+            try:
+                count = int(result.split()[1])
+            except (IndexError, ValueError):
+                pass
+        
+        if count > 0:
+            logger.info(f"Cleaned up {count} old Bug Bounty challenges")
+        return count

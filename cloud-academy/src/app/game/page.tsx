@@ -495,15 +495,40 @@ const GameModeCard = ({
   );
 };
 
-// Live activity ticker
+// Activity type for ticker
+interface TickerActivity {
+  user: string;
+  action: string;
+  game: string;
+  points: string;
+}
+
+// Live activity ticker - fetches real users from database
 const LiveActivityTicker = () => {
-  const activities = [
-    { user: "CloudMaster99", action: "won", game: "Quiz Battle", points: "+52 ELO" },
-    { user: "AWSNinja", action: "started", game: "Lightning Round", points: "" },
-    { user: "ServerlessKing", action: "achieved", game: "10 Win Streak", points: "🔥" },
-    { user: "LambdaQueen", action: "won", game: "Quiz Battle", points: "+48 ELO" },
-    { user: "EC2Master", action: "joined", game: "Tournament", points: "" },
-  ];
+  const [activities, setActivities] = useState<TickerActivity[]>([
+    { user: "Loading...", action: "joining", game: "Arena", points: "" },
+  ]);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const res = await fetch("/api/gaming/activity-ticker");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.activities && data.activities.length > 0) {
+            setActivities(data.activities);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch activity ticker:", error);
+      }
+    };
+
+    fetchActivities();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchActivities, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="relative overflow-hidden py-3 border-y border-white/5 bg-black/30 backdrop-blur-sm">
@@ -674,6 +699,8 @@ export default function GameModePage() {
       router.push("/game/modes/architect-arena/lobby");
     } else if (slug === "ticking_bomb") {
       router.push("/game/modes/ticking-bomb");
+    } else if (slug === "bug_bounty") {
+      router.push("/game/modes/bug-bounty/lobby");
     }
   };
 

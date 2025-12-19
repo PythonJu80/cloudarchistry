@@ -113,6 +113,7 @@ export async function POST(
           isAlive: true,
           score: 0,
           correctAnswers: 0,
+          questionsAnswered: 0,
         },
         {
           id: match.player2!.id,
@@ -120,6 +121,7 @@ export async function POST(
           isAlive: true,
           score: 0,
           correctAnswers: 0,
+          questionsAnswered: 0,
         },
       ];
 
@@ -161,7 +163,7 @@ export async function POST(
         currentQuestion: number;
         currentBombHolder: string;
         fuseTime: number;
-        players: Array<{ id: string; name: string; isAlive: boolean; score: number; correctAnswers: number }>;
+        players: Array<{ id: string; name: string; isAlive: boolean; score: number; correctAnswers: number; questionsAnswered: number }>;
       };
 
       if (!currentState) {
@@ -173,10 +175,14 @@ export async function POST(
         return NextResponse.json({ error: "You don't have the bomb" }, { status: 400 });
       }
 
-      // Update player stats
+      // Update player stats - increment both correctAnswers and questionsAnswered
       const updatedPlayers = currentState.players.map((p) => {
         if (p.id === academyUser.id) {
-          return { ...p, correctAnswers: p.correctAnswers + 1 };
+          return { 
+            ...p, 
+            correctAnswers: p.correctAnswers + 1,
+            questionsAnswered: (p.questionsAnswered || 0) + 1
+          };
         }
         return p;
       });
@@ -238,7 +244,7 @@ export async function POST(
         currentQuestion: number;
         currentBombHolder: string;
         fuseTime: number;
-        players: Array<{ id: string; name: string; isAlive: boolean; score: number; correctAnswers: number }>;
+        players: Array<{ id: string; name: string; isAlive: boolean; score: number; correctAnswers: number; questionsAnswered: number }>;
       };
 
       if (!currentState) {
@@ -250,13 +256,24 @@ export async function POST(
         return NextResponse.json({ error: "You don't have the bomb" }, { status: 400 });
       }
 
+      // Increment questionsAnswered but not correctAnswers
+      const updatedPlayers = currentState.players.map((p) => {
+        if (p.id === academyUser.id) {
+          return { 
+            ...p, 
+            questionsAnswered: (p.questionsAnswered || 0) + 1
+          };
+        }
+        return p;
+      });
+
       // Move to next question (no score update for wrong answer)
       const nextQuestion = currentState.currentQuestion + 1;
 
       // Check if we've run out of questions
       if (nextQuestion >= currentState.questions.length) {
         // Game over - determine winner by most correct answers
-        const winner = currentState.players.reduce((a, b) => 
+        const winner = updatedPlayers.reduce((a, b) => 
           a.correctAnswers > b.correctAnswers ? a : b
         );
 
@@ -268,6 +285,7 @@ export async function POST(
             completedAt: new Date(),
             matchState: {
               ...currentState,
+              players: updatedPlayers,
               currentBombHolder: null,
             } as object,
           },
@@ -282,6 +300,7 @@ export async function POST(
       // Update match state - move to next question, keep bomb with same player
       const newState = {
         ...currentState,
+        players: updatedPlayers,
         currentQuestion: nextQuestion,
         // currentBombHolder stays the same
         // fuseTime stays the same (continues counting down)
@@ -305,17 +324,22 @@ export async function POST(
         currentQuestion: number;
         currentBombHolder: string;
         fuseTime: number;
-        players: Array<{ id: string; name: string; isAlive: boolean; score: number; correctAnswers: number }>;
+        players: Array<{ id: string; name: string; isAlive: boolean; score: number; correctAnswers: number; questionsAnswered: number }>;
       };
 
       if (!currentState) {
         return NextResponse.json({ error: "Game not started" }, { status: 400 });
       }
 
-      // Mark player as eliminated
+      // Mark player as eliminated AND deduct 1 point (penalty for explosion)
       const updatedPlayers = currentState.players.map((p) => {
         if (p.id === academyUser.id) {
-          return { ...p, isAlive: false };
+          return { 
+            ...p, 
+            isAlive: false,
+            correctAnswers: Math.max(0, p.correctAnswers - 1), // Deduct 1 point, minimum 0
+            questionsAnswered: (p.questionsAnswered || 0) + 1 // Count as a question faced
+          };
         }
         return p;
       });

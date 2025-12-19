@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 
 const DRAWING_AGENT_URL = process.env.DRAWING_AGENT_URL || "http://10.121.19.210:6098";
 
@@ -10,6 +11,9 @@ export async function POST(req: NextRequest) {
     if (!session?.user?.academyProfileId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const profileId = session.user.academyProfileId;
+    const aiConfig = await getAiConfigForRequest(profileId);
 
     const body = await req.json();
     const {
@@ -40,6 +44,7 @@ export async function POST(req: NextRequest) {
         claim,
         evidence: evidence || [],
         confidence: confidence || 50,
+        openai_api_key: aiConfig?.key,
       }),
     });
 
