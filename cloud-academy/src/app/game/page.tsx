@@ -230,7 +230,23 @@ const CarouselSlide = ({
 
           {/* Right: Large animated icon */}
           <div className="hidden lg:block relative">
-            <div className="text-[150px] leading-none animate-bounce-slow">{game.icon}</div>
+            {/* Pulsing ring behind icon */}
+            <div 
+              className="absolute inset-0 m-auto w-32 h-32 rounded-full animate-pulse-ring"
+              style={{ background: `radial-gradient(circle, ${gradientMatch?.[0] || '#ef4444'}40 0%, transparent 70%)` }}
+            />
+            {/* Rotating orbit */}
+            <div className="absolute inset-0 animate-orbit">
+              <div 
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full"
+                style={{ backgroundColor: gradientMatch?.[0] || '#ef4444', boxShadow: `0 0 10px ${gradientMatch?.[0] || '#ef4444'}` }}
+              />
+            </div>
+            {/* Main icon with 3D hover effect */}
+            <div className="text-[150px] leading-none animate-float-3d group-hover:scale-110 transition-transform duration-300">{game.icon}</div>
+            {/* Sparkle effects */}
+            <div className="absolute top-4 right-4 animate-sparkle">✨</div>
+            <div className="absolute bottom-8 left-2 animate-sparkle-delayed">⭐</div>
             {/* Floating particles around icon */}
             <div 
               className="absolute top-0 right-0 w-4 h-4 rounded-full animate-ping" 
@@ -244,18 +260,47 @@ const CarouselSlide = ({
               className="absolute top-20 right-10 w-2 h-2 rounded-full animate-ping" 
               style={{ backgroundColor: gradientMatch?.[0] || '#fbbf24', animationDelay: '1s' }}
             />
+            {/* Electric bolts */}
+            <div className="absolute -left-4 top-1/2 text-2xl animate-zap">⚡</div>
+            <div className="absolute -right-2 top-1/3 text-xl animate-zap-delayed">⚡</div>
             <style jsx>{`
-              @keyframes bounce-slow {
-                0%, 100% { transform: translateY(0) rotate(-5deg); }
-                50% { transform: translateY(-20px) rotate(5deg); }
+              @keyframes float-3d {
+                0%, 100% { transform: translateY(0) rotate(-5deg) scale(1); }
+                25% { transform: translateY(-15px) rotate(0deg) scale(1.05); }
+                50% { transform: translateY(-25px) rotate(5deg) scale(1.1); }
+                75% { transform: translateY(-10px) rotate(2deg) scale(1.05); }
               }
-              .animate-bounce-slow { animation: bounce-slow 3s ease-in-out infinite; }
+              .animate-float-3d { animation: float-3d 4s ease-in-out infinite; }
+              
+              @keyframes orbit {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+              .animate-orbit { animation: orbit 8s linear infinite; }
+              
+              @keyframes pulse-ring {
+                0%, 100% { transform: scale(1); opacity: 0.5; }
+                50% { transform: scale(1.3); opacity: 0.2; }
+              }
+              .animate-pulse-ring { animation: pulse-ring 2s ease-in-out infinite; }
+              
+              @keyframes sparkle {
+                0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+                50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+              }
+              .animate-sparkle { animation: sparkle 2s ease-in-out infinite; }
+              .animate-sparkle-delayed { animation: sparkle 2s ease-in-out infinite 0.5s; }
+              
+              @keyframes zap {
+                0%, 100% { opacity: 0; transform: translateX(0) scale(0.8); }
+                10%, 30% { opacity: 1; transform: translateX(5px) scale(1.2); }
+                20% { opacity: 0.5; transform: translateX(-3px) scale(1); }
+              }
+              .animate-zap { animation: zap 3s ease-in-out infinite; }
+              .animate-zap-delayed { animation: zap 3s ease-in-out infinite 1.5s; }
             `}</style>
           </div>
         </div>
-
-        {/* Bottom gradient fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-900 to-transparent" />
       </div>
     </div>
   );
