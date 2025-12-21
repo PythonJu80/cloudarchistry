@@ -37,6 +37,7 @@ import { type TeamSummary } from "@/lib/academy/types/team";
 import { ScenarioGenerationModal } from "@/components/world/scenario-generation-modal";
 import { ChallengeWorkspaceModal } from "@/components/world/challenge-workspace-modal";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TrialBanner } from "@/components/trial-banner";
 
 // Dynamically import map components to avoid SSR issues
 const Globe3D = dynamic(() => import("@/components/world/globe-3d"), {
@@ -803,7 +804,11 @@ export default function WorldPage() {
   }, []);
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-slate-950 flex">
+    <div className="h-screen w-full overflow-hidden bg-slate-950 flex flex-col">
+      {/* Trial Banner */}
+      <TrialBanner />
+      
+      <div className="flex-1 flex overflow-hidden">
       {/* Sidebar */}
       <div
         className={cn(
@@ -1857,6 +1862,7 @@ export default function WorldPage() {
             attemptId={resumeChallenge.id}
           />
         )}
+      </div>
       </div>
     </div>
   );

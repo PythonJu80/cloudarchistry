@@ -1234,13 +1234,18 @@ model AcademyUserProfile {
   academyTenantId String?
   academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
   
-  // Subscription tier: free, learner, pro, team
-  // free    = browse only, no AI, no Neo4j
-  // learner = AI coaching, challenges, flashcards ($19/mo)
-  // pro     = AI + Neo4j knowledge graph, custom scenarios ($49/mo)
-  // team    = full access, team features, admin ($29/user/mo)
+  // Subscription tier: free, learner, tutor, pro, team
+  // free    = browse only, no AI, no challenges
+  // learner = AI coaching, challenges, join cohorts (£29/mo)
+  // tutor   = learner + create/manage cohorts (£79/mo)
+  // pro     = legacy, maps to tutor
+  // team    = legacy, maps to tutor
   subscriptionTier String @default("free")
   subscriptionExpiresAt DateTime?
+  
+  // Trial tracking - 14 days free for new users
+  trialEndsAt DateTime?  // null = no trial or trial not started
+  trialUsed   Boolean @default(false)  // true = user has already used their trial
   
   // Feature flags based on tier
   hasAiAccess Boolean @default(false)

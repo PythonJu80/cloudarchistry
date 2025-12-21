@@ -55,11 +55,24 @@ export async function GET() {
         subscriptionTier: true,
         hasAiAccess: true,
         settings: true,
+        trialEndsAt: true,
+        trialUsed: true,
+        subscriptionExpiresAt: true,
       },
     });
 
     if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    // Calculate trial status
+    let trialDaysRemaining = 0;
+    let trialExpired = false;
+    if (profile.trialEndsAt) {
+      const now = new Date();
+      const diffMs = profile.trialEndsAt.getTime() - now.getTime();
+      trialDaysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      trialExpired = diffMs <= 0;
     }
 
     return NextResponse.json({
@@ -70,6 +83,12 @@ export async function GET() {
       subscriptionTier: profile.subscriptionTier,
       hasAiAccess: profile.hasAiAccess,
       settings: profile.settings,
+      // Trial info
+      trialEndsAt: profile.trialEndsAt?.toISOString() || null,
+      trialDaysRemaining,
+      trialExpired,
+      trialUsed: profile.trialUsed,
+      subscriptionExpiresAt: profile.subscriptionExpiresAt?.toISOString() || null,
     });
   } catch (error) {
     console.error("Settings GET error:", error);

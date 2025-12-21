@@ -21,6 +21,10 @@ export async function POST(req: NextRequest) {
     
     // Set subscription tier based on user type (beta)
     const subscriptionTier = userType === "tutor" ? "tutor" : "learner";
+    
+    // Calculate trial end date (14 days from now)
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 14);
 
     // Check if Academy user exists (separate from main CloudMigrate users)
     const existingUser = await prisma.academyUser.findUnique({
@@ -77,13 +81,15 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create AcademyUserProfile for the user with appropriate tier
+      // Create AcademyUserProfile for the user with appropriate tier and trial
       const profile = await tx.academyUserProfile.create({
         data: {
           academyUserId: user.id,
           academyTenantId: tenant.id,
           displayName: username,
           subscriptionTier, // learner or tutor based on registration choice
+          trialEndsAt, // 14 days from registration
+          trialUsed: false,
         },
       });
 
