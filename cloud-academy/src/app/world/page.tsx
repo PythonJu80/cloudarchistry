@@ -33,6 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { type SubscriptionTier, getTierFeatures, getUpgradeMessage } from "@/lib/academy/services/subscription";
+import { type TeamSummary } from "@/lib/academy/types/team";
 import { ScenarioGenerationModal } from "@/components/world/scenario-generation-modal";
 import { ChallengeWorkspaceModal } from "@/components/world/challenge-workspace-modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -502,14 +503,8 @@ export default function WorldPage() {
   const [userChallenges, setUserChallenges] = useState<SavedChallenge[]>([]);
   const [isLoadingUserChallenges, setIsLoadingUserChallenges] = useState(false);
   
-  // Cohort challenges state
-  interface CohortChallenge {
-    id: string;
-    name: string;
-    memberCount: number;
-    activeChallenges: number;
-  }
-  const [cohortChallenges, setCohortChallenges] = useState<CohortChallenge[]>([]);
+  // Cohort challenges state (uses TeamSummary from shared types)
+  const [cohortChallenges, setCohortChallenges] = useState<TeamSummary[]>([]);
   const [isLoadingCohorts, setIsLoadingCohorts] = useState(false);
   
   // State for resuming a saved challenge
@@ -583,7 +578,7 @@ export default function WorldPage() {
           const teams = data.teams || [];
           
           // Transform teams into cohort challenges format
-          const cohorts: CohortChallenge[] = teams.map((team: {
+          const cohorts: TeamSummary[] = teams.map((team: {
             id: string;
             name: string;
             memberCount: number;
@@ -1034,9 +1029,10 @@ export default function WorldPage() {
                       ) : (
                         <div className="space-y-1">
                           {cohortChallenges.map((cohort) => (
-                            <button
+                            <Link
                               key={cohort.id}
-                              className="w-full p-2 rounded-lg text-left transition-all hover:bg-secondary/50"
+                              href={`/dashboard/cohort/${cohort.id}`}
+                              className="block w-full p-2 rounded-lg text-left transition-all hover:bg-secondary/50"
                             >
                               <div className="flex items-center justify-between">
                                 <span className="font-medium text-sm">{cohort.name}</span>
@@ -1047,7 +1043,7 @@ export default function WorldPage() {
                               <div className="text-xs text-muted-foreground">
                                 {cohort.activeChallenges} active challenges
                               </div>
-                            </button>
+                            </Link>
                           ))}
                         </div>
                       )}

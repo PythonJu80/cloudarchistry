@@ -162,37 +162,17 @@ interface PortfolioData {
 
 // No fallback - models must come from OpenAI API
 
-interface TeamMember {
-  id: string;
-  role: string;
-  academyUser: {
-    id: string;
-    name: string | null;
-    email: string;
-    username: string | null;
-  } | null;
-}
+// Team types imported from shared location
+import type { 
+  TeamResponse, 
+  TeamMemberResponse, 
+  TeamInviteResponse 
+} from "@/lib/academy/types/team";
 
-interface TeamInvite {
-  id: string;
-  email: string | null;
-  code: string;
-  role: string;
-  expiresAt: string;
-  createdAt: string;
-}
-
-interface TeamData {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  myRole: string;
-  memberCount: number;
-  maxMembers: number;
-  members: TeamMember[];
-  invites: TeamInvite[];
-}
+// Alias for backward compatibility in this file
+type TeamData = TeamResponse;
+type TeamMember = TeamMemberResponse;
+type TeamInvite = TeamInviteResponse;
 
 export default function SettingsPage() {
   const { status } = useSession();

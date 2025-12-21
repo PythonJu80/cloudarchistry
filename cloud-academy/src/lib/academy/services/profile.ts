@@ -270,21 +270,45 @@ export async function incrementStats(
 
 /**
  * Get user's team memberships
+ * @param academyUserId - The AcademyUser ID (not the legacy userId)
  */
-export async function getUserTeams(userId: string) {
+export async function getUserTeams(academyUserId: string) {
   const memberships = await prisma.academyTeamMember.findMany({
-    where: { userId },
+    where: { academyUserId },
     include: {
-      team: true,
+      team: {
+        include: {
+          _count: {
+            select: { 
+              members: true,
+              attempts: true,
+            },
+          },
+        },
+      },
     },
     orderBy: { joinedAt: "desc" },
   });
 
   return memberships.map((m) => ({
-    ...m.team,
-    role: m.role,
+    id: m.team.id,
+    name: m.team.name,
+    slug: m.team.slug,
+    description: m.team.description,
+    avatarUrl: m.team.avatarUrl,
+    visibility: m.team.visibility,
+    maxMembers: m.team.maxMembers,
+    totalPoints: m.team.totalPoints,
+    level: m.team.level,
+    createdAt: m.team.createdAt,
+    // User's role in this team
+    myRole: m.role,
     pointsContributed: m.pointsContributed,
+    challengesCompleted: m.challengesCompleted,
     joinedAt: m.joinedAt,
+    // Counts
+    memberCount: m.team._count.members,
+    activeChallenges: m.team._count.attempts,
   }));
 }
 

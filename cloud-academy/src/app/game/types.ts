@@ -1,6 +1,13 @@
 // Shared types for game system
 // These types are used across all game modes
 
+// Re-export team types from shared location
+export { 
+  type TeamMemberResponse as TeamMember,
+  type TeamResponse as Team,
+  type TeamMemberUser,
+} from "@/lib/academy/types/team";
+
 export interface Player {
   id: string;
   name: string | null;
@@ -14,23 +21,6 @@ export interface ChatMessage {
   playerName: string;
   message: string;
   timestamp: string;
-}
-
-export interface TeamMember {
-  id: string;
-  role: string;
-  academyUser: {
-    id: string;
-    name: string | null;
-    email: string;
-    username: string | null;
-  } | null;
-}
-
-export interface Team {
-  id: string;
-  name: string;
-  members: TeamMember[];
 }
 
 export interface Match {
