@@ -16,17 +16,26 @@ import {
   Activity,
   Award,
   BarChart3,
+  Mail,
+  UserPlus,
+  Loader2,
+  X,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { 
   TeamResponse, 
   TeamStatsResponse, 
   TeamActivityResponse,
   TeamRole,
+  TeamInviteResponse,
 } from "@/lib/academy/types/team";
 
 // Role icon mapping
@@ -59,12 +68,19 @@ export default function CohortDashboardPage() {
   const router = useRouter();
   const params = useParams();
   const teamId = params.teamId as string;
+  const { toast } = useToast();
 
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [stats, setStats] = useState<TeamStatsResponse | null>(null);
   const [activities, setActivities] = useState<TeamActivityResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Invite state
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
+  const [revokingInvite, setRevokingInvite] = useState<string | null>(null);
 
   const fetchTeamData = useCallback(async () => {
     if (!teamId) return;
@@ -102,6 +118,75 @@ export default function CohortDashboardPage() {
       setLoading(false);
     }
   }, [teamId]);
+
+  // Send invite handler
+  const handleSendInvite = async () => {
+    const emailToSend = inviteEmail.trim().toLowerCase();
+    if (!emailToSend) {
+      toast({ title: "Error", description: "Email is required", variant: "destructive" });
+      return;
+    }
+
+    setSendingInvite(true);
+    try {
+      const response = await fetch("/api/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, email: emailToSend }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send invite");
+      }
+      toast({ title: "Success", description: `Invite sent to ${emailToSend}` });
+      setInviteEmail("");
+      fetchTeamData(); // Refresh to show new invite
+    } catch (err) {
+      toast({ 
+        title: "Error", 
+        description: err instanceof Error ? err.message : "Failed to send invite",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  // Revoke invite handler
+  const handleRevokeInvite = async (inviteId: string) => {
+    setRevokingInvite(inviteId);
+    try {
+      const response = await fetch(`/api/team/invite?id=${inviteId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to revoke invite");
+      }
+      toast({ title: "Success", description: "Invite revoked" });
+      fetchTeamData();
+    } catch (err) {
+      toast({ 
+        title: "Error", 
+        description: err instanceof Error ? err.message : "Failed to revoke invite",
+        variant: "destructive"
+      });
+    } finally {
+      setRevokingInvite(null);
+    }
+  };
+
+  // Copy invite link handler
+  const handleCopyInviteLink = async (code: string) => {
+    const inviteUrl = `${window.location.origin}/invite/${code}`;
+    await navigator.clipboard.writeText(inviteUrl);
+    setCopiedInvite(code);
+    toast({ title: "Copied!", description: "Invite link copied to clipboard" });
+    setTimeout(() => setCopiedInvite(null), 2000);
+  };
+
+  // Check if current user can manage invites
+  const canManageInvites = team?.myRole === "owner" || team?.myRole === "admin";
 
   useEffect(() => {
     if (authStatus === "unauthenticated") {
@@ -346,7 +431,7 @@ export default function CohortDashboardPage() {
           </Card>
         </div>
 
-        {/* Members List */}
+        {/* Members & Invites */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -357,7 +442,8 @@ export default function CohortDashboardPage() {
               {team.memberCount} of {team.maxMembers} members
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
+            {/* Members Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {team.members.map((member) => {
                 const RoleIcon = ROLE_ICONS[member.role as TeamRole] || User;
@@ -387,6 +473,92 @@ export default function CohortDashboardPage() {
                 );
               })}
             </div>
+
+            {/* Invite Section - Only for owner/admin */}
+            {canManageInvites && (
+              <div className="border-t border-border pt-6 space-y-4">
+                <h4 className="font-medium flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-cyan-400" />
+                  Invite Members
+                </h4>
+                
+                {/* Invite Form */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="colleague@company.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendInvite()}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleSendInvite}
+                    disabled={sendingInvite || !inviteEmail.trim()}
+                    className="gap-2"
+                  >
+                    {sendingInvite ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Mail className="w-4 h-4" />
+                    )}
+                    Send Invite
+                  </Button>
+                </div>
+
+                {/* Pending Invites */}
+                {team.invites && team.invites.length > 0 && (
+                  <div className="space-y-2">
+                    <h5 className="text-sm font-medium text-muted-foreground">
+                      Pending Invites ({team.invites.length})
+                    </h5>
+                    <div className="space-y-2">
+                      {team.invites.map((invite) => (
+                        <div
+                          key={invite.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-secondary/20"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {invite.email || "Anyone with link"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Expires {new Date(invite.expiresAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCopyInviteLink(invite.code)}
+                              className="h-8 px-2"
+                            >
+                              {copiedInvite === invite.code ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRevokeInvite(invite.id)}
+                              disabled={revokingInvite === invite.id}
+                              className="h-8 px-2 text-red-400 hover:text-red-300"
+                            >
+                              {revokingInvite === invite.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <X className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
