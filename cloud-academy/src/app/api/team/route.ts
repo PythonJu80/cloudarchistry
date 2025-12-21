@@ -56,7 +56,10 @@ export async function GET() {
               },
             },
             _count: {
-              select: { members: true },
+              select: { 
+                members: true,
+                attempts: true,
+              },
             },
           },
         },
@@ -67,6 +70,7 @@ export async function GET() {
       ...m.team,
       myRole: m.role,
       memberCount: m.team._count.members,
+      activeChallenges: m.team._count.attempts,
     }));
 
     return NextResponse.json({ teams });

@@ -33,6 +33,10 @@ import {
   Mail,
   Copy,
   Crown,
+  Link2,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +51,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PortfolioViewer } from "@/components/portfolio/portfolio-viewer";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SettingsData {
   hasOpenAiKey: boolean;
@@ -241,6 +251,13 @@ export default function SettingsPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
+
+  // URL Crawl state
+  const [crawlUrl, setCrawlUrl] = useState("");
+  const [isCrawling, setIsCrawling] = useState(false);
+  const [crawlStatus, setCrawlStatus] = useState<{ success: boolean; message: string; jobId?: string; polling?: boolean } | null>(null);
+  const [crawlDepth, setCrawlDepth] = useState(2);
+  const [crawlConcurrent, setCrawlConcurrent] = useState(5);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -552,6 +569,88 @@ export default function SettingsPage() {
     setTimeout(() => setCopiedInvite(null), 2000);
   }
 
+  const pollCrawlStatus = async (jobId: string) => {
+    try {
+      const res = await fetch(`/api/crawl/status/${jobId}`);
+      const data = await res.json();
+      
+      if (data.status === "completed") {
+        const result = data.result;
+        setCrawlStatus({
+          success: true,
+          message: `✓ Done! ${result.pages_crawled} pages, ${result.total_words?.toLocaleString() || 0} words indexed`,
+          jobId
+        });
+        setTimeout(() => setCrawlStatus(null), 8000);
+      } else if (data.status === "failed") {
+        setCrawlStatus({
+          success: false,
+          message: data.error || "Crawl failed",
+          jobId
+        });
+        setTimeout(() => setCrawlStatus(null), 8000);
+      } else {
+        setTimeout(() => pollCrawlStatus(jobId), 3000);
+      }
+    } catch (error) {
+      setCrawlStatus({
+        success: false,
+        message: "Lost connection to crawl service",
+        jobId
+      });
+      setTimeout(() => setCrawlStatus(null), 5000);
+    }
+  };
+
+  const crawlWebsite = async () => {
+    if (!crawlUrl.trim() || isCrawling) return;
+    
+    setIsCrawling(true);
+    setCrawlStatus(null);
+    
+    try {
+      const res = await fetch(`/api/crawl?url=${encodeURIComponent(crawlUrl)}&max_depth=${crawlDepth}&max_concurrent=${crawlConcurrent}`, {
+        method: "POST",
+      });
+      
+      const data = await res.json();
+      
+      if (data.success && data.job_id) {
+        setCrawlStatus({
+          success: true,
+          message: "Crawl started! Indexing in background...",
+          jobId: data.job_id,
+          polling: true
+        });
+        setCrawlUrl("");
+        setIsCrawling(false);
+        setTimeout(() => pollCrawlStatus(data.job_id), 2000);
+      } else if (data.rate_limit) {
+        const limits = data.rate_limit;
+        setCrawlStatus({
+          success: false,
+          message: `Rate limited: ${limits.active_crawls}/${limits.limits?.concurrent} active, ${limits.hourly_crawls}/${limits.limits?.hourly} hourly`
+        });
+        setIsCrawling(false);
+        setTimeout(() => setCrawlStatus(null), 8000);
+      } else {
+        setCrawlStatus({
+          success: false,
+          message: data.error || "Failed to start crawl"
+        });
+        setIsCrawling(false);
+        setTimeout(() => setCrawlStatus(null), 5000);
+      }
+    } catch (error) {
+      setCrawlStatus({
+        success: false,
+        message: "Failed to connect to crawl service"
+      });
+      setIsCrawling(false);
+      setTimeout(() => setCrawlStatus(null), 5000);
+    }
+  };
+
   function handleAvatarUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -770,9 +869,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+    <TooltipProvider>
+      <div className="min-h-screen bg-background">
+        {/* Navigation */}
+        <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             {profileAvatar ? (
@@ -1722,6 +1822,169 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* URL Crawl Section */}
+              <Card className="bg-card/50 border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Globe className="w-4 h-4 text-cyan-400" />
+                    Add Knowledge
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Crawl AWS docs or guides to enhance AI responses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-3">
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        value={crawlUrl}
+                        onChange={(e) => setCrawlUrl(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            crawlWebsite();
+                          }
+                        }}
+                        placeholder="Paste URL to crawl..."
+                        className="pl-9 h-9 bg-background/50 border-border/50 focus:border-cyan-500/50 text-sm"
+                        disabled={isCrawling}
+                      />
+                    </div>
+
+                    {/* Crawl Settings */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Label htmlFor="crawlDepth" className="text-xs text-muted-foreground">
+                            Depth
+                          </Label>
+                          <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="inline-flex">
+                                <HelpCircle className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs z-50">
+                              <p className="text-xs">
+                                <strong>How deep to follow links:</strong><br />
+                                • Level 1: Just the page you enter<br />
+                                • Level 2: The page + all linked pages<br />
+                                • Level 3+: Follows links on those pages too<br />
+                                <br />
+                                <em>Example:</em> For a blog, use 3-4 levels to get the blog index and all individual posts.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Select 
+                          value={crawlDepth.toString()} 
+                          onValueChange={(v) => setCrawlDepth(parseInt(v))}
+                          disabled={isCrawling}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent side="bottom" align="start" sideOffset={4}>
+                            <SelectItem value="1">1 level</SelectItem>
+                            <SelectItem value="2">2 levels</SelectItem>
+                            <SelectItem value="3">3 levels</SelectItem>
+                            <SelectItem value="4">4 levels</SelectItem>
+                            <SelectItem value="5">5 levels</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Label htmlFor="crawlConcurrent" className="text-xs text-muted-foreground">
+                            Concurrent
+                          </Label>
+                          <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="inline-flex">
+                                <HelpCircle className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs z-50">
+                              <p className="text-xs">
+                                <strong>How many pages at once:</strong><br />
+                                Controls how many pages are crawled simultaneously.<br />
+                                <br />
+                                • <strong>3-5 pages:</strong> Slower but gentler on the website<br />
+                                • <strong>10-20 pages:</strong> Faster crawling for large sites<br />
+                                <br />
+                                Higher numbers = faster but more resource-intensive.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Select 
+                          value={crawlConcurrent.toString()} 
+                          onValueChange={(v) => setCrawlConcurrent(parseInt(v))}
+                          disabled={isCrawling}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent side="bottom" align="start" sideOffset={4}>
+                            <SelectItem value="3">3 pages</SelectItem>
+                            <SelectItem value="5">5 pages</SelectItem>
+                            <SelectItem value="10">10 pages</SelectItem>
+                            <SelectItem value="15">15 pages</SelectItem>
+                            <SelectItem value="20">20 pages</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={crawlWebsite}
+                      disabled={isCrawling || !crawlUrl.trim()}
+                      size="sm"
+                      className="w-full gap-2 bg-cyan-600 hover:bg-cyan-500"
+                    >
+                      {isCrawling ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Crawling...
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="w-3.5 h-3.5" />
+                          Start Crawl
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Crawl Status */}
+                  {crawlStatus && (
+                    <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
+                      crawlStatus.success 
+                        ? crawlStatus.polling 
+                          ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                          : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+                        : "bg-red-500/10 text-red-400 border border-red-500/20"
+                    }`}>
+                      {crawlStatus.success ? (
+                        crawlStatus.polling ? (
+                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        )
+                      ) : (
+                        <XCircle className="w-3.5 h-3.5 shrink-0" />
+                      )}
+                      <span className="text-[11px] leading-tight">{crawlStatus.message}</span>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-muted-foreground">
+                    Indexed content will be available for AI-powered features across the platform.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -1736,6 +1999,7 @@ export default function SettingsPage() {
           setSelectedPortfolio(null);
         }}
       />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

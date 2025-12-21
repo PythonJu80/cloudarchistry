@@ -336,8 +336,22 @@ async def crawl_single_page(url: str, openai_api_key: str = None, tenant_id: str
 
 
 async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurrent: int, chunk_size: int, tenant_id: str = None, openai_api_key: str = None, preset: str = None, max_urls: int = None):
-    """Execute a crawl job in the background with optional filtering."""
+    """Execute a crawl job in the background with optional filtering and recursive link following."""
     from utils import set_request_api_key
+    from urllib.parse import urldefrag, urlparse
+    
+    def normalize_url(u: str) -> str:
+        """Remove fragment from URL for deduplication."""
+        return urldefrag(u)[0]
+    
+    def is_same_domain(base_url: str, link_url: str) -> bool:
+        """Check if link is on the same domain as base URL."""
+        try:
+            base_domain = urlparse(base_url).netloc
+            link_domain = urlparse(link_url).netloc
+            return base_domain == link_domain
+        except:
+            return False
     
     try:
         # Set request-scoped API key for embeddings
@@ -357,7 +371,56 @@ async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurre
         all_code_examples = []
         crawled_urls = set()
         
+        # Helper function to process a crawl result
+        async def process_crawl_result(result, crawl_url: str):
+            """Process a successful crawl result and extract data."""
+            if not result.success or not result.markdown:
+                return []
+            
+            crawled_urls.add(normalize_url(crawl_url))
+            url_to_full_document[crawl_url] = result.markdown
+            
+            chunks = smart_chunk_markdown(result.markdown, chunk_size)
+            for i, chunk in enumerate(chunks):
+                section_info = extract_section_info(chunk)
+                all_urls.append(crawl_url)
+                all_chunk_numbers.append(i)
+                all_contents.append(chunk)
+                all_metadatas.append({
+                    "title": result.metadata.get("title", "") if result.metadata else "",
+                    "headers": section_info["headers"],
+                })
+            
+            # Extract code examples
+            code_blocks = extract_code_blocks(result.markdown)
+            for code in code_blocks:
+                all_code_examples.append({
+                    "url": crawl_url,
+                    "code": code["code"],
+                    "language": code.get("language", ""),
+                })
+            
+            # Extract AWS services to Neo4j
+            if ctx.neo4j_driver:
+                await extract_aws_services_to_neo4j(
+                    content=result.markdown,
+                    source_url=crawl_url,
+                    neo4j_driver=ctx.neo4j_driver,
+                    tenant_id=tenant_id
+                )
+            
+            # Return internal links for recursive crawling
+            internal_links = []
+            if hasattr(result, 'links') and result.links:
+                for link in result.links.get("internal", []):
+                    link_url = link.get("href", "")
+                    if link_url and is_same_domain(crawl_url, link_url):
+                        internal_links.append(normalize_url(link_url))
+            return internal_links
+        
         # Determine crawl strategy based on URL type
+        use_recursive_crawl = False
+        
         if is_sitemap_index(url):
             # Parse sitemap index and all child sitemaps
             logger.info(f"Sitemap index detected: {url}")
@@ -382,56 +445,73 @@ async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurre
             resp = requests.get(url)
             urls_to_crawl = [u.strip() for u in resp.text.split('\n') if u.strip()]
         else:
+            # Regular URL - use recursive crawling with depth
             urls_to_crawl = [url]
+            use_recursive_crawl = True
+            logger.info(f"Regular URL detected, will crawl recursively up to depth {max_depth}")
         
         # Apply max_urls limit
-        if max_urls and len(urls_to_crawl) > max_urls:
+        effective_max_urls = max_urls if max_urls else 100  # Default limit for recursive crawls
+        if not use_recursive_crawl and max_urls and len(urls_to_crawl) > max_urls:
             logger.info(f"Limiting crawl to {max_urls} URLs (from {len(urls_to_crawl)})")
             urls_to_crawl = urls_to_crawl[:max_urls]
         
         # Crawl URLs
         run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
         
-        for crawl_url in urls_to_crawl:
-            if crawl_url in crawled_urls:
-                continue
+        if use_recursive_crawl and max_depth > 1:
+            # Recursive crawl with depth-based link following
+            current_level_urls = set([normalize_url(u) for u in urls_to_crawl])
             
-            try:
-                result = await crawler.arun(url=crawl_url, config=run_config)
-                if result.success and result.markdown:
-                    crawled_urls.add(crawl_url)
-                    url_to_full_document[crawl_url] = result.markdown
+            for depth in range(max_depth):
+                # Filter out already crawled URLs
+                urls_this_level = [u for u in current_level_urls if normalize_url(u) not in crawled_urls]
+                
+                if not urls_this_level:
+                    logger.info(f"Depth {depth + 1}: No new URLs to crawl")
+                    break
+                
+                # Respect max_urls limit
+                if len(crawled_urls) >= effective_max_urls:
+                    logger.info(f"Reached max URLs limit ({effective_max_urls}), stopping")
+                    break
+                
+                remaining_slots = effective_max_urls - len(crawled_urls)
+                urls_this_level = urls_this_level[:remaining_slots]
+                
+                logger.info(f"Depth {depth + 1}/{max_depth}: Crawling {len(urls_this_level)} URLs")
+                
+                next_level_urls = set()
+                
+                for crawl_url in urls_this_level:
+                    if normalize_url(crawl_url) in crawled_urls:
+                        continue
                     
-                    chunks = smart_chunk_markdown(result.markdown, chunk_size)
-                    for i, chunk in enumerate(chunks):
-                        section_info = extract_section_info(chunk)
-                        all_urls.append(crawl_url)
-                        all_chunk_numbers.append(i)
-                        all_contents.append(chunk)
-                        all_metadatas.append({
-                            "title": result.metadata.get("title", ""),
-                            "headers": section_info["headers"],
-                        })
-                    
-                    # Extract code examples
-                    code_blocks = extract_code_blocks(result.markdown)
-                    for code in code_blocks:
-                        all_code_examples.append({
-                            "url": crawl_url,
-                            "code": code["code"],
-                            "language": code.get("language", ""),
-                        })
-                    
-                    # Extract AWS services to Neo4j
-                    if ctx.neo4j_driver:
-                        await extract_aws_services_to_neo4j(
-                            content=result.markdown,
-                            source_url=crawl_url,
-                            neo4j_driver=ctx.neo4j_driver,
-                            tenant_id=tenant_id
-                        )
-            except Exception as e:
-                logger.warning(f"Failed to crawl {crawl_url}: {e}")
+                    try:
+                        result = await crawler.arun(url=crawl_url, config=run_config)
+                        internal_links = await process_crawl_result(result, crawl_url)
+                        
+                        # Add discovered links for next depth level
+                        for link in internal_links:
+                            if link not in crawled_urls:
+                                next_level_urls.add(link)
+                                
+                    except Exception as e:
+                        logger.warning(f"Failed to crawl {crawl_url}: {e}")
+                
+                current_level_urls = next_level_urls
+                logger.info(f"Depth {depth + 1} complete: {len(crawled_urls)} total pages crawled, {len(next_level_urls)} links discovered for next level")
+        else:
+            # Simple crawl without recursive link following (sitemaps, txt files, or depth=1)
+            for crawl_url in urls_to_crawl:
+                if normalize_url(crawl_url) in crawled_urls:
+                    continue
+                
+                try:
+                    result = await crawler.arun(url=crawl_url, config=run_config)
+                    await process_crawl_result(result, crawl_url)
+                except Exception as e:
+                    logger.warning(f"Failed to crawl {crawl_url}: {e}")
         
         # Store documents
         if all_contents:
@@ -448,8 +528,10 @@ async def _execute_crawl_job(job_id: str, url: str, max_depth: int, max_concurre
         
         await update_crawl_job(job_id, "completed", result={
             "urls_crawled": len(crawled_urls),
+            "pages_crawled": len(crawled_urls),
             "documents_stored": len(all_contents),
             "code_examples": len(all_code_examples),
+            "total_words": sum(len(c.split()) for c in all_contents),
         })
         
     except Exception as e:

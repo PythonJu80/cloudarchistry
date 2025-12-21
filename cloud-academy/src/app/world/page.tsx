@@ -502,6 +502,16 @@ export default function WorldPage() {
   const [userChallenges, setUserChallenges] = useState<SavedChallenge[]>([]);
   const [isLoadingUserChallenges, setIsLoadingUserChallenges] = useState(false);
   
+  // Cohort challenges state
+  interface CohortChallenge {
+    id: string;
+    name: string;
+    memberCount: number;
+    activeChallenges: number;
+  }
+  const [cohortChallenges, setCohortChallenges] = useState<CohortChallenge[]>([]);
+  const [isLoadingCohorts, setIsLoadingCohorts] = useState(false);
+  
   // State for resuming a saved challenge
   const [resumeChallenge, setResumeChallenge] = useState<SavedChallenge | null>(null);
   const [resumeChallengeIndex, setResumeChallengeIndex] = useState(0);
@@ -560,9 +570,42 @@ export default function WorldPage() {
     fetchUserChallenges();
   }, [session?.user?.academyProfileId]);
   
-  // Cohort/Team challenges (from database - empty for now)
-  // TODO: Fetch from AcademyTeam -> TeamChallengeAttempt
-  const cohortChallenges: { id: string; name: string; memberCount: number; activeChallenges: number }[] = [];
+  // Fetch cohort/team challenges
+  useEffect(() => {
+    const fetchCohorts = async () => {
+      if (!session?.user?.id) return;
+      
+      setIsLoadingCohorts(true);
+      try {
+        const response = await fetch("/api/team");
+        if (response.ok) {
+          const data = await response.json();
+          const teams = data.teams || [];
+          
+          // Transform teams into cohort challenges format
+          const cohorts: CohortChallenge[] = teams.map((team: {
+            id: string;
+            name: string;
+            memberCount: number;
+            activeChallenges: number;
+          }) => ({
+            id: team.id,
+            name: team.name,
+            memberCount: team.memberCount,
+            activeChallenges: team.activeChallenges,
+          }));
+          
+          setCohortChallenges(cohorts);
+        }
+      } catch (error) {
+        console.error("Failed to fetch cohorts:", error);
+      } finally {
+        setIsLoadingCohorts(false);
+      }
+    };
+    
+    fetchCohorts();
+  }, [session?.user?.id]);
 
   // Memoize location groupings to prevent recalculation on every render
   const { beginnerLocations, intermediateLocations, advancedLocations, expertLocations } = useMemo(() => ({
@@ -973,13 +1016,20 @@ export default function WorldPage() {
                             Upgrade to Team
                           </Button>
                         </div>
+                      ) : isLoadingCohorts ? (
+                        <div className="text-center py-4">
+                          <Loader2 className="w-5 h-5 text-muted-foreground mx-auto animate-spin" />
+                          <p className="text-xs text-muted-foreground mt-2">Loading cohorts...</p>
+                        </div>
                       ) : cohortChallenges.length === 0 ? (
                         <div className="text-center py-4 space-y-2">
                           <p className="text-sm text-muted-foreground">No cohorts yet</p>
-                          <Button variant="outline" size="sm" className="text-xs">
-                            <UserPlus className="w-3 h-3 mr-1" />
-                            Create Cohort
-                          </Button>
+                          <Link href="/dashboard/settings?tab=teams">
+                            <Button variant="outline" size="sm" className="text-xs">
+                              <UserPlus className="w-3 h-3 mr-1" />
+                              Create Cohort
+                            </Button>
+                          </Link>
                         </div>
                       ) : (
                         <div className="space-y-1">
@@ -1092,6 +1142,38 @@ export default function WorldPage() {
                     {/* </>
                   )}
                 </div> */}
+
+                {/* How to Use Guide */}
+                <div className="rounded-lg border border-border/50 overflow-hidden bg-secondary/20">
+                  <div className="p-3 space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <HelpCircle className="w-4 h-4 text-cyan-400" />
+                      <span className="font-medium text-sm text-cyan-400">How to Use</span>
+                    </div>
+                    
+                    <div className="space-y-2 text-xs text-muted-foreground">
+                      <div className="flex gap-2">
+                        <span className="text-cyan-400 font-bold">1.</span>
+                        <p>Click anywhere on the globe to explore different locations around the world</p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <span className="text-cyan-400 font-bold">2.</span>
+                        <p>Search for any real business to create a custom AWS architecture challenge</p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <span className="text-cyan-400 font-bold">3.</span>
+                        <p>Your challenges appear in <span className="text-cyan-400">User Challenges</span> - click to resume anytime</p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <span className="text-red-400 font-bold">4.</span>
+                        <p>Visit <span className="text-red-400">Game Zone</span> for quick practice battles and leaderboard competitions</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
