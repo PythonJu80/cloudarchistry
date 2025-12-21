@@ -3,11 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { Cloud, Loader2, Mail, Eye, EyeOff } from "lucide-react";
+import { Cloud, Loader2, Mail, Eye, EyeOff, GraduationCap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Google icon component
 function GoogleIcon({ className }: { className?: string }) {
@@ -56,6 +57,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     organizationName: "",
+    userType: "learner" as "learner" | "tutor",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -224,6 +226,51 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* User Type Selection */}
+            <div className="space-y-2">
+              <Label>I am a...</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, userType: "learner" })}
+                  className={cn(
+                    "p-4 rounded-lg border-2 transition-all text-left",
+                    formData.userType === "learner"
+                      ? "border-cyan-500 bg-cyan-500/10"
+                      : "border-border hover:border-cyan-500/50"
+                  )}
+                >
+                  <GraduationCap className={cn(
+                    "w-6 h-6 mb-2",
+                    formData.userType === "learner" ? "text-cyan-400" : "text-muted-foreground"
+                  )} />
+                  <p className="font-semibold text-sm">Learner</p>
+                  <p className="text-xs text-muted-foreground">
+                    Learn AWS, join cohorts
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, userType: "tutor" })}
+                  className={cn(
+                    "p-4 rounded-lg border-2 transition-all text-left",
+                    formData.userType === "tutor"
+                      ? "border-purple-500 bg-purple-500/10"
+                      : "border-border hover:border-purple-500/50"
+                  )}
+                >
+                  <Users className={cn(
+                    "w-6 h-6 mb-2",
+                    formData.userType === "tutor" ? "text-purple-400" : "text-muted-foreground"
+                  )} />
+                  <p className="font-semibold text-sm">Tutor</p>
+                  <p className="text-xs text-muted-foreground">
+                    Create & manage cohorts
+                  </p>
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Your Name</Label>
               <Input

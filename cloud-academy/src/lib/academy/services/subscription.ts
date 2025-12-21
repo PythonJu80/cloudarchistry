@@ -1,15 +1,21 @@
 /**
  * Subscription & Feature Access Service
  * Handles tier checks and feature gating
+ * 
+ * Beta Model:
+ * - Learner: Individual learners, can join cohorts when invited
+ * - Tutor: Can create/manage cohorts, invite learners, has all learner features
  */
 
-export type SubscriptionTier = "free" | "learner" | "pro" | "team";
+export type SubscriptionTier = "free" | "learner" | "tutor" | "pro" | "team";
 
 export interface TierFeatures {
   canStartChallenges: boolean;
   hasAiAccess: boolean;
   hasNeo4jAccess: boolean;
   hasTeamAccess: boolean;
+  canCreateCohorts: boolean;
+  canManageCohorts: boolean;
   canCreateCustomScenarios: boolean;
   canExportReports: boolean;
   hasApiAccess: boolean;
@@ -26,36 +32,60 @@ export function getTierFeatures(tier: SubscriptionTier): TierFeatures {
         hasAiAccess: false,
         hasNeo4jAccess: false,
         hasTeamAccess: false,
+        canCreateCohorts: false,
+        canManageCohorts: false,
         canCreateCustomScenarios: false,
         canExportReports: false,
         hasApiAccess: false,
       };
     case "learner":
+      // Learners can do challenges, use AI, join cohorts (but not create them)
       return {
         canStartChallenges: true,
         hasAiAccess: true,
         hasNeo4jAccess: false,
-        hasTeamAccess: false,
+        hasTeamAccess: true, // Can JOIN cohorts when invited
+        canCreateCohorts: false,
+        canManageCohorts: false,
         canCreateCustomScenarios: false,
         canExportReports: false,
         hasApiAccess: false,
       };
-    case "pro":
-      return {
-        canStartChallenges: true,
-        hasAiAccess: true,
-        hasNeo4jAccess: true,
-        hasTeamAccess: false,
-        canCreateCustomScenarios: true,
-        canExportReports: true,
-        hasApiAccess: true,
-      };
-    case "team":
+    case "tutor":
+      // Tutors have all learner features + can create/manage cohorts
       return {
         canStartChallenges: true,
         hasAiAccess: true,
         hasNeo4jAccess: true,
         hasTeamAccess: true,
+        canCreateCohorts: true,
+        canManageCohorts: true,
+        canCreateCustomScenarios: true,
+        canExportReports: true,
+        hasApiAccess: true,
+      };
+    case "pro":
+      // Legacy - maps to tutor features
+      return {
+        canStartChallenges: true,
+        hasAiAccess: true,
+        hasNeo4jAccess: true,
+        hasTeamAccess: true,
+        canCreateCohorts: true,
+        canManageCohorts: true,
+        canCreateCustomScenarios: true,
+        canExportReports: true,
+        hasApiAccess: true,
+      };
+    case "team":
+      // Legacy - maps to tutor features
+      return {
+        canStartChallenges: true,
+        hasAiAccess: true,
+        hasNeo4jAccess: true,
+        hasTeamAccess: true,
+        canCreateCohorts: true,
+        canManageCohorts: true,
         canCreateCustomScenarios: true,
         canExportReports: true,
         hasApiAccess: true,
@@ -111,9 +141,21 @@ export function getUpgradeMessage(action: keyof TierFeatures): {
       };
     case "hasTeamAccess":
       return {
-        title: "Upgrade to Team Plan",
-        description: "Train your team together with shared progress, admin controls, and team analytics.",
-        requiredTier: "team",
+        title: "Join as a Learner",
+        description: "Register as a Learner to join cohorts and participate in team challenges.",
+        requiredTier: "learner",
+      };
+    case "canCreateCohorts":
+      return {
+        title: "Register as a Tutor",
+        description: "Tutors can create cohorts, invite learners, and track team progress.",
+        requiredTier: "tutor",
+      };
+    case "canManageCohorts":
+      return {
+        title: "Register as a Tutor",
+        description: "Tutors can manage cohort members, send invites, and view analytics.",
+        requiredTier: "tutor",
       };
     default:
       return {
@@ -128,8 +170,9 @@ export function getUpgradeMessage(action: keyof TierFeatures): {
  * Tier display info
  */
 export const TIER_INFO: Record<SubscriptionTier, { name: string; color: string; price: string }> = {
-  free: { name: "Free", color: "text-muted-foreground", price: "$0" },
-  learner: { name: "Learner", color: "text-cyan-400", price: "$19/mo" },
-  pro: { name: "Pro", color: "text-purple-400", price: "$49/mo" },
-  team: { name: "Team", color: "text-amber-400", price: "$29/user/mo" },
+  free: { name: "Free Trial", color: "text-muted-foreground", price: "14 days" },
+  learner: { name: "Learner", color: "text-cyan-400", price: "£29/mo" },
+  tutor: { name: "Tutor", color: "text-purple-400", price: "£79/mo" },
+  pro: { name: "Pro", color: "text-purple-400", price: "£79/mo" },
+  team: { name: "Bootcamp", color: "text-amber-400", price: "Custom" },
 };

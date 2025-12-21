@@ -10,13 +10,17 @@ const registerSchema = z.object({
   name: z.string().min(2),
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
   organizationName: z.string().min(2).optional().or(z.literal("")),  // Optional - for team signups, allow empty string
+  userType: z.enum(["learner", "tutor"]).default("learner"),  // Beta: learner or tutor
 });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     console.log("Registration attempt with body:", JSON.stringify(body, null, 2));
-    const { email, password, name, username, organizationName } = registerSchema.parse(body);
+    const { email, password, name, username, organizationName, userType } = registerSchema.parse(body);
+    
+    // Set subscription tier based on user type (beta)
+    const subscriptionTier = userType === "tutor" ? "tutor" : "learner";
 
     // Check if Academy user exists (separate from main CloudMigrate users)
     const existingUser = await prisma.academyUser.findUnique({
@@ -73,13 +77,13 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create AcademyUserProfile for the user
+      // Create AcademyUserProfile for the user with appropriate tier
       const profile = await tx.academyUserProfile.create({
         data: {
           academyUserId: user.id,
           academyTenantId: tenant.id,
           displayName: username,
-          subscriptionTier: "free",
+          subscriptionTier, // learner or tutor based on registration choice
         },
       });
 

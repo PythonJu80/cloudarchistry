@@ -1019,12 +1019,19 @@ export default function WorldPage() {
                       ) : cohortChallenges.length === 0 ? (
                         <div className="text-center py-4 space-y-2">
                           <p className="text-sm text-muted-foreground">No cohorts yet</p>
-                          <Link href="/dashboard/settings?tab=teams">
-                            <Button variant="outline" size="sm" className="text-xs">
-                              <UserPlus className="w-3 h-3 mr-1" />
-                              Create Cohort
-                            </Button>
-                          </Link>
+                          {/* Only tutors can create cohorts */}
+                          {tierFeatures.canCreateCohorts ? (
+                            <Link href="/dashboard/settings">
+                              <Button variant="outline" size="sm" className="text-xs">
+                                <UserPlus className="w-3 h-3 mr-1" />
+                                Create Cohort
+                              </Button>
+                            </Link>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              Ask a tutor to invite you
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <div className="space-y-1">

@@ -1285,8 +1285,8 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Cohort Section - Links to dedicated cohort management */}
-          {settings?.subscriptionTier && ["team", "enterprise"].includes(settings.subscriptionTier) && (
+          {/* Cohort Section - Show for learners (can view) and tutors (can create/manage) */}
+          {settings?.subscriptionTier && ["learner", "tutor", "team", "pro", "enterprise"].includes(settings.subscriptionTier) && (
             <Card className="bg-card/50 border-border/50 mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1309,10 +1309,17 @@ export default function SettingsPage() {
                       <div className="text-center py-6">
                         <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                         <p className="text-muted-foreground mb-4">You&apos;re not part of any cohort yet.</p>
-                        <Button onClick={() => setShowCreateTeam(true)} className="gap-2">
-                          <UserPlus className="w-4 h-4" />
-                          Create a Cohort
-                        </Button>
+                        {/* Only tutors can create cohorts */}
+                        {settings?.subscriptionTier && ["tutor", "team", "pro", "enterprise"].includes(settings.subscriptionTier) ? (
+                          <Button onClick={() => setShowCreateTeam(true)} className="gap-2">
+                            <UserPlus className="w-4 h-4" />
+                            Create a Cohort
+                          </Button>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Ask a tutor to invite you to their cohort.
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-4 p-4 rounded-lg bg-background border border-border">
