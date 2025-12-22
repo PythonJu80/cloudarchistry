@@ -71,7 +71,81 @@ def validate_study_plan_params(user_level: str, cert_code: str) -> None:
         )
 
 # Platform features that can be recommended
+# COMPREHENSIVE list of ALL platform features available to learners
 PLATFORM_ACTIONS = {
+    # SERIOUS STUDY FEATURES (prioritize these)
+    "practice_exam": {
+        "practice_exam": {
+            "title": "Practice Exam",
+            "description": "Full-length certification practice exam with real exam conditions",
+            "link": "/learn/exams",
+        },
+    },
+    "world_challenge": {
+        "world_map_challenge": {
+            "title": "World Map Challenge",
+            "description": "Real-world scenario challenges from the world map",
+            "link": "/world",
+        },
+    },
+    "drawing_challenge": {
+        "architecture_drawing": {
+            "title": "Architecture Drawing Challenge",
+            "description": "Design and draw AWS architectures to solve real problems",
+            "link": "/challenges",
+        },
+    },
+    "cli_practice": {
+        "cli_simulator": {
+            "title": "CLI Simulator",
+            "description": "Practice AWS CLI commands in a safe sandbox environment",
+            "link": "/learn/cli",
+        },
+    },
+    "flashcard": {
+        "flashcard_deck": {
+            "title": "Flashcard Review",
+            "description": "Spaced repetition flashcard study for key concepts",
+            "link": "/learn/flashcards",
+        },
+    },
+    "quiz": {
+        "topic_quiz": {
+            "title": "Topic Quiz",
+            "description": "Focused quiz on specific AWS topics and services",
+            "link": "/learn/quiz",
+        },
+    },
+    "notes": {
+        "study_notes": {
+            "title": "Study Notes",
+            "description": "AI-generated comprehensive study notes on AWS topics",
+            "link": "/learn/notes",
+        },
+    },
+    "learning_center": {
+        "learning_hub": {
+            "title": "Learning Center",
+            "description": "Comprehensive learning resources and guided paths",
+            "link": "/learn",
+        },
+    },
+    "ai_chat": {
+        "chat_with_agent": {
+            "title": "Chat with AI Tutor",
+            "description": "Ask questions and get personalized explanations from the AI tutor",
+            "link": "/learn/chat",
+        },
+    },
+    "resources": {
+        "external_resources": {
+            "title": "Curated Resources",
+            "description": "Handpicked AWS documentation, videos, and learning materials",
+            "link": "/learn/resources",
+        },
+    },
+    
+    # GAMES (use sparingly as reinforcement, not primary learning)
     "game": {
         "sniper_quiz": {
             "title": "Sniper Quiz",
@@ -81,50 +155,37 @@ PLATFORM_ACTIONS = {
         "lightning_round": {
             "title": "Lightning Round",
             "description": "60 seconds to answer as many questions as possible",
-            "link": "/game",
+            "link": "/game/modes/lightning-round",
         },
         "hot_streak": {
             "title": "Hot Streak",
             "description": "Build multiplier streaks with consecutive correct answers",
-            "link": "/game",
+            "link": "/game/modes/hot-streak",
         },
         "quiz_battle": {
             "title": "Quiz Battle",
             "description": "1v1 head-to-head knowledge showdown",
-            "link": "/game",
+            "link": "/game/modes/quiz-battle",
         },
         "cloud_tycoon": {
             "title": "Cloud Tycoon",
             "description": "Build infrastructure and earn virtual money",
             "link": "/game/modes/cloud-tycoon",
         },
-    },
-    "exam": {
-        "practice_exam": {
-            "title": "Practice Exam",
-            "description": "Full-length certification practice exam",
-            "link": "/learn/exams",
+        "survival_mode": {
+            "title": "Survival Mode",
+            "description": "Answer questions under pressure - how long can you survive?",
+            "link": "/game/modes/survival",
         },
-    },
-    "quiz": {
-        "topic_quiz": {
-            "title": "Topic Quiz",
-            "description": "Focused quiz on specific AWS topics",
-            "link": "/learn/quiz",
+        "time_attack": {
+            "title": "Time Attack",
+            "description": "Race against the clock to answer as many questions as possible",
+            "link": "/game/modes/time-attack",
         },
-    },
-    "challenge": {
-        "architecture_challenge": {
-            "title": "Architecture Challenge",
-            "description": "Real-world scenario-based architecture challenge",
-            "link": "/challenges",
-        },
-    },
-    "flashcard": {
-        "flashcard_deck": {
-            "title": "Flashcard Review",
-            "description": "Spaced repetition flashcard study",
-            "link": "/learn/flashcards",
+        "perfect_run": {
+            "title": "Perfect Run",
+            "description": "Aim for a perfect score - no mistakes allowed",
+            "link": "/game/modes/perfect-run",
         },
     },
 }
@@ -166,32 +227,57 @@ STUDY_GUIDE_PROMPT = """You are an expert AWS certification coach creating a per
 - Progress Summary: {telemetry_summary}
 
 ## Platform Features Available
-You MUST recommend actions from these specific platform features:
+You MUST recommend actions from these specific platform features.
 
-**Games (type: "game")**
-- sniper_quiz: High-stakes single-shot questions (good for testing knowledge under pressure)
-- lightning_round: 60-second speed challenges (good for quick recall practice)
-- hot_streak: Build multiplier streaks (good for building confidence)
-- quiz_battle: 1v1 battles (good for competitive learners)
-- cloud_tycoon: Build infrastructure simulation (good for hands-on learners)
+**PRIORITY: SERIOUS STUDY FEATURES (Use these as primary learning methods)**
 
-**Practice Exams (type: "exam")**
-- practice_exam: Full certification practice exams (essential for exam readiness)
+**Practice Exams (type: "practice_exam")**
+- practice_exam: Full certification practice exams (ESSENTIAL for exam readiness)
+
+**World Map Challenges (type: "world_challenge")**
+- world_map_challenge: Real-world scenario challenges (excellent for applied learning)
+
+**Architecture Drawing (type: "drawing_challenge")**
+- architecture_drawing: Design and draw AWS architectures (critical for visual/hands-on learners)
+
+**CLI Practice (type: "cli_practice")**
+- cli_simulator: Practice AWS CLI commands safely (essential for practical skills)
+
+**Flashcards (type: "flashcard")**
+- flashcard_deck: Spaced repetition review (excellent for memorization and retention)
 
 **Quizzes (type: "quiz")**
 - topic_quiz: Focused topic quizzes (good for targeting weak areas)
 
-**Challenges (type: "challenge")**
-- architecture_challenge: Real-world scenario challenges (essential for hands-on learning)
+**Study Notes (type: "notes")**
+- study_notes: AI-generated comprehensive study notes (great for reading/writing learners)
 
-**Flashcards (type: "flashcard")**
-- flashcard_deck: Spaced repetition review (good for memorization)
+**Learning Center (type: "learning_center")**
+- learning_hub: Comprehensive learning resources and guided paths (good for structured learning)
+
+**AI Chat (type: "ai_chat")**
+- chat_with_agent: Ask questions and get personalized explanations (excellent for clarifying concepts)
+
+**Resources (type: "resources")**
+- external_resources: Curated AWS docs, videos, materials (supplement your learning)
+
+**SECONDARY: GAMES (Use sparingly as reinforcement/breaks, NOT primary learning)**
+
+**Game Zone (type: "game")** - Limit to 1-2 per week maximum
+- sniper_quiz: High-stakes single-shot questions
+- lightning_round: 60-second speed challenges
+- hot_streak: Build multiplier streaks
+- quiz_battle: 1v1 battles
+- cloud_tycoon: Build infrastructure simulation
+- survival_mode: Answer under pressure
+- time_attack: Race against the clock
+- perfect_run: Aim for perfect score
 
 ## Learning Style Recommendations
-- visual: Prioritize architecture challenges, diagrams, Cloud Tycoon
-- auditory: Prioritize quiz battles, discussions
-- reading: Prioritize flashcards, study notes
-- hands_on: Prioritize challenges, Cloud Tycoon, architecture exercises
+- visual: Prioritize architecture_drawing, world_map_challenge, study_notes with diagrams
+- auditory: Prioritize ai_chat (discussion), external_resources (videos)
+- reading: Prioritize study_notes, flashcard_deck, external_resources (documentation)
+- hands_on: Prioritize world_map_challenge, architecture_drawing, cli_simulator, practice_exam
 
 ## Output Format
 Return a JSON object with this exact structure:
@@ -238,15 +324,19 @@ Return a JSON object with this exact structure:
 
 ## Guidelines
 1. Create {time_horizon_weeks} weeks of content
-2. Each week should have 3-5 specific actions
-3. Balance different action types based on learning style
-4. Include at least one practice exam in the final weeks
-5. Add 2-3 meaningful milestones
-6. Include 2-3 accountability reminders
-7. Recommend 2-4 external resources based on learning style (YouTube for visual, AWS docs for reading, etc.)
-8. Make targets specific and measurable
-9. Progress from fundamentals to advanced topics
-10. For {target_certification}, focus on the key exam domains
+2. Each week should have 4-6 specific actions
+3. **CRITICAL**: 70-80% of actions should be SERIOUS STUDY features (practice exams, world challenges, drawing, CLI, flashcards, quizzes, notes, learning center, AI chat)
+4. **CRITICAL**: Maximum 1-2 games per week, positioned as breaks/reinforcement only
+5. Include at least one practice exam in the final 2 weeks
+6. For hands-on/visual learners: Heavy emphasis on world_map_challenge, architecture_drawing, cli_simulator
+7. For reading learners: Heavy emphasis on study_notes, flashcard_deck, external_resources
+8. Add 3-4 meaningful milestones tied to exam domains
+9. Include 2-3 accountability reminders
+10. Recommend 2-4 external resources based on learning style (YouTube for visual, AWS docs for reading, etc.)
+11. Make targets specific and measurable
+12. Progress from fundamentals to advanced topics
+13. For {target_certification}, focus on the key exam domains
+14. Utilize the full breadth of platform features - don't just repeat the same actions
 
 Generate the study plan JSON now. Output ONLY valid JSON, no prose."""
 
@@ -427,23 +517,25 @@ def enrich_plan_with_platform_data(plan: Dict[str, Any]) -> Dict[str, Any]:
 # FORMAT STUDY GUIDE - AI is just a formatter
 # ============================================
 
-FORMAT_STUDY_GUIDE_PROMPT = """You are formatting a study guide for an AWS certification learner.
+FORMAT_STUDY_GUIDE_PROMPT = """You are an expert AWS certification coach formatting a personalized study guide.
 
 ## Learner Context
 - Target Certification: {target_certification}
 - Skill Level: {skill_level}
 - Study Duration: {time_horizon_weeks} weeks, {hours_per_week} hours/week
 - Learning Styles: {learning_styles}
+- Exam Date: {exam_date_info}
 - Coach Notes: {coach_notes}
+- Current Progress: {progress_summary}
 
 ## IMPORTANT: Your Role
 You are a FORMATTER, not a decision maker. The content below has already been selected from the database.
 Your job is to:
-1. Add a motivating summary
+1. Add a motivating, personalized summary that acknowledges their exam timeline and learning preferences
 2. Add weekly themes based on the content
 3. Add focus descriptions for each week
 4. Add specific, measurable targets for each action
-5. Add accountability reminders
+5. Add 6-8 deeply personalized accountability reminders with encouragement
 6. Suggest 2-3 external resources (YouTube, AWS docs) based on learning style
 
 DO NOT add, remove, or change the actions. They are pre-selected from real database content.
@@ -451,10 +543,28 @@ DO NOT add, remove, or change the actions. They are pre-selected from real datab
 ## Pre-Selected Content
 {structured_content_json}
 
+## Platform Features Reference
+The pre-selected content uses these platform feature types:
+
+**SERIOUS STUDY FEATURES** (prioritize in targets):
+- practice_exam: Practice exams → Target: "Score 75%+" or "Complete under exam conditions"
+- world_challenge: World map challenges → Target: "Complete 3 scenarios" or "Build working solution"
+- drawing_challenge: Architecture drawing → Target: "Design solution with 80%+ accuracy"
+- cli_practice: CLI simulator → Target: "Complete 10 commands" or "Master service CLI"
+- flashcard: Flashcard review → Target: "Master 30 cards" or "90%+ accuracy"
+- quiz: Topic quizzes → Target: "Score 80%+" or "Complete 2 quizzes"
+- notes: Study notes → Target: "Review and annotate notes" or "Create summary"
+- learning_center: Learning hub → Target: "Complete learning path" or "Review resources"
+- ai_chat: AI tutor chat → Target: "Clarify 3 concepts" or "Ask 5 questions"
+- resources: External resources → Target: "Watch video" or "Read documentation"
+
+**GAMES** (use sparingly as breaks):
+- game: Game zone → Target: "10-minute break" or "Quick reinforcement"
+
 ## Output Format
 Return a JSON object with this structure:
 {{
-  "summary": "Motivating 1-2 sentence summary of the plan",
+  "summary": "Personalized 2-3 sentence summary that mentions their exam timeline, skill level, and learning preferences. Be encouraging and specific.",
   "total_weeks": {time_horizon_weeks},
   "weeks": [
     {{
@@ -463,9 +573,8 @@ Return a JSON object with this structure:
       "focus": "What to focus on this week based on the actions",
       "actions": [
         // COPY THE ACTIONS EXACTLY from the input, but add a "target" field
-        // e.g., if action is a challenge, target might be "Complete with 80%+ score"
-        // if action is flashcards, target might be "Master 20 cards"
-        // if action is a game, target might be "Score 500+ points"
+        // Use the Platform Features Reference above for appropriate targets
+        // Match the target to the action type and user's skill level
       ]
     }}
   ],
@@ -473,18 +582,36 @@ Return a JSON object with this structure:
     // COPY FROM INPUT, keep as-is
   ],
   "accountability": [
-    "Daily reminder based on learning style",
-    "Weekly check-in suggestion",
-    "Motivation tip"
+    "6-8 personalized accountability reminders that:",
+    "- Reference their exam timeline (e.g., 'With X weeks until your exam...')",
+    "- Acknowledge their skill level and learning style",
+    "- Provide specific daily/weekly habits",
+    "- Include encouragement and growth mindset tips",
+    "- Suggest progress tracking methods",
+    "- Offer recovery strategies for when falling behind",
+    "- Celebrate effort, not just results",
+    "- Build confidence for exam day"
   ],
   "resources": [
     {{
       "title": "Resource name",
       "url": "https://...",
-      "type": "video|documentation|course"
+      "type": "video|documentation|course|whitepaper"
     }}
   ]
 }}
+
+## Accountability Examples (adapt to user's context):
+- "With X weeks until your exam, dedicate 30 minutes each morning to review yesterday's concepts. Consistency beats cramming!"
+- "As a {skill_level} learner, you're building on solid foundations. Track your progress weekly and celebrate small wins."
+- "Your learning preferences ({learning_styles}) mean hands-on practice sticks best. Use the world map challenges and architecture drawing to build real solutions."
+- "Feeling overwhelmed? That's normal. Break each study session into 25-minute focused blocks with 5-minute breaks."
+- "Join an AWS study group or find an accountability partner. Use the AI chat feature when you're stuck - teaching others reinforces understanding."
+- "Keep a 'wins journal' - write down one thing you mastered each day, no matter how small. Review your study notes weekly."
+- "The exam tests applied knowledge, not memorization. Focus on understanding WHY through CLI practice and drawing challenges."
+- "You've got this! Every expert was once a beginner. Trust the process, stay consistent, and use the full platform."
+- "Games are fun, but serious study builds real skills. Prioritize practice exams, world challenges, and hands-on work."
+- "Track your streak! Even 15 minutes daily with flashcards or CLI practice compounds over time."
 
 Output ONLY valid JSON."""
 
@@ -498,6 +625,8 @@ async def format_study_guide(
     coach_notes: Optional[str],
     structured_content: Dict[str, Any],
     *,
+    exam_date: Optional[str] = None,
+    progress_summary: Optional[str] = None,
     model: Optional[str] = None,
     api_key: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -514,6 +643,8 @@ async def format_study_guide(
         learning_styles: List of learning style preferences
         coach_notes: Optional coach notes
         structured_content: Pre-selected content to format
+        exam_date: Optional exam date for countdown awareness
+        progress_summary: Optional user progress summary
         model: Optional model override
         api_key: Optional OpenAI API key
     
@@ -539,6 +670,20 @@ async def format_study_guide(
     persona = CERTIFICATION_PERSONAS[cert_code]
     target_certification = persona["cert"]
 
+    # Calculate exam date info for personalized messaging
+    exam_date_info = "Not specified"
+    if exam_date:
+        try:
+            from datetime import datetime
+            exam_dt = datetime.fromisoformat(exam_date.replace('Z', '+00:00'))
+            days_until = (exam_dt - datetime.now()).days
+            if days_until > 0:
+                exam_date_info = f"{exam_date} ({days_until} days away)"
+            else:
+                exam_date_info = f"{exam_date} (exam has passed)"
+        except:
+            exam_date_info = exam_date
+
     # Build the prompt with the pre-selected content
     prompt = FORMAT_STUDY_GUIDE_PROMPT.format(
         target_certification=target_certification,
@@ -546,7 +691,9 @@ async def format_study_guide(
         time_horizon_weeks=time_horizon_weeks,
         hours_per_week=hours_per_week,
         learning_styles=", ".join(learning_styles),
+        exam_date_info=exam_date_info,
         coach_notes=coach_notes or "None provided",
+        progress_summary=progress_summary or "New learner starting their journey",
         structured_content_json=json.dumps(structured_content, indent=2),
     )
 
@@ -575,20 +722,21 @@ async def format_study_guide(
     # Validate that actions weren't changed (safety check)
     plan = validate_and_fix_actions(plan, structured_content)
 
-    # Fetch real resources using Crawl4AI (YouTube + AWS docs)
+    # Fetch real resources using Brave Search (validated YouTube + AWS docs)
     try:
         from generators.resource_fetcher import fetch_study_resources
         real_resources = await fetch_study_resources(
-            cert_code=cert_code,
+            certification=cert_code,
+            skill_level=skill_level,
             learning_styles=learning_styles,
-            max_youtube=2,
+            max_youtube=3,
             max_docs=2
         )
         if real_resources:
             plan["resources"] = real_resources
-            logger.info(f"Fetched {len(real_resources)} real resources for study guide")
+            logger.info(f"Fetched {len(real_resources)} validated resources for {cert_code} ({skill_level} level)")
     except Exception as e:
-        logger.warning(f"Failed to fetch real resources, using AI-generated: {e}")
+        logger.warning(f"Failed to fetch validated resources, using AI-generated: {e}")
         # Keep AI-generated resources as fallback
 
     return plan

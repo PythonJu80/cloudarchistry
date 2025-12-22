@@ -2687,14 +2687,20 @@ async def format_study_guide_endpoint(request: dict):
         if request.get("preferred_model"):
             set_request_model(request["preferred_model"])
 
+        # Map short cert code (e.g., "MLS") to full persona ID (e.g., "machine-learning-specialty")
+        target_cert = request.get("target_certification", "")
+        cert_code = _resolve_persona_id(target_cert)
+
         plan = await format_study_guide(
-            target_certification=request.get("target_certification", ""),
+            cert_code=cert_code,
             skill_level=request.get("skill_level", "intermediate"),
             time_horizon_weeks=request.get("time_horizon_weeks", 6),
             hours_per_week=request.get("hours_per_week", 6),
             learning_styles=request.get("learning_styles", ["hands_on"]),
             coach_notes=request.get("coach_notes"),
             structured_content=request.get("structured_content", {}),
+            exam_date=request.get("exam_date"),
+            progress_summary=request.get("progress_summary"),
         )
         return {"success": True, "plan": plan}
     except ApiKeyRequiredError as key_err:

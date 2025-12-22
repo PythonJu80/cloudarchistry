@@ -165,6 +165,8 @@ export async function POST(request: NextRequest) {
         hours_per_week: hoursPerWeek,
         learning_styles: normalizedStyles,  // Array of styles
         coach_notes: coachNotes,
+        exam_date: examDate || null,
+        progress_summary: `${profile.challengesCompleted || 0} challenges completed, ${profile.totalPoints || 0} points earned, ${profile.currentStreak || 0} day streak`,
         // PRE-SELECTED content - AI just formats this
         structured_content: structuredContent,
         // AI config
@@ -231,118 +233,132 @@ function calculateWeeksUntil(examDate?: string | null): number {
 }
 
 /**
- * Build structured content from real data.
+ * Build structured content from real data + ALL platform features.
  * THE TOOL DECIDES what content goes in the plan.
  * The AI just formats it nicely.
+ * 
+ * CRITICAL: 70-80% serious study features, max 1-2 games per week
  */
 function buildStructuredContent(
   data: StudyGuideData,
   weeks: number,
   hoursPerWeek: number,
-  learningStyles: string[]  // Now accepts array
+  learningStyles: string[]
 ) {
   const { recommendations, progress, games } = data;
-
-  // Distribute content across weeks - simple and predictable
   const weeklyContent = [];
+
+  // ALL PLATFORM FEATURES (not just database content)
+  const allFeatures = [
+    // SERIOUS STUDY FEATURES (prioritize these)
+    { type: "world_challenge", title: "World Map Challenge", description: "Real-world scenario challenges from the world map", link: "/world" },
+    { type: "drawing_challenge", title: "Architecture Drawing Challenge", description: "Design and draw AWS architectures to solve real problems", link: "/challenges" },
+    { type: "cli_practice", title: "CLI Simulator", description: "Practice AWS CLI commands in a safe sandbox environment", link: "/learn/cli" },
+    { type: "notes", title: "Study Notes", description: "AI-generated comprehensive study notes on AWS topics", link: "/learn/notes" },
+    { type: "learning_center", title: "Learning Center", description: "Comprehensive learning resources and guided paths", link: "/learn" },
+    { type: "ai_chat", title: "Chat with AI Tutor", description: "Ask questions and get personalized explanations from the AI tutor", link: "/learn/chat" },
+  ];
+
+  // Merge database content with platform features
   const challenges = [...recommendations.priorityChallenges];
   const flashcards = [...recommendations.flashcardDecksToReview];
   const quizzes = [...recommendations.quizzesToTry];
-  
-  // Calculate spacing: spread challenges across first 70% of weeks
-  const challengeSpacing = challenges.length > 0 ? Math.floor((weeks * 0.7) / challenges.length) : 0;
-  // Flashcards spread evenly across all weeks
-  const flashcardSpacing = flashcards.length > 0 ? Math.floor(weeks / flashcards.length) : 0;
-  // Quizzes in weeks 3 onwards
-  const quizSpacing = quizzes.length > 0 ? Math.floor((weeks - 2) / quizzes.length) : 0;
-
-  // Track which items have been assigned
-  let challengeIdx = 0;
-  let flashcardIdx = 0;
-  let quizIdx = 0;
 
   for (let w = 1; w <= weeks; w++) {
     const weekActions = [];
+    const maxGamesThisWeek = w % 4 === 0 ? 1 : 0; // Game every 4th week only
+    let gamesAdded = 0;
 
-    // Add challenge: one every `challengeSpacing` weeks, starting week 1
-    if (challengeIdx < challenges.length) {
-      const targetWeek = 1 + (challengeIdx * Math.max(1, challengeSpacing));
-      if (w === targetWeek || (challengeSpacing === 0 && w <= challenges.length)) {
-        const challenge = challenges[challengeIdx];
-        weekActions.push({
-          type: "challenge",
-          id: challenge.id,
-          title: challenge.title,
-          description: challenge.description,
-          difficulty: challenge.difficulty,
-          points: challenge.points,
-          estimatedMinutes: challenge.estimatedMinutes,
-          awsServices: challenge.awsServices,
-          link: `/challenges/${challenge.id}`,
-        });
-        challengeIdx++;
-      }
-    }
-
-    // Add flashcard deck: spread evenly
-    if (flashcardIdx < flashcards.length) {
-      const targetWeek = 1 + (flashcardIdx * Math.max(1, flashcardSpacing));
-      if (w === targetWeek || (flashcardSpacing === 0 && w <= flashcards.length)) {
-        const deck = flashcards[flashcardIdx];
-        weekActions.push({
-          type: "flashcard",
-          id: deck.id,
-          title: deck.title,
-          description: deck.description || `Master ${deck.totalCards} flashcards`,
-          totalCards: deck.totalCards,
-          cardsMastered: deck.userProgress?.cardsMastered ?? 0,
-          link: `/learn/flashcards/${deck.id}`,
-        });
-        flashcardIdx++;
-      }
-    }
-
-    // Add quizzes: starting week 3, spread evenly
-    if (w >= 3 && quizIdx < quizzes.length) {
-      const targetWeek = 3 + (quizIdx * Math.max(1, quizSpacing));
-      if (w === targetWeek || (quizSpacing === 0 && (w - 3) < quizzes.length)) {
-        const quiz = quizzes[quizIdx];
-        weekActions.push({
-          type: "quiz",
-          id: quiz.id,
-          title: quiz.title,
-          description: quiz.description,
-          questionCount: quiz.questionCount,
-          link: `/learn/quiz/${quiz.id}`,
-        });
-        quizIdx++;
-      }
-    }
-
-    // Add games based on learning styles - every week gets a game
-    const gameForWeek = selectGameForLearningStyles(games, learningStyles, w);
-    if (gameForWeek) {
+    // PRIORITY 1: Database challenges (if available)
+    if (challenges.length > 0 && w <= challenges.length) {
+      const challenge = challenges[w - 1];
       weekActions.push({
-        type: "game",
-        id: gameForWeek.slug,
-        title: gameForWeek.name,
-        description: gameForWeek.description,
-        link: gameForWeek.link,
+        type: "world_challenge",
+        id: challenge.id,
+        title: challenge.title,
+        description: challenge.description,
+        link: `/challenges/${challenge.id}`,
       });
     }
 
-    // Add practice exam in final 2 weeks
+    // PRIORITY 2: Platform features (rotate through ALL of them)
+    const featureIndex = (w - 1) % allFeatures.length;
+    const platformFeature = allFeatures[featureIndex];
+    weekActions.push(platformFeature);
+    
+    // Add EXTRA drawing/CLI for hands-on/visual learners (in addition to rotation)
+    if ((learningStyles.includes("hands_on") || learningStyles.includes("visual")) && w <= 6) {
+      const extraFeatureIndex = (w - 1 + 3) % allFeatures.length; // Offset by 3
+      const extraFeature = allFeatures[extraFeatureIndex];
+      if (extraFeature.type === "drawing_challenge" || extraFeature.type === "cli_practice") {
+        weekActions.push(extraFeature);
+      }
+    }
+
+    // PRIORITY 3: Flashcards (if available)
+    if (flashcards.length > 0 && w <= flashcards.length) {
+      const deck = flashcards[w - 1];
+      weekActions.push({
+        type: "flashcard",
+        id: deck.id,
+        title: deck.title,
+        description: deck.description || `Master ${deck.totalCards} flashcards`,
+        link: `/learn/flashcards/${deck.id}`,
+      });
+    } else {
+      // Add generic flashcard action
+      weekActions.push({
+        type: "flashcard",
+        title: "Flashcard Review",
+        description: "Review key AWS concepts with spaced repetition",
+        link: "/learn/flashcards",
+      });
+    }
+
+    // PRIORITY 4: Quizzes (starting week 2)
+    if (w >= 2 && quizzes.length > 0 && (w - 2) < quizzes.length) {
+      const quiz = quizzes[w - 2];
+      weekActions.push({
+        type: "quiz",
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description,
+        link: `/learn/quiz/${quiz.id}`,
+      });
+    } else if (w >= 2) {
+      // Add generic quiz action
+      weekActions.push({
+        type: "quiz",
+        title: "Topic Quiz",
+        description: "Test your knowledge on specific AWS topics",
+        link: "/learn/quiz",
+      });
+    }
+
+    // PRIORITY 5: Practice exam (final 2 weeks)
     if (w >= weeks - 1 && recommendations.nextExam) {
       weekActions.push({
-        type: "exam",
+        type: "practice_exam",
         id: recommendations.nextExam.id,
         title: recommendations.nextExam.title,
         description: `Full ${recommendations.nextExam.questionCount}-question practice exam`,
-        timeLimit: recommendations.nextExam.timeLimit,
-        passingScore: recommendations.nextExam.passingScore,
-        userBestScore: recommendations.nextExam.userBestScore,
         link: `/learn/exams/${recommendations.nextExam.slug}`,
       });
+    }
+
+    // PRIORITY 6: Games (SPARINGLY - max 1 per week, only every 4th week)
+    if (gamesAdded < maxGamesThisWeek && games.length > 0) {
+      const gameForWeek = selectGameForLearningStyles(games, learningStyles, w);
+      if (gameForWeek) {
+        weekActions.push({
+          type: "game",
+          id: gameForWeek.slug,
+          title: gameForWeek.name,
+          description: gameForWeek.description,
+          link: gameForWeek.link,
+        });
+        gamesAdded++;
+      }
     }
 
     weeklyContent.push({
@@ -351,22 +367,24 @@ function buildStructuredContent(
     });
   }
 
-  // Build milestones from real progress targets
-  const milestones = [];
-  if (recommendations.priorityChallenges.length > 0) {
-    milestones.push({
+  // Build milestones
+  const milestones = [
+    {
+      weekNumber: Math.ceil(weeks / 3),
+      label: "Complete hands-on challenges and architecture drawings",
+      metric: "Build 3+ working solutions",
+    },
+    {
       weekNumber: Math.ceil(weeks / 2),
-      label: `Complete ${Math.ceil(recommendations.priorityChallenges.length / 2)} challenges`,
-      metric: `${progress.challengesCompleted} / ${Math.ceil(recommendations.priorityChallenges.length / 2)} completed`,
-    });
-  }
-  if (recommendations.nextExam) {
-    milestones.push({
+      label: "Master core AWS concepts through flashcards and notes",
+      metric: "90%+ accuracy on flashcard reviews",
+    },
+    {
       weekNumber: weeks,
-      label: `Pass ${recommendations.nextExam.shortTitle || recommendations.nextExam.title} practice exam`,
-      metric: `Score ${recommendations.nextExam.passingScore}% or higher`,
-    });
-  }
+      label: "Pass practice exam with confidence",
+      metric: recommendations.nextExam ? `Score ${recommendations.nextExam.passingScore}%+ on practice exam` : "Score 75%+ on practice exam",
+    },
+  ]
 
   return {
     weeks: weeklyContent,

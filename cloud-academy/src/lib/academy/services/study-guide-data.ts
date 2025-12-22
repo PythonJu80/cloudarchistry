@@ -278,6 +278,8 @@ async function fetchExams(certCode: string): Promise<AvailableExam[]> {
     "cloud-practitioner": "CLF-C02",
     "MLA": "MLA-C01",
     "machine-learning-associate": "MLA-C01",
+    "MLS": "MLS-C01",
+    "machine-learning-specialty": "MLS-C01",
     "DEA": "DEA-C01",
     "data-engineer-associate": "DEA-C01",
     "AIF": "AIF-C01",

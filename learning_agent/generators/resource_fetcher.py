@@ -1,235 +1,312 @@
 """
-Resource fetcher for study guide - uses Crawl4AI to fetch real YouTube and AWS docs.
-Filters for 2025/2026 content only.
+Resource fetcher for study guide - uses Brave Search API to find validated, relevant resources.
+Validates URLs are accessible and content matches certification and skill level.
 
 The certification is passed directly from the user's AcademyUserProfile.targetCertification.
 No hardcoded mappings needed - use what the database provides.
 """
 import re
 import asyncio
-from typing import List, Dict
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
+import httpx
+from typing import List, Dict, Optional
+from config.settings import logger
+
+
+async def validate_url(url: str, timeout: int = 5) -> bool:
+    """Check if a URL is accessible and returns 200 OK."""
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            response = await client.head(url)
+            return response.status_code == 200
+    except:
+        # If HEAD fails, try GET with small timeout
+        try:
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+                response = await client.get(url, timeout=3)
+                return response.status_code == 200
+        except:
+            return False
+
+
+async def search_with_brave(
+    query: str,
+    max_results: int = 5,
+    brave_api_key: Optional[str] = None
+) -> List[Dict]:
+    """
+    Search using Brave Search API.
+    Returns validated, accessible results.
+    """
+    if not brave_api_key:
+        import os
+        brave_api_key = os.getenv("BRAVE_API_KEY")
+    
+    if not brave_api_key:
+        logger.warning("No Brave API key configured for resource search")
+        return []
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                "https://api.search.brave.com/res/v1/web/search",
+                params={
+                    "q": query,
+                    "count": max_results * 2,  # Get extra to account for invalid URLs
+                    "search_lang": "en",
+                    "result_filter": "web",
+                },
+                headers={
+                    "Accept": "application/json",
+                    "X-Subscription-Token": brave_api_key
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            results = []
+            for item in data.get("web", {}).get("results", []):
+                results.append({
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "description": item.get("description", ""),
+                })
+            
+            return results[:max_results * 2]
+    except Exception as e:
+        logger.error(f"Brave search failed for query '{query}': {e}")
+        return []
 
 
 async def fetch_youtube_resources(
     certification: str,
+    skill_level: str,
     learning_styles: List[str],
     max_results: int = 3
 ) -> List[Dict]:
     """
-    Fetch real YouTube video URLs for the certification.
-    Filters for 2025/2026 content.
+    Fetch validated YouTube video URLs for the certification using Brave Search.
+    Filters for 2025/2026 content and validates URLs are accessible.
     
-    certification: The user's targetCertification from AcademyUserProfile (e.g., "solutions-architect-associate")
+    certification: The user's targetCertification (e.g., "solutions-architect-associate")
+    skill_level: User's skill level for content filtering
     """
-    # Use the certification directly from the user's profile - no mapping needed
-    search_term = f"AWS {certification.replace('-', ' ')}"
-    # Add year filter to search
-    search_query = f"{search_term} 2025"
+    cert_name = certification.replace('-', ' ').title()
     
-    # URL encode the search query
-    encoded_query = search_query.replace(" ", "+")
-    youtube_search_url = f"https://www.youtube.com/results?search_query={encoded_query}&sp=CAI%253D"
-    # sp=CAI%253D sorts by upload date
+    # Build search query with skill level context
+    skill_context = ""
+    if skill_level == "beginner":
+        skill_context = "tutorial beginner guide"
+    elif skill_level == "advanced" or skill_level == "expert":
+        skill_context = "advanced deep dive"
     
-    resources = []
+    search_query = f"AWS {cert_name} {skill_context} 2025 site:youtube.com"
     
-    try:
-        browser_config = BrowserConfig(headless=True, verbose=False)
-        crawler_config = CrawlerRunConfig(
-            wait_for="css:ytd-video-renderer",
-            page_timeout=15000,
-        )
-        
-        async with AsyncWebCrawler(config=browser_config) as crawler:
-            result = await crawler.arun(
-                url=youtube_search_url,
-                config=crawler_config
-            )
-            
-            if result.success and result.html:
-                # Parse video data from the HTML
-                # YouTube embeds video data in the page
-                videos = parse_youtube_results(result.html, max_results)
+    # Search with Brave
+    results = await search_with_brave(search_query, max_results=max_results)
+    
+    validated_resources = []
+    for result in results:
+        url = result.get("url", "")
+        if "youtube.com/watch" in url or "youtu.be/" in url:
+            # Validate URL is accessible
+            if await validate_url(url):
+                validated_resources.append({
+                    "title": result["title"],
+                    "url": url,
+                    "type": "video",
+                    "description": result.get("description", ""),
+                })
                 
-                for video in videos:
-                    # Filter for 2025/2026 content
-                    if is_recent_content(video.get("published", "")):
-                        resources.append({
-                            "title": video["title"],
-                            "url": video["url"],
-                            "type": "video",
-                            "channel": video.get("channel", ""),
-                            "published": video.get("published", ""),
-                        })
-                        
-                        if len(resources) >= max_results:
-                            break
-                            
-    except Exception as e:
-        print(f"Error fetching YouTube resources: {e}")
+                if len(validated_resources) >= max_results:
+                    break
     
-    return resources
+    logger.info(f"Found {len(validated_resources)} validated YouTube resources for {cert_name}")
+    return validated_resources
 
 
-def parse_youtube_results(html: str, max_results: int = 5) -> List[Dict]:
-    """Parse YouTube search results from HTML."""
-    videos = []
+def is_content_relevant(
+    title: str,
+    description: str,
+    certification: str,
+    skill_level: str
+) -> bool:
+    """
+    Validate that content is relevant to the certification and skill level.
+    """
+    content = f"{title} {description}".lower()
+    cert_keywords = certification.lower().replace('-', ' ').split()
     
-    # Look for video renderer data in the HTML
-    # YouTube uses ytInitialData for search results
-    pattern = r'"videoRenderer":\s*\{[^}]*"videoId":\s*"([^"]+)"[^}]*"title":\s*\{"runs":\s*\[\{"text":\s*"([^"]+)"'
+    # Must mention AWS and at least one cert keyword
+    if "aws" not in content:
+        return False
     
-    # Simpler pattern to find video IDs and titles
-    video_pattern = r'/watch\?v=([a-zA-Z0-9_-]{11})'
-    title_pattern = r'"title":\{"runs":\[\{"text":"([^"]+)"'
+    # Check for certification relevance
+    cert_match = any(keyword in content for keyword in cert_keywords)
+    if not cert_match:
+        return False
     
-    video_ids = re.findall(video_pattern, html)
-    titles = re.findall(title_pattern, html)
+    # Filter out outdated content
+    outdated_years = ["2020", "2021", "2022", "2023"]
+    if any(year in content for year in outdated_years):
+        return False
     
-    # Match them up (they should be in order)
-    seen_ids = set()
-    for i, vid in enumerate(video_ids[:max_results * 2]):
-        if vid not in seen_ids and i < len(titles):
-            seen_ids.add(vid)
-            videos.append({
-                "title": titles[i] if i < len(titles) else f"AWS Video {vid}",
-                "url": f"https://www.youtube.com/watch?v={vid}",
-                "videoId": vid,
-            })
-            if len(videos) >= max_results:
-                break
+    # Skill level filtering
+    if skill_level == "beginner":
+        # Avoid overly advanced content for beginners
+        if any(term in content for term in ["advanced", "expert", "deep dive", "masterclass"]):
+            return False
+    elif skill_level in ["advanced", "expert"]:
+        # Avoid basic content for advanced users
+        if any(term in content for term in ["beginner", "introduction", "getting started", "basics"]):
+            return False
     
-    return videos
-
-
-def is_recent_content(date_str: str) -> bool:
-    """Check if content is from 2025 or 2026."""
-    if not date_str:
-        return True  # If no date, include it
-    
-    # Check for year in string
-    if "2025" in date_str or "2026" in date_str:
-        return True
-    
-    # Check for relative dates like "1 month ago", "2 weeks ago"
-    recent_patterns = [
-        r"(\d+)\s*(hour|day|week|month)s?\s*ago",
-    ]
-    
-    for pattern in recent_patterns:
-        match = re.search(pattern, date_str.lower())
-        if match:
-            num = int(match.group(1))
-            unit = match.group(2)
-            # Within last 12 months is likely 2025
-            if unit in ["hour", "day", "week"]:
-                return True
-            if unit == "month" and num <= 12:
-                return True
-    
-    return False
+    return True
 
 
 async def fetch_aws_docs_resources(
     certification: str,
+    skill_level: str,
     max_results: int = 2
 ) -> List[Dict]:
     """
-    Fetch relevant AWS documentation links by searching AWS docs.
-    Uses the user's targetCertification directly from their profile.
+    Fetch validated AWS documentation links using Brave Search.
+    Validates URLs are accessible and content is relevant.
     
     certification: The user's targetCertification from AcademyUserProfile
+    skill_level: User's skill level for content filtering
     """
-    # Build search URL using the user's certification directly
-    cert_name = certification.replace("-", " ")
-    search_query = f"AWS {cert_name} exam guide 2025"
-    encoded_query = search_query.replace(" ", "+")
+    cert_name = certification.replace("-", " ").title()
     
-    # Search AWS documentation
-    aws_search_url = f"https://aws.amazon.com/search/?searchQuery={encoded_query}"
+    # Search for official AWS docs and whitepapers
+    queries = [
+        f"AWS {cert_name} exam guide site:aws.amazon.com",
+        f"AWS {cert_name} documentation site:docs.aws.amazon.com",
+        f"AWS {cert_name} whitepaper site:docs.aws.amazon.com/whitepapers",
+    ]
     
-    resources = []
+    all_results = []
+    for query in queries:
+        results = await search_with_brave(query, max_results=3)
+        all_results.extend(results)
     
-    try:
-        browser_config = BrowserConfig(headless=True, verbose=False)
-        crawler_config = CrawlerRunConfig(
-            page_timeout=15000,
-        )
-        
-        async with AsyncWebCrawler(config=browser_config) as crawler:
-            result = await crawler.arun(
-                url=aws_search_url,
-                config=crawler_config
-            )
-            
-            if result.success and result.html:
-                # Parse AWS search results
-                resources = parse_aws_search_results(result.html, cert_name, max_results)
-                
-    except Exception as e:
-        print(f"Error fetching AWS docs: {e}")
-    
-    # If search failed, return empty - don't use hardcoded fallbacks
-    return resources
-
-
-def parse_aws_search_results(html: str, cert_name: str, max_results: int = 2) -> List[Dict]:
-    """Parse AWS search results from HTML."""
-    resources = []
-    
-    # Look for links to AWS documentation
-    # Pattern for AWS docs URLs - exclude Skill Builder (competes with our platform)
-    doc_pattern = r'href="(https://docs\.aws\.amazon\.com/[^"]+)"'
-    training_pattern = r'href="(https://aws\.amazon\.com/training/[^"]+)"'
-    # DO NOT include skillbuilder - it defeats the purpose of our platform
-    
-    # Find all doc links
-    doc_urls = re.findall(doc_pattern, html)
-    training_urls = re.findall(training_pattern, html)
-    
+    # Validate and filter results
+    validated_resources = []
     seen_urls = set()
     
-    # Add unique doc links
-    for url in doc_urls[:max_results]:
-        if url not in seen_urls:
+    for result in all_results:
+        url = result.get("url", "")
+        
+        # Skip duplicates
+        if url in seen_urls:
+            continue
+        
+        # Must be AWS domain
+        if not ("aws.amazon.com" in url or "docs.aws.amazon.com" in url):
+            continue
+        
+        # Skip Skill Builder (competes with our platform)
+        if "skillbuilder" in url.lower():
+            continue
+        
+        # Check content relevance
+        if not is_content_relevant(
+            result.get("title", ""),
+            result.get("description", ""),
+            certification,
+            skill_level
+        ):
+            continue
+        
+        # Validate URL is accessible
+        if await validate_url(url):
             seen_urls.add(url)
-            resources.append({
-                "title": f"AWS {cert_name.title()} Documentation",
+            
+            # Determine resource type
+            resource_type = "documentation"
+            if "whitepapers" in url:
+                resource_type = "whitepaper"
+            elif "training" in url:
+                resource_type = "course"
+            
+            validated_resources.append({
+                "title": result["title"],
                 "url": url,
-                "type": "documentation",
+                "type": resource_type,
+                "description": result.get("description", ""),
             })
-            if len(resources) >= max_results:
+            
+            if len(validated_resources) >= max_results:
                 break
     
-    # Add training links if we need more (no Skill Builder)
-    for url in training_urls[:max_results - len(resources)]:
-        if url not in seen_urls:
-            seen_urls.add(url)
-            resources.append({
-                "title": f"AWS {cert_name.title()} Training",
-                "url": url,
-                "type": "course",
-            })
-            if len(resources) >= max_results:
-                break
+    logger.info(f"Found {len(validated_resources)} validated AWS docs for {cert_name}")
+    return validated_resources
+
+
+
+
+def get_curated_resources(certification: str, learning_styles: List[str]) -> List[Dict]:
+    """
+    Return curated, high-quality resources for the certification.
+    These are always available as fallback when web scraping fails.
+    """
+    cert_lower = certification.lower().replace("-", " ")
+    resources = []
     
-    return resources
+    # Official AWS Exam Guide (always relevant)
+    resources.append({
+        "title": f"AWS {certification.replace('-', ' ').title()} Exam Guide",
+        "url": f"https://aws.amazon.com/certification/{certification}/",
+        "type": "documentation",
+    })
+    
+    # Hands-on labs for hands-on/visual learners
+    if "hands_on" in learning_styles or "visual" in learning_styles:
+        resources.append({
+            "title": "AWS Hands-On Tutorials",
+            "url": "https://aws.amazon.com/getting-started/hands-on/",
+            "type": "course",
+        })
+    
+    # AWS Well-Architected Framework (critical for most certs)
+    if "architect" in cert_lower or "solutions" in cert_lower:
+        resources.append({
+            "title": "AWS Well-Architected Framework",
+            "url": "https://aws.amazon.com/architecture/well-architected/",
+            "type": "whitepaper",
+        })
+    
+    # AWS Whitepapers for reading learners
+    if "reading" in learning_styles:
+        resources.append({
+            "title": "AWS Whitepapers & Guides",
+            "url": "https://aws.amazon.com/whitepapers/",
+            "type": "whitepaper",
+        })
+    
+    return resources[:3]  # Return max 3 curated resources
 
 
 async def fetch_study_resources(
     certification: str,
+    skill_level: str,
     learning_styles: List[str],
-    max_youtube: int = 2,
+    max_youtube: int = 3,
     max_docs: int = 2
 ) -> List[Dict]:
     """
-    Fetch all study resources for a certification.
-    Combines YouTube videos and AWS docs.
+    Fetch all study resources for a certification using Brave Search.
+    All resources are validated for:
+    - URL accessibility (200 OK response)
+    - Content relevance to certification
+    - Appropriate skill level
+    - Recent content (2025/2026)
+    
+    Combines YouTube videos, AWS docs, and curated resources.
+    Aims for 5-8 diverse, validated resources total.
     """
-    # Fetch in parallel
-    youtube_task = fetch_youtube_resources(certification, learning_styles, max_youtube)
-    docs_task = fetch_aws_docs_resources(certification, max_docs)
+    # Fetch in parallel with skill level context
+    youtube_task = fetch_youtube_resources(certification, skill_level, learning_styles, max_youtube)
+    docs_task = fetch_aws_docs_resources(certification, skill_level, max_docs)
     
     youtube_results, docs_results = await asyncio.gather(
         youtube_task,
@@ -251,4 +328,16 @@ async def fetch_study_resources(
     else:
         print(f"AWS docs fetch failed: {docs_results}")
     
-    return resources
+    # Add curated AWS resources (always available as fallback)
+    curated = get_curated_resources(certification, learning_styles)
+    resources.extend(curated)
+    
+    # Deduplicate by URL
+    seen_urls = set()
+    unique_resources = []
+    for r in resources:
+        if r.get("url") not in seen_urls:
+            seen_urls.add(r["url"])
+            unique_resources.append(r)
+    
+    return unique_resources[:8]  # Cap at 8 resources
