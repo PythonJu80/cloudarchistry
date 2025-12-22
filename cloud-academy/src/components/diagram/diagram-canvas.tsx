@@ -236,6 +236,9 @@ function DiagramCanvasInner({
   // 🖱️ CONTEXT MENU STATE
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
   
+  // Track if user has manually adjusted z-indices (disables auto-recalculation)
+  const manualZIndexAdjustment = useRef(false);
+  
   // 🔲 GRID STATE
   const [showGrid, setShowGrid] = useState(true);
   
@@ -279,6 +282,80 @@ function DiagramCanvasInner({
     
     setIsDirty(true);
   }, [nodes, edges]);
+
+  // Calculate proper z-index for a node based on its hierarchy
+  const calculateZIndex = useCallback((node: DiagramNode, allNodes: DiagramNode[]): number => {
+    // Base z-index by node type (lower = further back)
+    const baseZIndex: Record<string, number> = {
+      // Organizational boundaries (furthest back)
+      orgNode: -4,
+      accountNode: -3,
+      awsCloud: -3,
+      region: -2,
+      availabilityZone: -1,
+      // Service containers (should be behind their children)
+      vpc: 1,
+      subnet: 2,
+      securityGroup: 3,
+      autoScaling: 4,
+      // Regular services and elements
+      awsResource: 10,
+      genericIcon: 10,
+      textNode: 15,
+      noteNode: 15,
+      // Annotations (on top)
+      legendNode: 20,
+      lifecycleNode: 20,
+      pipelineNode: 20,
+      scalingPolicyNode: 20,
+      backupPlanNode: 20,
+      dataFlowNode: 20,
+      policyDocumentNode: 20,
+    };
+    
+    const nodeType = node.type || 'awsResource';
+    let zIndex = baseZIndex[nodeType] ?? 10;
+    
+    // If this node has children, ensure it stays behind them
+    const hasChildren = allNodes.some(n => n.parentId === node.id);
+    if (hasChildren) {
+      // Container nodes should be behind their children
+      // Find the maximum z-index of children and stay below it
+      const childrenZIndices = allNodes
+        .filter(n => n.parentId === node.id)
+        .map(child => calculateZIndex(child, allNodes));
+      
+      if (childrenZIndices.length > 0) {
+        const maxChildZ = Math.max(...childrenZIndices);
+        // Stay at least 1 level below the lowest child
+        zIndex = Math.min(zIndex, maxChildZ - 1);
+      }
+    }
+    
+    return zIndex;
+  }, []);
+  
+  // Recalculate all z-indices based on hierarchy
+  const recalculateZIndices = useCallback(() => {
+    setNodes(nds => {
+      const updatedNodes = nds.map(node => {
+        const newZIndex = calculateZIndex(node as DiagramNode, nds as DiagramNode[]);
+        return { ...node, zIndex: newZIndex } as DiagramNode;
+      });
+      return updatedNodes;
+    });
+  }, [calculateZIndex, setNodes]);
+  
+  // Recalculate z-indices when nodes are first added (but not if user has manually adjusted)
+  useEffect(() => {
+    // Only auto-recalculate on initial node creation, not on every change
+    if (manualZIndexAdjustment.current) return;
+    
+    const timer = setTimeout(() => {
+      recalculateZIndices();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [nodes.length, recalculateZIndices]);
 
   // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -850,7 +927,9 @@ function DiagramCanvasInner({
         type: nodeType,
         position: relativePosition,
         parentId,
-        extent: parentId ? "parent" : undefined,
+        // Remove extent constraint to allow free movement - nodes can be moved anywhere
+        // The parentId is kept for logical grouping and z-index calculations only
+        extent: undefined,
         ...(size && { width: size.width, height: size.height }),
         style: size ? { width: size.width, height: size.height } : undefined,
         data: {
@@ -878,6 +957,131 @@ function DiagramCanvasInner({
       setSelectedNode(null);
     }
   }, [selectedNode, setNodes, setEdges]);
+  
+  // 🎨 LAYER CONTROLS - Send to Back / Bring to Front
+  const sendToBack = useCallback(() => {
+    if (!selectedNode) return;
+    manualZIndexAdjustment.current = true; // Disable auto-recalculation
+    
+    setNodes(nds => {
+      const selectedNodeData = nds.find(n => n.id === selectedNode.id) as DiagramNode | undefined;
+      if (!selectedNodeData) return nds;
+      
+      // Get siblings (nodes with same parent or both at root level)
+      const siblings = nds.filter(n => {
+        const isSibling = n.parentId === selectedNodeData.parentId;
+        const notSelf = n.id !== selectedNode.id;
+        return isSibling && notSelf;
+      });
+      
+      if (siblings.length === 0) return nds;
+      
+      // Find minimum z-index among siblings
+      const minZ = Math.min(...siblings.map(n => n.zIndex ?? 0));
+      
+      return nds.map(n => {
+        if (n.id === selectedNode.id) {
+          return { ...n, zIndex: minZ - 1 } as DiagramNode;
+        }
+        return n;
+      });
+    });
+  }, [selectedNode, setNodes]);
+  
+  const bringToFront = useCallback(() => {
+    if (!selectedNode) return;
+    manualZIndexAdjustment.current = true; // Disable auto-recalculation
+    
+    setNodes(nds => {
+      const selectedNodeData = nds.find(n => n.id === selectedNode.id) as DiagramNode | undefined;
+      if (!selectedNodeData) return nds;
+      
+      // Get siblings (nodes with same parent or both at root level)
+      const siblings = nds.filter(n => {
+        const isSibling = n.parentId === selectedNodeData.parentId;
+        const notSelf = n.id !== selectedNode.id;
+        return isSibling && notSelf;
+      });
+      
+      if (siblings.length === 0) return nds;
+      
+      // Find maximum z-index among siblings
+      const maxZ = Math.max(...siblings.map(n => n.zIndex ?? 0));
+      
+      return nds.map(n => {
+        if (n.id === selectedNode.id) {
+          return { ...n, zIndex: maxZ + 1 } as DiagramNode;
+        }
+        return n;
+      });
+    });
+  }, [selectedNode, setNodes]);
+  
+  const sendBackward = useCallback(() => {
+    if (!selectedNode) return;
+    manualZIndexAdjustment.current = true; // Disable auto-recalculation
+    
+    setNodes(nds => {
+      const selectedNodeData = nds.find(n => n.id === selectedNode.id) as DiagramNode | undefined;
+      if (!selectedNodeData) return nds;
+      
+      const currentZ = selectedNodeData.zIndex ?? 0;
+      
+      // Get siblings (nodes with same parent or both at root level)
+      const siblings = nds.filter(n => {
+        const isSibling = n.parentId === selectedNodeData.parentId;
+        const notSelf = n.id !== selectedNode.id;
+        return isSibling && notSelf;
+      });
+      
+      // Find the next lower z-index among siblings
+      const lowerSiblings = siblings.filter(n => (n.zIndex ?? 0) < currentZ);
+      if (lowerSiblings.length === 0) return nds; // Already at back
+      
+      const targetZ = Math.max(...lowerSiblings.map(n => n.zIndex ?? 0));
+      
+      return nds.map(n => {
+        if (n.id === selectedNode.id) {
+          // Swap z-index with the node below
+          return { ...n, zIndex: targetZ - 0.5 } as DiagramNode;
+        }
+        return n;
+      });
+    });
+  }, [selectedNode, setNodes]);
+  
+  const bringForward = useCallback(() => {
+    if (!selectedNode) return;
+    manualZIndexAdjustment.current = true; // Disable auto-recalculation
+    
+    setNodes(nds => {
+      const selectedNodeData = nds.find(n => n.id === selectedNode.id) as DiagramNode | undefined;
+      if (!selectedNodeData) return nds;
+      
+      const currentZ = selectedNodeData.zIndex ?? 0;
+      
+      // Get siblings (nodes with same parent or both at root level)
+      const siblings = nds.filter(n => {
+        const isSibling = n.parentId === selectedNodeData.parentId;
+        const notSelf = n.id !== selectedNode.id;
+        return isSibling && notSelf;
+      });
+      
+      // Find the next higher z-index among siblings
+      const higherSiblings = siblings.filter(n => (n.zIndex ?? 0) > currentZ);
+      if (higherSiblings.length === 0) return nds; // Already at front
+      
+      const targetZ = Math.min(...higherSiblings.map(n => n.zIndex ?? 0));
+      
+      return nds.map(n => {
+        if (n.id === selectedNode.id) {
+          // Swap z-index with the node above
+          return { ...n, zIndex: targetZ + 0.5 } as DiagramNode;
+        }
+        return n;
+      });
+    });
+  }, [selectedNode, setNodes]);
 
   // Clear canvas
   const clearCanvas = useCallback(() => {
@@ -1197,6 +1401,11 @@ function DiagramCanvasInner({
         onZoomOut={() => rfZoomOut()}
         onFitView={() => fitView()}
         onClear={clearCanvas}
+        // Layer controls
+        onSendToBack={sendToBack}
+        onBringToFront={bringToFront}
+        onSendBackward={sendBackward}
+        onBringForward={bringForward}
         // Control state
         canUndo={canUndo}
         canRedo={canRedo}
@@ -1416,6 +1625,32 @@ function DiagramCanvasInner({
                   >
                     <span className="w-4">📑</span> Duplicate
                     <span className="ml-auto text-slate-500">⌘D</span>
+                  </button>
+                  <div className="h-px bg-slate-700 my-1" />
+                  {/* Layer Controls */}
+                  <button
+                    onClick={() => { bringToFront(); closeContextMenu(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <span className="w-4">⬆️</span> Bring to Front
+                  </button>
+                  <button
+                    onClick={() => { bringForward(); closeContextMenu(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <span className="w-4">🔼</span> Bring Forward
+                  </button>
+                  <button
+                    onClick={() => { sendBackward(); closeContextMenu(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <span className="w-4">🔽</span> Send Backward
+                  </button>
+                  <button
+                    onClick={() => { sendToBack(); closeContextMenu(); }}
+                    className="w-full px-3 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <span className="w-4">⬇️</span> Send to Back
                   </button>
                   <div className="h-px bg-slate-700 my-1" />
                   <button

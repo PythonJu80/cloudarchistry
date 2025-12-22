@@ -278,6 +278,11 @@ interface ServicePickerProps {
   onZoomOut?: () => void;
   onFitView?: () => void;
   onClear?: () => void;
+  // Layer control callbacks
+  onSendToBack?: () => void;
+  onBringToFront?: () => void;
+  onSendBackward?: () => void;
+  onBringForward?: () => void;
   // State for controls
   canUndo?: boolean;
   canRedo?: boolean;
@@ -308,6 +313,10 @@ export function ServicePicker({
   onZoomOut,
   onFitView,
   onClear,
+  onSendToBack,
+  onBringToFront,
+  onSendBackward,
+  onBringForward,
   canUndo = false,
   canRedo = false,
   hasSelection = false,
@@ -1326,6 +1335,61 @@ export function ServicePicker({
               title="Fit to View"
             >
               <Maximize className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Layer Controls */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider px-1">Arrange</p>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              onClick={onBringToFront}
+              disabled={!hasSelection}
+              className={cn(
+                "h-8 rounded bg-slate-800/50 flex items-center justify-center gap-1.5 text-[10px] transition-colors",
+                hasSelection ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Bring to Front"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Front
+            </button>
+            <button
+              onClick={onSendToBack}
+              disabled={!hasSelection}
+              className={cn(
+                "h-8 rounded bg-slate-800/50 flex items-center justify-center gap-1.5 text-[10px] transition-colors",
+                hasSelection ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Send to Back"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Back
+            </button>
+            <button
+              onClick={onBringForward}
+              disabled={!hasSelection}
+              className={cn(
+                "h-8 rounded bg-slate-800/50 flex items-center justify-center gap-1.5 text-[10px] transition-colors",
+                hasSelection ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Bring Forward"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+              Forward
+            </button>
+            <button
+              onClick={onSendBackward}
+              disabled={!hasSelection}
+              className={cn(
+                "h-8 rounded bg-slate-800/50 flex items-center justify-center gap-1.5 text-[10px] transition-colors",
+                hasSelection ? "hover:bg-slate-700 text-slate-300" : "text-slate-600 cursor-not-allowed"
+              )}
+              title="Send Backward"
+            >
+              <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+              Backward
             </button>
           </div>
         </div>
