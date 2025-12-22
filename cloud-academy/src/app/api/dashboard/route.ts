@@ -22,6 +22,11 @@ export async function GET() {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
+    // Get gaming profile for unified stats
+    const gameProfile = await prisma.gameProfile.findUnique({
+      where: { userId },
+    });
+
     // Get scenario attempts with challenge progress
     const scenarioAttempts = await prisma.scenarioAttempt.findMany({
       where: { profileId: profile.id },
@@ -265,6 +270,13 @@ export async function GET() {
         hasAiAccess: profile.hasAiAccess,
         hasOpenAiKey: !!profile.openaiApiKey,
         openaiKeyLastFour: profile.openaiKeyLastFour,
+        // Gaming stats
+        gamingElo: gameProfile?.elo || 1500,
+        gamingRank: gameProfile?.rank || "Silver",
+        gamesPlayed: gameProfile?.totalGames || 0,
+        gamesWon: gameProfile?.totalWins || 0,
+        gamingWinStreak: gameProfile?.winStreak || 0,
+        gamingPoints: gameProfile?.totalPoints || 0,
       },
       stats: {
         totalChallenges,

@@ -21,6 +21,13 @@ export interface TierFeatures {
   hasApiAccess: boolean;
 }
 
+export interface TeamLimits {
+  maxTeams: number;  // -1 = unlimited
+  maxMembersPerTeam: number;
+  canInviteMembers: boolean;
+  canTransferOwnership: boolean;
+}
+
 /**
  * Get features available for a subscription tier
  */
@@ -163,6 +170,55 @@ export function getUpgradeMessage(action: keyof TierFeatures): {
         description: "This feature requires a paid subscription.",
         requiredTier: "learner",
       };
+  }
+}
+
+/**
+ * Get team limits for a subscription tier
+ */
+export function getTeamLimits(tier: SubscriptionTier): TeamLimits {
+  switch (tier) {
+    case "free":
+      return {
+        maxTeams: 0,
+        maxMembersPerTeam: 0,
+        canInviteMembers: false,
+        canTransferOwnership: false,
+      };
+    case "learner":
+      // Learners can join teams but not create them
+      return {
+        maxTeams: 0,
+        maxMembersPerTeam: 0,
+        canInviteMembers: false,
+        canTransferOwnership: false,
+      };
+    case "tutor":
+      // Tutors can create and manage cohorts
+      return {
+        maxTeams: 5,
+        maxMembersPerTeam: 25,
+        canInviteMembers: true,
+        canTransferOwnership: true,
+      };
+    case "pro":
+      // Pro has same limits as tutor
+      return {
+        maxTeams: 10,
+        maxMembersPerTeam: 50,
+        canInviteMembers: true,
+        canTransferOwnership: true,
+      };
+    case "team":
+      // Team/Bootcamp tier has unlimited teams
+      return {
+        maxTeams: -1,  // unlimited
+        maxMembersPerTeam: 100,
+        canInviteMembers: true,
+        canTransferOwnership: true,
+      };
+    default:
+      return getTeamLimits("free");
   }
 }
 

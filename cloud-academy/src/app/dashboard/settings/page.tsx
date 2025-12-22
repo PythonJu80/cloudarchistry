@@ -475,10 +475,27 @@ export default function SettingsPage() {
         }),
       });
       const data = await response.json();
+      
+      // Handle rate limiting
+      if (response.status === 429) {
+        const resetInMinutes = data.resetAt 
+          ? Math.ceil((data.resetAt - Date.now()) / 60000)
+          : 60;
+        setError(`Rate limit exceeded. You can create more teams in ${resetInMinutes} minute${resetInMinutes !== 1 ? 's' : ''}.`);
+        return;
+      }
+      
       if (!response.ok) {
         throw new Error(data.error || "Failed to create team");
       }
-      setSuccess("Team created successfully!");
+      
+      // Show success with team limits
+      const maxMembers = data.limits?.maxMembers || data.team?.maxMembers;
+      const successMsg = maxMembers 
+        ? `Team created successfully! Capacity: ${maxMembers} members`
+        : "Team created successfully!";
+      setSuccess(successMsg);
+      
       setShowCreateTeam(false);
       setNewTeamName("");
       setNewTeamDescription("");

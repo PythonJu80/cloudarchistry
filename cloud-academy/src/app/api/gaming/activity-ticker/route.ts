@@ -81,17 +81,9 @@ export async function GET() {
       };
     });
 
-    // If we don't have enough real users, pad with some variety
-    if (activities.length < 5) {
-      const fallbackActivities = [
-        { user: "NewPlayer", action: "joined", game: "Arena", points: "" },
-        { user: "Learner", action: "started", game: "Quiz Battle", points: "" },
-      ];
-      activities.push(...fallbackActivities.slice(0, 5 - activities.length));
-    }
-
+    // Only return real user activities - no fake fallbacks
     return NextResponse.json({
-      activities,
+      activities: activities.length > 0 ? activities : [],
       userCount: uniqueUsers.length,
     });
   } catch (error) {

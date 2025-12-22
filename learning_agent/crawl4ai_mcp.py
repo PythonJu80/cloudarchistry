@@ -794,14 +794,17 @@ async def execute_tool(tool_name: str, tool_args: dict) -> str:
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     """Chat with the RAG agent."""
-    from utils import get_request_api_key, get_request_model
+    from utils import set_request_api_key, set_request_model, get_request_model
     
     try:
-        api_key = get_request_api_key()
-        if not api_key:
-            raise ApiKeyRequiredError("OpenAI API key required")
+        # Set request context if BYOK provided
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
         
-        client = AsyncOpenAI(api_key=api_key)
+        # Use get_async_openai() which checks: request context -> .env -> error
+        client = get_async_openai()
         model = get_request_model() or DEFAULT_MODEL
         
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -1106,7 +1109,7 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                 else:
                     kb_query = f"{research.company_info.industry} {skill_context} AWS architecture"
 
-                client = AsyncOpenAI(api_key=get_request_api_key())
+                client = get_async_openai()
                 embed_response = await client.embeddings.create(
                     model="text-embedding-3-small",
                     input=kb_query
@@ -1479,14 +1482,13 @@ YOUR IDENTITY:
 - Be {persona_name} - stay in character"""
 
     try:
-        from utils import get_request_model, get_request_api_key
+        from utils import get_request_model
         model = get_request_model()
-        api_key = get_request_api_key()
         
-        if not api_key:
-            return {"response": "API key not configured. Please add your OpenAI API key in Settings.", "key_terms": []}
-        
-        client = OpenAI(api_key=api_key)
+        # Use get_async_openai() which checks: request context -> .env -> error
+        # Note: Using sync OpenAI client here, so we get the client from get_async_openai and use its api_key
+        async_client = get_async_openai()
+        client = OpenAI(api_key=async_client.api_key)
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": message}]
         
         response = client.chat.completions.create(
@@ -1526,14 +1528,20 @@ YOUR IDENTITY:
             extraction_response = client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "Extract 3-8 key AWS services or technical concepts. Return JSON array: [{\"term\": \"name\", \"category\": \"category\"}]."},
-                    {"role": "user", "content": final_content[:1500]}
+                    {"role": "system", "content": "Extract 3-8 key AWS services or technical concepts mentioned in the response. Return a JSON object with a 'terms' array: {\"terms\": [{\"term\": \"VPC\", \"category\": \"Networking\"}, {\"term\": \"S3\", \"category\": \"Storage\"}]}. Categories: Networking, Compute, Storage, Database, Security, Monitoring, Other."},
+                    {"role": "user", "content": f"Extract key AWS terms from this response:\n\n{final_content[:1500]}"}
                 ],
-                temperature=0.3, max_tokens=500
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=500
             )
-            key_terms = json.loads(extraction_response.choices[0].message.content)
-        except:
-            pass
+            content = extraction_response.choices[0].message.content
+            parsed = json.loads(content)
+            key_terms = parsed.get("terms", [])
+            logger.info(f"Extracted {len(key_terms)} key terms: {[t.get('term') for t in key_terms]}")
+        except Exception as e:
+            logger.warning(f"Key terms extraction failed: {e}")
+            key_terms = []
         
         return {"response": final_content, "key_terms": key_terms, "tools_used": tools_used}
             
@@ -1718,11 +1726,8 @@ async def audit_diagram_endpoint(request: AuditDiagramRequest):
             diagram_json=json.dumps(diagram_data, indent=2),
         )
         
-        api_key = get_request_api_key()
-        if not api_key:
-            raise HTTPException(status_code=402, detail="OpenAI API key required")
-        
-        client = AsyncOpenAI(api_key=api_key)
+        # Use get_async_openai() which checks: request context -> .env -> error
+        client = get_async_openai()
         response = await client.chat.completions.create(
             model=get_request_model() or "gpt-4o",
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": "Audit this diagram."}],
@@ -2004,15 +2009,11 @@ async def generate_flashcards_endpoint(request: GenerateContentRequest):
     import random
     
     try:
-        from utils import set_request_api_key, set_request_model, get_request_api_key
+        from utils import set_request_api_key, set_request_model
         if request.openai_api_key:
             set_request_api_key(request.openai_api_key)
         if request.preferred_model:
             set_request_model(request.preferred_model)
-        
-        api_key = get_request_api_key()
-        if not api_key:
-            raise HTTPException(status_code=402, detail="OpenAI API key required")
         
         card_count = request.card_count or (request.options.get("card_count", 20) if request.options else 20)
         user_level = request.user_level or "intermediate"
@@ -2051,7 +2052,7 @@ async def generate_flashcards_endpoint(request: GenerateContentRequest):
             knowledge_facts = []
             try:
                 search_query = f"{cert_name} {' '.join(aws_services_list[:5])} {scenario.get('scenario_title', '')}"
-                client = AsyncOpenAI(api_key=api_key)
+                client = get_async_openai()
                 embed_response = await client.embeddings.create(model="text-embedding-3-small", input=search_query)
                 query_embedding = embed_response.data[0].embedding
                 kb_results = await db.search_knowledge_chunks(query_embedding=query_embedding, limit=10)
@@ -2113,7 +2114,7 @@ async def generate_flashcards_endpoint(request: GenerateContentRequest):
             try:
                 selected_focus = random.sample(focus_areas, min(3, len(focus_areas)))
                 search_query = f"{cert_name} {' '.join(selected_focus)} AWS best practices"
-                client = AsyncOpenAI(api_key=api_key)
+                client = get_async_openai()
                 embed_response = await client.embeddings.create(model="text-embedding-3-small", input=search_query)
                 kb_results = await db.search_knowledge_chunks(query_embedding=embed_response.data[0].embedding, limit=8)
                 if kb_results:
@@ -2157,7 +2158,7 @@ User Progress:
                 card_count=card_count,
             )
             
-            client = AsyncOpenAI(api_key=api_key)
+            client = get_async_openai()
             model = request.preferred_model or "gpt-4o"
             
             prompt = f"""{base_prompt}
@@ -2628,12 +2629,8 @@ async def audit_architect_arena_endpoint(request: dict):
             knowledge_context=knowledge_context,
         )
         
-        # Use OpenAI client directly (not _chat_json which doesn't exist here)
-        api_key = get_request_api_key()
-        if not api_key:
-            raise HTTPException(status_code=402, detail="OpenAI API key required")
-        
-        client = AsyncOpenAI(api_key=api_key)
+        # Use get_async_openai() which checks: request context -> .env -> error
+        client = get_async_openai()
         response = await client.chat.completions.create(
             model=get_request_model() or "gpt-4o",
             messages=[

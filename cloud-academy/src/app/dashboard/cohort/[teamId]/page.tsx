@@ -135,6 +135,20 @@ export default function CohortDashboardPage() {
         body: JSON.stringify({ teamId, email: emailToSend }),
       });
       const data = await response.json();
+      
+      // Handle rate limiting
+      if (response.status === 429) {
+        const resetInMinutes = data.resetAt 
+          ? Math.ceil((data.resetAt - Date.now()) / 60000)
+          : 60;
+        toast({ 
+          title: "Rate Limit Exceeded", 
+          description: `You can send more invites in ${resetInMinutes} minute${resetInMinutes !== 1 ? 's' : ''}. (Limit: 10 per hour)`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       if (!response.ok) {
         throw new Error(data.error || "Failed to send invite");
       }
@@ -438,8 +452,24 @@ export default function CohortDashboardPage() {
               <Users className="w-5 h-5 text-purple-400" />
               Cohort Members
             </CardTitle>
-            <CardDescription>
-              {team.memberCount} of {team.maxMembers} members
+            <CardDescription className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span>{team.memberCount} of {team.maxMembers} members</span>
+                <span className="text-xs">
+                  {Math.round((team.memberCount / team.maxMembers) * 100)}% capacity
+                </span>
+              </div>
+              <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                <div 
+                  className={cn(
+                    "h-full transition-all duration-300",
+                    team.memberCount >= team.maxMembers ? "bg-red-500" :
+                    team.memberCount / team.maxMembers > 0.8 ? "bg-yellow-500" :
+                    "bg-green-500"
+                  )}
+                  style={{ width: `${Math.min((team.memberCount / team.maxMembers) * 100, 100)}%` }}
+                />
+              </div>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

@@ -700,6 +700,7 @@ export default function GameModePage() {
     return (
       <div className="min-h-screen bg-[#050508] flex items-center justify-center">
         <div className="text-center">
+          {/* ... (rest of the code remains the same) */}
           <div className="relative w-24 h-24 mx-auto mb-6">
             {/* Outer ring */}
             <div className="absolute inset-0 border-4 border-red-500/20 rounded-full" />

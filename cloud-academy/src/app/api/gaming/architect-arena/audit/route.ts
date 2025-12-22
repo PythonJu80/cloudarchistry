@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
+import { prisma } from "@/lib/db";
+import { recordSoloGame, updateGameModeStats } from "@/lib/gaming/stats";
 
 const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
 
@@ -62,6 +64,49 @@ export async function POST(req: NextRequest) {
     const result = await response.json();
 
     console.log(`[Architect Arena Audit] Score: ${result.score}`);
+
+    // Record game completion stats
+    const academyUser = await prisma.academyUser.findFirst({
+      where: { 
+        profile: { id: profileId }
+      },
+      select: { id: true },
+    });
+
+    if (academyUser) {
+      const score = result.score || 0;
+      const targetScore = body.target_score || 100;
+      const won = score >= targetScore * 0.6; // 60% or higher is a win
+
+      // Record game completion
+      await recordSoloGame(
+        academyUser.id,
+        "architect_arena",
+        score,
+        won
+      );
+
+      // Update Architect Arena specific stats
+      const profile = await prisma.gameProfile.findUnique({
+        where: { userId: academyUser.id },
+      });
+
+      const currentStats = (profile?.architectArenaStats as Record<string, unknown>) || {};
+      const gamesPlayed = ((currentStats.gamesPlayed as number) || 0) + 1;
+      const gamesWon = ((currentStats.gamesWon as number) || 0) + (won ? 1 : 0);
+      const highScore = Math.max((currentStats.highScore as number) || 0, score);
+      const totalScore = ((currentStats.totalScore as number) || 0) + score;
+
+      await updateGameModeStats(academyUser.id, "architect_arena", {
+        gamesPlayed,
+        gamesWon,
+        highScore,
+        totalScore,
+        avgScore: Math.round(totalScore / gamesPlayed),
+        lastScore: score,
+        lastPlayed: new Date().toISOString(),
+      });
+    }
 
     return NextResponse.json({
       score: result.score || 0,

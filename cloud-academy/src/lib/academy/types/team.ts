@@ -184,3 +184,31 @@ export const TEAM_VISIBILITY_LABELS: Record<TeamVisibility, string> = {
   tenant: "Organization",
   public: "Public",
 };
+
+// ============================================
+// New API Response Types (2026+ Modernization)
+// ============================================
+
+/**
+ * Team limits based on subscription tier
+ */
+export interface TeamLimits {
+  maxMembers: number;
+  canInviteMembers: boolean;
+}
+
+/**
+ * Response from POST /api/team (team creation)
+ */
+export interface TeamCreateResponse {
+  team: TeamResponse;
+  limits: TeamLimits;
+}
+
+/**
+ * Rate limit error response (HTTP 429)
+ */
+export interface RateLimitError {
+  error: string;
+  resetAt: number;
+}

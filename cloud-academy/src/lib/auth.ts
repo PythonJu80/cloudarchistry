@@ -147,6 +147,19 @@ export const authOptions: NextAuthOptions = {
         // Create user if doesn't exist
         if (!existingUser) {
           const slug = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "-");
+          
+          // Generate username from email (strip domain, keep only valid chars)
+          const baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "");
+          let username = baseUsername;
+          
+          // Ensure username is unique by checking and appending timestamp if needed
+          const existingUsername = await prisma.academyUser.findFirst({
+            where: { username },
+          });
+          if (existingUsername) {
+            username = `${baseUsername}${Date.now()}`;
+          }
+          
           const tenant = await prisma.academyTenant.create({
             data: {
               name: user.name || email.split("@")[0],
@@ -157,6 +170,7 @@ export const authOptions: NextAuthOptions = {
           existingUser = await prisma.academyUser.create({
             data: {
               email,
+              username, // Set username for OAuth users
               name: user.name || "",
               passwordHash: "", // No password for OAuth users
               role: "ADMIN",
@@ -176,16 +190,16 @@ export const authOptions: NextAuthOptions = {
           const trialEndsAt = new Date();
           trialEndsAt.setDate(trialEndsAt.getDate() + 14);
           
-          // Create AcademyUserProfile with Google metadata
-          // Default to learner tier with 14-day trial for OAuth signups
+          // Create AcademyUserProfile with OAuth metadata
+          // Note: Username and tier will be updated by oauth-complete API with user's registration choices
           await prisma.academyUserProfile.create({
             data: {
               academyUserId: existingUser.id,
               academyTenantId: existingUser.tenantId,
-              displayName: user.name || email.split("@")[0],
-              avatarUrl: user.image || null, // Google profile picture
+              displayName: user.name || existingUser.username || email.split("@")[0],
+              avatarUrl: user.image || null, // OAuth profile picture
               skillLevel: "beginner",
-              subscriptionTier: "learner", // Default to learner for beta
+              subscriptionTier: "learner", // Temporary - will be updated by oauth-complete
               trialEndsAt, // 14 days from registration
               trialUsed: false,
             },

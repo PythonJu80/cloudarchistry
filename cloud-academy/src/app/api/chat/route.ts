@@ -17,19 +17,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get API key and preferred model from user's settings - no fallback
+    // Get API key and preferred model from user's settings (optional - learning agent has platform key)
     const aiConfig = await getAiConfigForRequest(session.user.academyProfileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        { 
-          error: "OpenAI API key required",
-          message: "Please configure your OpenAI API key in Settings to use AI features.",
-          action: "configure_api_key",
-          settingsUrl: "/dashboard/settings"
-        },
-        { status: 402 }
-      );
-    }
     
     // Get user's learning profile with stats and recent activity
     const profile = await prisma.academyUserProfile.findUnique({
@@ -218,11 +207,11 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json();
     
-    // Pass the API key, model, and rich learner context to the learning agent
+    // Pass the API key (if user has BYOK), model, and rich learner context to the learning agent
     const requestBody = {
       ...body,
-      openai_api_key: aiConfig.key,
-      preferred_model: body.preferred_model || aiConfig.preferredModel,
+      openai_api_key: aiConfig?.key, // Optional - learning agent uses .env if not provided
+      preferred_model: body.preferred_model || aiConfig?.preferredModel,
       context: {
         ...body.context,
         // Basic profile

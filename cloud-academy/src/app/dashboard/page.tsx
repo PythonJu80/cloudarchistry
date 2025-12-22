@@ -55,6 +55,13 @@ interface DashboardData {
     hasAiAccess: boolean;
     hasOpenAiKey: boolean;
     openaiKeyLastFour: string | null;
+    // Gaming stats
+    gamingElo: number;
+    gamingRank: string;
+    gamesPlayed: number;
+    gamesWon: number;
+    gamingWinStreak: number;
+    gamingPoints: number;
   };
   stats: {
     totalChallenges: number;
@@ -878,38 +885,44 @@ export default function DashboardPage() {
                     <div className="space-y-4">
                       <h4 className="font-semibold flex items-center gap-2">
                         <Trophy className="w-4 h-4 text-yellow-500" />
-                        Your Battle Stats
+                        Your Gaming Stats
                       </h4>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
+                          <p className="text-2xl font-bold text-cyan-400">
+                            {profile.gamingElo}
+                          </p>
+                          <p className="text-xs text-muted-foreground">ELO Rating</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
+                          <p className="text-sm font-bold text-purple-400">
+                            {profile.gamingRank}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Rank</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
                           <p className="text-2xl font-bold text-green-400">
-                            {versusData?.recentMatches.filter(m => {
-                              const isPlayer1 = m.player1.id === myUserId;
-                              return isPlayer1 ? m.player1Score > m.player2Score : m.player2Score > m.player1Score;
-                            }).length || 0}
+                            {profile.gamesWon}
                           </p>
                           <p className="text-xs text-muted-foreground">Wins</p>
                         </div>
                         <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
-                          <p className="text-2xl font-bold text-red-400">
-                            {versusData?.recentMatches.filter(m => {
-                              const isPlayer1 = m.player1.id === myUserId;
-                              return isPlayer1 ? m.player1Score < m.player2Score : m.player2Score < m.player1Score;
-                            }).length || 0}
+                          <p className="text-2xl font-bold text-primary">
+                            {profile.gamesPlayed}
                           </p>
-                          <p className="text-xs text-muted-foreground">Losses</p>
+                          <p className="text-xs text-muted-foreground">Games Played</p>
                         </div>
                         <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
-                          <p className="text-2xl font-bold text-primary">
-                            {(versusData?.activeMatches.length || 0) + (versusData?.recentMatches.length || 0)}
+                          <p className="text-2xl font-bold text-orange-400">
+                            {profile.gamingWinStreak}
                           </p>
-                          <p className="text-xs text-muted-foreground">Total Matches</p>
+                          <p className="text-xs text-muted-foreground">Win Streak</p>
                         </div>
                         <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-center">
                           <p className="text-2xl font-bold text-amber-400">
-                            {versusData?.activeMatches.length || 0}
+                            {profile.gamingPoints.toLocaleString()}
                           </p>
-                          <p className="text-xs text-muted-foreground">Active</p>
+                          <p className="text-xs text-muted-foreground">Gaming Pts</p>
                         </div>
                       </div>
                     </div>

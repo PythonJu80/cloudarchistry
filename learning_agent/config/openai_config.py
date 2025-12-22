@@ -101,24 +101,24 @@ def get_async_openai(api_key: Optional[str] = None) -> AsyncOpenAI:
     Get AsyncOpenAI client.
     
     Priority:
-    1. Explicit api_key parameter (for BYOK)
-    2. Request context API key (for BYOK)
-    3. Environment variable (platform's API key)
+    1. Environment variable (platform's API key) - DEFAULT
+    2. Request context API key (BYOK fallback)
+    3. Explicit api_key parameter (BYOK fallback)
     
     Returns: AsyncOpenAI client
     """
     from utils import get_request_api_key
     
-    # Try explicit parameter first (BYOK)
-    key = api_key
+    # Priority 1: Environment variable (platform key) - USE THIS FIRST
+    key = os.getenv("OPENAI_API_KEY")
     
-    # Try request context (BYOK)
+    # Priority 2: Request context (BYOK fallback if .env not set)
     if not key:
         key = get_request_api_key()
     
-    # Fallback to environment variable (platform key)
+    # Priority 3: Explicit parameter (BYOK fallback if neither above set)
     if not key:
-        key = os.getenv("OPENAI_API_KEY")
+        key = api_key
     
     if not key:
         raise ApiKeyRequiredError(

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { Resend } from "resend";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/academy/services/rate-limit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXTAUTH_URL || "https://cloudarchistry.com";
@@ -40,6 +41,28 @@ export async function POST(req: NextRequest) {
 
     if (!academyUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Rate limiting: 10 invites per hour per user
+    const rateLimitKey = `invite:${academyUser.id}`;
+    const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.TEAM_INVITE);
+    
+    if (!rateLimit.allowed) {
+      const resetInMinutes = Math.ceil((rateLimit.resetAt - Date.now()) / 60000);
+      return NextResponse.json(
+        { 
+          error: `Rate limit exceeded. You can send more invites in ${resetInMinutes} minute${resetInMinutes !== 1 ? 's' : ''}.`,
+          resetAt: rateLimit.resetAt,
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': RATE_LIMITS.TEAM_INVITE.maxRequests.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          },
+        }
+      );
     }
 
     // Check if user is owner/admin of the team
@@ -114,8 +137,37 @@ export async function POST(req: NextRequest) {
         code,
         role,
         expiresAt,
+        createdBy: academyUser.id,
       },
     });
+
+    // Create audit log for invite creation
+    const inviterProfile = await prisma.academyUserProfile.findUnique({
+      where: { academyUserId: academyUser.id },
+      select: { id: true },
+    });
+    
+    if (inviterProfile) {
+      await prisma.academyActivity.create({
+        data: {
+          academyTenantId: membership.team.academyTenantId,
+          profileId: inviterProfile.id,
+          teamId,
+          type: "team_invite_sent",
+          data: {
+            teamId,
+            teamName: membership.team.name,
+            inviteId: invite.id,
+            inviteeEmail: email,
+            role,
+            expiresAt: expiresAt.toISOString(),
+          },
+          visibility: "team",
+        },
+      }).catch(err => {
+        console.error("Failed to log invite creation:", err);
+      });
+    }
 
     // Send invite email
     const inviteUrl = `${APP_URL}/invite/${code}`;
@@ -247,6 +299,32 @@ export async function DELETE(req: NextRequest) {
     await prisma.academyTeamInvite.delete({
       where: { id: inviteId },
     });
+
+    // Create audit log for invite revocation
+    const revokerProfile = await prisma.academyUserProfile.findUnique({
+      where: { academyUserId: academyUser.id },
+      select: { id: true },
+    });
+    
+    if (revokerProfile) {
+      await prisma.academyActivity.create({
+        data: {
+          academyTenantId: invite.team.academyTenantId,
+          profileId: revokerProfile.id,
+          teamId: invite.teamId,
+          type: "team_invite_revoked",
+          data: {
+            teamId: invite.teamId,
+            teamName: invite.team.name,
+            inviteId: invite.id,
+            inviteeEmail: invite.email,
+          },
+          visibility: "team",
+        },
+      }).catch(err => {
+        console.error("Failed to log invite revocation:", err);
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

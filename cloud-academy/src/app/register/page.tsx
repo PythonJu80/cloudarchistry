@@ -198,7 +198,23 @@ export default function RegisterPage() {
               type="button"
               variant="outline"
               className="w-full bg-white hover:bg-gray-50 text-gray-900 border-gray-300"
-              onClick={() => signIn("google", { callbackUrl: "/world" })}
+              onClick={() => {
+                // Validate required fields before OAuth
+                if (!formData.username) {
+                  toast({
+                    title: "Username required",
+                    description: "Please enter a username before continuing with Google",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                // Store registration preferences before OAuth redirect
+                localStorage.setItem('oauth_registration_prefs', JSON.stringify({
+                  username: formData.username,
+                  userType: formData.userType,
+                }));
+                signIn("google", { callbackUrl: "/auth/callback" });
+              }}
             >
               <GoogleIcon className="w-5 h-5 mr-2" />
               Continue with Google
@@ -208,7 +224,23 @@ export default function RegisterPage() {
               type="button"
               variant="outline"
               className="w-full bg-[#2f2f2f] hover:bg-[#3f3f3f] text-white border-[#2f2f2f]"
-              onClick={() => signIn("azure-ad", { callbackUrl: "/world" })}
+              onClick={() => {
+                // Validate required fields before OAuth
+                if (!formData.username) {
+                  toast({
+                    title: "Username required",
+                    description: "Please enter a username before continuing with Microsoft",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                // Store registration preferences before OAuth redirect
+                localStorage.setItem('oauth_registration_prefs', JSON.stringify({
+                  username: formData.username,
+                  userType: formData.userType,
+                }));
+                signIn("azure-ad", { callbackUrl: "/auth/callback" });
+              }}
             >
               <MicrosoftIcon className="w-5 h-5 mr-2" />
               Continue with Microsoft

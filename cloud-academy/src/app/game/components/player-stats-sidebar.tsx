@@ -12,10 +12,7 @@ import {
   Loader2,
   Swords,
   Flame,
-  Target,
-  Zap,
   TrendingUp,
-  Award,
   Star,
   Sparkles,
 } from "lucide-react";
@@ -222,100 +219,6 @@ const RankDisplay = ({ profile }: { profile: GameProfile }) => {
   );
 };
 
-// Daily challenges section
-const DailyChallenges = () => {
-  const challenges = [
-    { title: "Win 3 matches", progress: 1, total: 3, reward: "+50 XP", icon: Trophy },
-    { title: "5 correct in a row", progress: 3, total: 5, reward: "+25 XP", icon: Target },
-    { title: "Play Lightning Round", progress: 0, total: 1, reward: "+30 XP", icon: Zap },
-  ];
-
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-transparent p-3">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-black flex items-center gap-2 text-purple-400">
-          <Award className="w-4 h-4" />
-          DAILY CHALLENGES
-        </h3>
-        <span className="text-[10px] text-gray-500">Resets in 4h</span>
-      </div>
-
-      {/* Challenge list */}
-      <div className="space-y-2">
-        {challenges.map((challenge, i) => (
-          <div key={i} className="group">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <challenge.icon className="w-3 h-3 text-gray-500" />
-                <span className="text-[10px] text-gray-400">{challenge.title}</span>
-              </div>
-              <span className="text-[10px] text-purple-400 font-bold">{challenge.reward}</span>
-            </div>
-            <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500"
-                style={{ width: `${(challenge.progress / challenge.total) * 100}%` }}
-              />
-            </div>
-            <div className="text-right text-[9px] text-gray-600 mt-0.5">
-              {challenge.progress}/{challenge.total}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Live match feed
-const LiveMatchFeed = () => {
-  const liveMatches = [
-    { player1: "AWSNinja", player2: "CloudKing", game: "Quiz Battle", time: "2:34" },
-    { player1: "LambdaGod", player2: "S3Master", game: "Lightning", time: "0:45" },
-  ];
-
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-green-500/30 bg-gradient-to-br from-green-500/10 to-transparent p-3">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-black flex items-center gap-2 text-green-400">
-          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          LIVE MATCHES
-        </h3>
-        <span className="text-[10px] text-gray-500">{liveMatches.length} active</span>
-      </div>
-
-      <div className="space-y-2">
-        {liveMatches.map((match, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
-          >
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-cyan-400 truncate max-w-[60px]">{match.player1}</span>
-                <Swords className="w-3 h-3 text-gray-600 flex-shrink-0" />
-                <span className="text-[10px] text-orange-400 truncate max-w-[60px]">{match.player2}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] text-gray-500">{match.time}</span>
-              <ChevronRight className="w-3 h-3 text-gray-600 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-full mt-2 text-[10px] text-green-400 hover:text-green-300 hover:bg-green-500/10"
-      >
-        Watch Live
-      </Button>
-    </div>
-  );
-};
 
 export function PlayerStatsSidebar({
   gameProfile,
@@ -364,12 +267,6 @@ export function PlayerStatsSidebar({
           </div>
         )}
 
-        {/* Daily Challenges */}
-        <DailyChallenges />
-
-        {/* Live Matches */}
-        <LiveMatchFeed />
-
         {/* Pending Challenges */}
         {pendingChallenges.length > 0 && (
           <div className="relative overflow-hidden rounded-xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent p-3">
@@ -402,9 +299,11 @@ export function PlayerStatsSidebar({
             <div className="text-center py-4">
               <Users className="w-6 h-6 text-gray-600 mx-auto mb-2" />
               <p className="text-gray-500 text-xs">No teammates online</p>
-              <Button variant="ghost" size="sm" className="mt-2 text-[10px] text-cyan-400">
-                Invite Friends
-              </Button>
+              <Link href="/cohort">
+                <Button variant="ghost" size="sm" className="mt-2 text-[10px] text-cyan-400">
+                  Invite Friends
+                </Button>
+              </Link>
             </div>
           ) : (
             <div className="space-y-2">

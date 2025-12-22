@@ -888,11 +888,10 @@ model AcademyUser {
 // Team for collaborative challenges
 model AcademyTeam {
   id          String   @id @default(cuid())
-  tenantId    String?  // Legacy - to be removed
   
-  // New: Reference to AcademyTenant
-  academyTenantId String?
-  academyTenant   AcademyTenant? @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
+  // Reference to AcademyTenant (required)
+  academyTenantId String
+  academyTenant   AcademyTenant @relation(fields: [academyTenantId], references: [id], onDelete: Cascade)
   
   name        String
   slug        String   // URL-friendly name
@@ -910,7 +909,7 @@ model AcademyTeam {
   // Metadata
   settings    Json     @default("{}")  // Future extensibility
   
-  createdBy   String   // userId who created
+  createdBy   String   // AcademyUser ID who created
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -919,21 +918,21 @@ model AcademyTeam {
   invites     AcademyTeamInvite[]
   activities  TeamActivity[]
   
-  @@unique([tenantId, slug])
-  @@index([tenantId])
+  @@unique([academyTenantId, slug])
   @@index([academyTenantId])
   @@index([visibility])
+  @@index([createdBy])
+  @@index([createdAt])
 }
 
 model AcademyTeamMember {
   id        String   @id @default(cuid())
   teamId    String
   team      AcademyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  userId    String?  // Legacy - to be removed
   
-  // New: Reference to AcademyUser
-  academyUserId String?
-  academyUser   AcademyUser? @relation(fields: [academyUserId], references: [id], onDelete: Cascade)
+  // Reference to AcademyUser (required)
+  academyUserId String
+  academyUser   AcademyUser @relation(fields: [academyUserId], references: [id], onDelete: Cascade)
   
   role      String   @default("member")  // owner, admin, member
   
@@ -943,10 +942,10 @@ model AcademyTeamMember {
   
   joinedAt  DateTime @default(now())
   
-  @@unique([teamId, userId])
   @@unique([teamId, academyUserId])  // Prevent duplicate memberships
-  @@index([userId])
   @@index([academyUserId])
+  @@index([teamId])
+  @@index([role])
 }
 
 model AcademyTeamInvite {
@@ -954,10 +953,9 @@ model AcademyTeamInvite {
   teamId    String
   team      AcademyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
   
-  email     String?  // Email invite
-  userId    String?  // Legacy - to be removed
+  email     String?  // Email invite (optional for direct user invites)
   
-  // New: Reference to AcademyUser
+  // Reference to AcademyUser (optional - set when invite is for specific user)
   academyUserId String?
   academyUser   AcademyUser? @relation(fields: [academyUserId], references: [id], onDelete: SetNull)
   code      String   @unique  // Invite code for link sharing
@@ -965,15 +963,21 @@ model AcademyTeamInvite {
   role      String   @default("member")  // Role when accepted
   expiresAt DateTime
   usedAt    DateTime?
-  usedBy    String?  // userId who used the invite
+  usedBy    String?  // AcademyUser ID who used the invite
   
-  createdBy String
+  // Invite analytics
+  viewCount     Int      @default(0)
+  lastViewedAt  DateTime?
+  
+  createdBy String  // AcademyUser ID who created invite
   createdAt DateTime @default(now())
   
   @@index([teamId])
   @@index([code])
   @@index([email])
   @@index([academyUserId])
+  @@index([expiresAt])
+  @@index([usedAt])
 }
 
 // Team Activity Feed - tracks team-level events for feeds and analytics
@@ -1006,6 +1010,7 @@ model TeamActivity {
   @@index([academyUserId])
   @@index([activityType])
   @@index([createdAt])
+  @@index([teamId, createdAt])  // Composite index for pagination
 }
 
 // Versus Match - Head-to-head battles
