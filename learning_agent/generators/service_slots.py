@@ -10,13 +10,60 @@ Economy: Players bet virtual money, win more if correct, lose if wrong.
 import json
 import uuid
 import random
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 from generators.cloud_tycoon import VALID_SERVICE_IDS, AWS_SERVICES_REFERENCE
+
+
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class ServiceSlotsValidationError(Exception):
+    """Raised when service slots generation parameters are invalid"""
+    pass
+
+
+def validate_slots_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        ServiceSlotsValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise ServiceSlotsValidationError(
+            "user_level is required. Service slots challenges must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise ServiceSlotsValidationError(
+            "cert_code is required. Service slots challenges must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise ServiceSlotsValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise ServiceSlotsValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+
 
 # Map cert codes (e.g., "SAA-C03" from DB) to persona IDs
 CERT_CODE_TO_PERSONA = {
@@ -170,8 +217,8 @@ BASE PAYOUT GUIDE:
 # =============================================================================
 
 async def generate_slot_challenge(
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
+    user_level: str,
+    cert_code: str,
     _difficulty: Optional[str] = None,  # DEPRECATED - ignored, kept for backward compat
     api_key: Optional[str] = None,
     model: Optional[str] = None,
@@ -179,38 +226,37 @@ async def generate_slot_challenge(
     """
     Generate a single slot machine challenge.
     
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each challenge must be certification-specific and user-level specific.
+    
     Args:
-        user_level: User's skill level from profile - this drives challenge complexity
-        cert_code: Target certification code
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
         _difficulty: DEPRECATED - ignored, user_level is used instead
         api_key: OpenAI API key
+        model: Optional model override
     
     Returns:
         SlotChallenge with 3 services and 4 options
+    
+    Raises:
+        ServiceSlotsValidationError: If user_level or cert_code are missing/invalid
     """
+    
+    # CRITICAL: Validate required parameters
+    validate_slots_params(user_level, cert_code)
     # Get API key
     key = api_key or get_request_api_key()
     if not key:
         raise ApiKeyRequiredError("OpenAI API key required")
     
-    # Build cert context
-    cert_name = "AWS Cloud Practitioner"
-    focus_areas = ["Core AWS Services", "Cloud Concepts", "Security"]
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise ServiceSlotsValidationError(f"Unknown certification persona: {cert_code}")
     
-    # Map cert code (e.g., "SAA-C03") to persona ID (e.g., "solutions-architect-associate")
-    persona_id = None
-    if cert_code:
-        upper_code = cert_code.upper()
-        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
-        if not persona_id:
-            # Try without version (e.g., "SAA-C03" -> "SAA")
-            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
-            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
-    
-    if persona_id and persona_id in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[persona_id]
-        cert_name = persona.get("cert", cert_name)
-        focus_areas = persona.get("focus", focus_areas)
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
     
     # Normalize user_level for lookups
     user_level = user_level.lower()
@@ -250,6 +296,15 @@ async def generate_slot_challenge(
     ]
     theme = random.choice(themes)
     
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=f"{theme} {' '.join(focus_areas[:2])}",
+        limit=5,
+        api_key=api_key
+    )
+    
     # Build prompt
     system_prompt = SERVICE_SLOTS_PROMPT.format(
         user_level=user_level,
@@ -262,6 +317,8 @@ async def generate_slot_challenge(
 
 Target certification: {cert_name}
 Skill level: {user_level}
+
+{knowledge_context}
 Theme hint: Focus on "{theme}" patterns for this challenge.
 
 Pick 3 AWS services that work together in a real-world architecture pattern related to {theme}.
@@ -340,24 +397,20 @@ def validate_slot_answer(
     challenge: SlotChallenge,
     selected_option_id: str,
     bet_amount: int,
-) -> Dict:
+    cert_code: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Validate the player's answer and calculate winnings.
+    Provides certification-specific educational feedback.
     
     Args:
         challenge: The slot challenge
-        selected_option_id: The option ID the player selected
-        bet_amount: How much they bet
+        selected_option_id: ID of the option the player selected
+        bet_amount: Amount the player bet
+        cert_code: Optional certification code for cert-specific feedback
     
     Returns:
-        {
-            "correct": bool,
-            "winnings": int (positive if won, negative if lost),
-            "correct_answer": str,
-            "explanation": str,
-            "pattern_name": str,
-            "pattern_description": str,
-        }
+        Validation result with winnings and personalized feedback
     """
     # Find selected option
     selected = None
@@ -378,6 +431,12 @@ def validate_slot_answer(
             "pattern_description": challenge.pattern_description,
         }
     
+    # Add certification-specific educational note if cert_code provided
+    cert_note = ""
+    if cert_code and cert_code in CERTIFICATION_PERSONAS:
+        persona = CERTIFICATION_PERSONAS[cert_code]
+        cert_note = f"\n\n💡 {persona['cert']} Tip: This pattern is commonly tested in the exam's {persona['focus'][0]} domain."
+    
     if selected.is_correct:
         # Winner! Payout is bet * base_payout
         winnings = int(bet_amount * challenge.base_payout)
@@ -385,7 +444,7 @@ def validate_slot_answer(
             "correct": True,
             "winnings": winnings,
             "correct_answer": selected.text,
-            "explanation": selected.explanation,
+            "explanation": selected.explanation + cert_note,
             "pattern_name": challenge.pattern_name,
             "pattern_description": challenge.pattern_description,
         }
@@ -395,7 +454,7 @@ def validate_slot_answer(
             "correct": False,
             "winnings": -bet_amount,
             "correct_answer": correct.text if correct else "",
-            "explanation": selected.explanation,
+            "explanation": selected.explanation + cert_note,
             "pattern_name": challenge.pattern_name,
             "pattern_description": challenge.pattern_description,
         }
@@ -406,13 +465,33 @@ def validate_slot_answer(
 # =============================================================================
 
 async def generate_slot_batch(
-    count: int = 5,
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
+    count: int,
+    user_level: str,
+    cert_code: str,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
 ) -> List[SlotChallenge]:
-    """Generate multiple challenges at once for smoother UX."""
+    """
+    Generate multiple challenges at once for smoother UX.
+    
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
+    Args:
+        count: Number of challenges to generate
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED)
+        api_key: Optional OpenAI API key
+        model: Optional model override
+    
+    Returns:
+        List of SlotChallenges
+    
+    Raises:
+        ServiceSlotsValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # Validate parameters once for the batch
+    validate_slots_params(user_level, cert_code)
     challenges = []
     for _ in range(count):
         try:

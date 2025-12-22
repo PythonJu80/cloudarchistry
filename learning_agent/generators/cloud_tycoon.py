@@ -16,6 +16,52 @@ from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
 
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class TycoonValidationError(Exception):
+    """Raised when Cloud Tycoon generation parameters are invalid"""
+    pass
+
+
+def validate_tycoon_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        TycoonValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise TycoonValidationError(
+            "user_level is required. Cloud Tycoon journey must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise TycoonValidationError(
+            "cert_code is required. Cloud Tycoon journey must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise TycoonValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise TycoonValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+
+
 # =============================================================================
 # DATA MODELS
 # =============================================================================
@@ -337,42 +383,54 @@ async def _chat_json(
 
 
 async def generate_tycoon_journey(
-    # User context
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
-    
-    # Journey options
-    theme: Optional[str] = None,  # If None, random theme selected
-    
-    # API config
+    user_level: str,
+    cert_code: str,
+    theme: Optional[str] = None,
     api_key: Optional[str] = None,
 ) -> TycoonJourney:
     """
     Generate a complete Cloud Tycoon journey with 10 business use cases.
     
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each journey must be certification-specific and user-level specific.
+    
     Args:
-        user_level: User's skill level (beginner/intermediate/advanced/expert)
-        cert_code: Target certification code (e.g., "SAA-C03", "DVA-C02")
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
         theme: Optional journey theme (random if not provided)
         api_key: Optional OpenAI API key
     
     Returns:
-        TycoonJourney with 10 businesses to visit
+        TycoonJourney with 10 businesses tailored to cert and level
+    
+    Raises:
+        TycoonValidationError: If user_level or cert_code are missing/invalid
     """
+    
+    # CRITICAL: Validate required parameters
+    validate_tycoon_params(user_level, cert_code)
     import random
     
     # Select theme
     if not theme:
         theme = random.choice(JOURNEY_THEMES)
     
-    # Build cert context
-    cert_name = "AWS Cloud Practitioner"
-    focus_areas = ["Core AWS Services", "Cloud Concepts", "Security", "Pricing"]
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise TycoonValidationError(f"Unknown certification persona: {cert_code}")
     
-    if cert_code and cert_code in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[cert_code]
-        cert_name = persona.get("cert", cert_name)
-        focus_areas = persona.get("focus", focus_areas)
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=f"{theme} AWS architecture {' '.join(focus_areas[:2])}",
+        limit=5,
+        api_key=api_key
+    )
     
     # Build the prompt
     system_prompt = CLOUD_TYCOON_PROMPT.format(
@@ -387,6 +445,8 @@ async def generate_tycoon_journey(
 
 Target certification: {cert_name}
 Skill level: {user_level}
+
+{knowledge_context}
 
 Create 10 diverse, realistic business use cases that test AWS architecture knowledge.
 Make the journey feel like a real consulting trip through different companies."""
@@ -456,9 +516,19 @@ Make the journey feel like a real consulting trip through different companies.""
 async def validate_service_match(
     use_case: BusinessUseCase,
     submitted_services: List[str],  # List of service_ids
+    cert_code: Optional[str] = None,
+    user_level: Optional[str] = None,
 ) -> Dict:
     """
     Validate if the submitted services match the required services.
+    Provides certification-specific and skill-level appropriate feedback.
+    Returns match percentage, missing services, and extra services.
+    
+    Args:
+        use_case: BusinessUseCase to validate against
+        submitted_services: List of service_ids submitted by the user
+        cert_code: Optional certification code for personalized feedback
+        user_level: Optional user skill level for personalized feedback
     
     Returns:
         {
@@ -488,7 +558,7 @@ async def validate_service_match(
     # Perfect match = full contract, partial = proportional
     contract_earned = int(use_case.contract_value * score)
     
-    # Generate feedback
+    # Generate feedback with certification and skill level context
     if score == 1.0:
         feedback = f"🎉 Perfect match! You've won the ${use_case.contract_value:,} contract!"
     elif score >= 0.8:
@@ -505,6 +575,24 @@ async def validate_service_match(
             if svc.service_id in missing
         ]
         feedback += f"\n\nMissing: {', '.join(missing_names)}"
+    
+    # Add certification-specific guidance if cert_code provided
+    if cert_code:
+        from prompts import CERTIFICATION_PERSONAS
+        if cert_code in CERTIFICATION_PERSONAS:
+            persona = CERTIFICATION_PERSONAS[cert_code]
+            feedback += f"\n\n💡 {persona['cert']} Focus: Consider how this architecture aligns with {persona['focus'][0]} best practices."
+    
+    # Add skill-level appropriate guidance if user_level provided
+    if user_level and missing:
+        skill_guidance = {
+            "beginner": "💭 Tip: Review the use case requirements carefully and match each requirement to a specific AWS service.",
+            "intermediate": "💭 Tip: Think about which AWS services best address scalability, security, and cost optimization for this use case.",
+            "advanced": "💭 Tip: Consider service integration patterns and how missing services impact the overall architecture's resilience.",
+            "expert": "💭 Tip: Evaluate the architectural trade-offs and compliance implications of the missing services."
+        }
+        if user_level in skill_guidance:
+            feedback += f"\n\n{skill_guidance[user_level]}"
     
     return {
         "correct": score == 1.0,

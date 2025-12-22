@@ -87,6 +87,8 @@ class BugBountyValidateRequest(BaseModel):
     claim: str
     evidence: List[str]
     confidence: int
+    cert_code: Optional[str] = None
+    user_level: Optional[str] = None
     openai_api_key: Optional[str] = None
 
 
@@ -256,12 +258,16 @@ async def generate_bug_bounty(request: BugBountyGenerateRequest):
     Challenge is persisted to database for validation and history.
     """
     try:
-        # Use provided API key or default
+        # Use provided API key or fallback to environment
         api_key = request.openai_api_key or OPENAI_API_KEY
+        if not api_key:
+            raise HTTPException(status_code=400, detail="OpenAI API key required")
+        
+        # Initialize generator with API key
         generator = BugBountyGenerator(openai_api_key=api_key)
         
-        # Generate challenge
-        challenge = generator.generate_challenge(
+        # Generate challenge (now async with knowledge base integration)
+        challenge = await generator.generate_challenge(
             difficulty=request.difficulty,
             certification_code=request.certification_code,
             scenario_type=request.scenario_type,
@@ -350,14 +356,24 @@ async def validate_bug_claim(request: BugBountyValidateRequest):
         
         # Validate using either in-memory challenge or database data
         if challenge:
-            result = generator.validate_claim(challenge, claim_data)
+            result = generator.validate_claim(
+                challenge, 
+                claim_data,
+                cert_code=request.cert_code,
+                user_level=request.user_level
+            )
         else:
             # Reconstruct minimal challenge object from database for validation
             from bug_bounty_generator import BugBountyChallenge, BugDefinition, AWSEnvironment
             hidden_bugs = [
                 BugDefinition(**bug) for bug in challenge_data["hidden_bugs"]
             ]
-            result = generator.validate_claim_from_bugs(hidden_bugs, claim_data)
+            result = generator.validate_claim_from_bugs(
+                hidden_bugs, 
+                claim_data,
+                cert_code=request.cert_code,
+                user_level=request.user_level
+            )
         
         # Update progress in database
         if challenge_data:

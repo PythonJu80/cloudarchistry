@@ -714,7 +714,7 @@ async def perform_rag_query(query: str, source: str = None, match_count: int = 5
         ctx = await get_context()
         
         # Search documents
-        results = await search_documents(query, source=source, match_count=match_count * 2)
+        results = await search_documents(query, source_id=source, match_count=match_count * 2)
         
         # Rerank if model available
         if ctx.reranking_model and results:
@@ -741,25 +741,29 @@ async def perform_rag_query(query: str, source: str = None, match_count: int = 5
 async def execute_tool(tool_name: str, tool_args: dict) -> str:
     """Execute a tool and return the result."""
     try:
-        if tool_name == "search_knowledge_base":
-            return await perform_rag_query(
+        if tool_name == "search_documentation":
+            results = await search_documents(
                 query=tool_args.get("query", ""),
-                source=tool_args.get("source"),
-                match_count=tool_args.get("match_count", 5)
+                source_id=tool_args.get("source"),
+                match_count=5
             )
-        elif tool_name == "search_code_examples":
-            results = await search_code_examples(
-                query=tool_args.get("query", ""),
-                language=tool_args.get("language"),
-                match_count=tool_args.get("match_count", 5)
-            )
-            return json.dumps({"success": True, "results": results}, indent=2)
-        elif tool_name == "list_aws_services":
+            if results:
+                formatted = []
+                for r in results:
+                    formatted.append(f"**Source:** {r.get('url', 'Unknown')}\n{r.get('content', '')[:1000]}")
+                return "\n\n---\n\n".join(formatted)
+            return "No relevant documentation found."
+        elif tool_name == "get_sources":
+            sources = await db.get_knowledge_sources(limit=50)
+            if sources:
+                return "\n".join([f"- **{s['id']}**: {s.get('summary', 'No summary')[:100]}..." for s in sources])
+            return "No sources available."
+        elif tool_name == "get_aws_services":
             return await list_aws_services(
                 category=tool_args.get("category"),
                 tenant_id=tool_args.get("tenant_id")
             )
-        elif tool_name == "get_aws_service":
+        elif tool_name == "get_aws_service_details":
             return await get_aws_service(
                 service_name=tool_args.get("service_name", ""),
                 tenant_id=tool_args.get("tenant_id")
@@ -768,6 +772,18 @@ async def execute_tool(tool_name: str, tool_args: dict) -> str:
             return await get_aws_architecture(
                 use_case=tool_args.get("use_case", ""),
                 tenant_id=tool_args.get("tenant_id")
+            )
+        elif tool_name == "generate_flashcards":
+            from generators.flashcards import generate_flashcards_from_knowledge
+            return await generate_flashcards_from_knowledge(
+                topic=tool_args.get("topic", ""),
+                count=tool_args.get("count", 10)
+            )
+        elif tool_name == "generate_quiz":
+            from generators.quiz import generate_quiz_from_knowledge
+            return await generate_quiz_from_knowledge(
+                topic=tool_args.get("topic", ""),
+                question_count=tool_args.get("question_count", 5)
             )
         else:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
@@ -1120,21 +1136,18 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                 logger.warning(f"Knowledge base search failed: {kb_err}")
                 yield f"data: {json.dumps({'type': 'status', 'message': '⚠️ Knowledge base search skipped'})}\n\n"
 
-            # Step 4: Building persona
-            persona_context = None
-            if request.cert_code and request.cert_code in CERTIFICATION_PERSONAS:
-                persona = CERTIFICATION_PERSONAS[request.cert_code]
-                persona_context = {
-                    "cert_code": request.cert_code,
-                    "cert_name": persona["cert"],
-                    "level": persona["level"],
-                    "focus_areas": ", ".join(persona["focus"]),
-                    "style": persona["style"],
-                }
-                cert_name = persona["cert"]
+            # Step 4: Validate cert_code (required by generator)
+            if not request.cert_code:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'cert_code is required for scenario generation'})}\n\n"
+                return
+            
+            # Get cert name for status messages
+            cert_name = None
+            if request.cert_code in CERTIFICATION_PERSONAS:
+                cert_name = CERTIFICATION_PERSONAS[request.cert_code]["cert"]
                 yield f"data: {json.dumps({'type': 'status', 'message': f'🎯 Applying {cert_name} certification focus...', 'step': 4, 'total_steps': 5})}\n\n"
             else:
-                yield f"data: {json.dumps({'type': 'status', 'message': '🎯 Building general cloud scenario...', 'step': 4, 'total_steps': 5})}\n\n"
+                yield f"data: {json.dumps({'type': 'status', 'message': '🎯 Building cloud scenario...', 'step': 4, 'total_steps': 5})}\n\n"
 
             await asyncio.sleep(0.1)
 
@@ -1154,8 +1167,8 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
 
             scenario = await gen_scenario(
                 company_info=company_info,
+                target_cert=request.cert_code,
                 user_level=request.user_level,
-                persona_context=persona_context,
                 knowledge_context=knowledge_context if knowledge_context else None,
             )
 
@@ -1171,7 +1184,7 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                     logger.warning(f"Failed to save scenario to DB: {db_err}")
 
             # Final result
-            yield f"data: {json.dumps({'type': 'complete', 'scenario': scenario.model_dump(), 'company_info': research.company_info.model_dump(), 'cert_code': request.cert_code, 'cert_name': persona_context['cert_name'] if persona_context else None})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'scenario': scenario.model_dump(), 'company_info': research.company_info.model_dump(), 'cert_code': request.cert_code, 'cert_name': cert_name})}\n\n"
 
         except Exception as e:
             logger.error(f"Stream generation error: {e}")
@@ -1214,22 +1227,23 @@ async def generate_scenario_endpoint(request: LocationRequest):
             employee_count=research.company_info.employee_count,
         )
         
-        persona_context = None
-        if request.cert_code and request.cert_code in CERTIFICATION_PERSONAS:
-            persona = CERTIFICATION_PERSONAS[request.cert_code]
-            persona_context = {
-                "cert_code": request.cert_code,
-                "cert_name": persona["cert"],
-                "level": persona["level"],
-                "focus_areas": ", ".join(persona["focus"]),
-                "style": persona["style"],
-            }
+        # Ensure cert_code is provided (required by generator)
+        if not request.cert_code:
+            raise HTTPException(
+                status_code=400,
+                detail="cert_code is required for scenario generation"
+            )
         
         scenario = await generate_scenario(
             company_info=company_info,
+            target_cert=request.cert_code,
             user_level=request.user_level,
-            persona_context=persona_context,
         )
+        
+        # Get cert name for response
+        cert_name = None
+        if request.cert_code in CERTIFICATION_PERSONAS:
+            cert_name = CERTIFICATION_PERSONAS[request.cert_code]["cert"]
         
         if request.place_id:
             try:
@@ -1246,7 +1260,7 @@ async def generate_scenario_endpoint(request: LocationRequest):
             scenario=scenario,
             company_info=research.company_info,
             cert_code=request.cert_code,
-            cert_name=persona_context["cert_name"] if persona_context else None,
+            cert_name=cert_name,
         )
     except Exception as e:
         logger.error(f"Scenario generation error: {e}")
@@ -1807,7 +1821,7 @@ async def grade_challenge_answer_endpoint(request: GradeChallengeAnswerRequest):
 # CLI SIMULATOR ENDPOINTS
 # ============================================
 
-_cli_sessions: Dict[str, Any] = {}
+from redis_sessions import get_cli_session, save_cli_session, delete_cli_session, session_exists
 
 
 @app.post("/api/learning/cli-simulate")
@@ -1828,9 +1842,15 @@ async def cli_simulate_endpoint(request: CLISimulatorRequest):
         
         # Get or create session
         session_id = request.session_id
-        if session_id and session_id in _cli_sessions:
-            session_data = _cli_sessions[session_id]
-            session = CLISession(**session_data)
+        if session_id:
+            session_data = await get_cli_session(session_id)
+            if session_data:
+                session = CLISession(**session_data)
+            else:
+                session = create_cli_session(
+                    challenge_id=request.challenge_context.get("id") if request.challenge_context else None
+                )
+                session_id = session.session_id
         else:
             session = create_cli_session(
                 challenge_id=request.challenge_context.get("id") if request.challenge_context else None
@@ -1849,8 +1869,8 @@ async def cli_simulate_endpoint(request: CLISimulatorRequest):
             model=request.preferred_model,
         )
         
-        # Save session state
-        _cli_sessions[session_id] = session.model_dump()
+        # Save session state to Redis
+        await save_cli_session(session_id, session.model_dump())
         
         return {
             "success": True,
@@ -1920,8 +1940,8 @@ async def cli_help_endpoint(request: CLIHelpRequest):
 @app.delete("/api/learning/cli-session/{session_id}")
 async def cli_session_delete(session_id: str):
     """Delete CLI session"""
-    if session_id in _cli_sessions:
-        del _cli_sessions[session_id]
+    deleted = await delete_cli_session(session_id)
+    if deleted:
         return {"success": True}
     return {"success": False, "message": "Session not found"}
 
@@ -1930,9 +1950,10 @@ async def cli_session_delete(session_id: str):
 async def cli_session_stats(session_id: str):
     """Get CLI session stats"""
     from generators.cli_simulator import CLISession
-    if session_id not in _cli_sessions:
+    session_data = await get_cli_session(session_id)
+    if not session_data:
         raise HTTPException(status_code=404, detail="Session not found")
-    session = CLISession(**_cli_sessions[session_id])
+    session = CLISession(**session_data)
     stats = get_cli_session_stats(session)
     return {"success": True, **stats}
 
@@ -1942,7 +1963,8 @@ async def cli_validate_endpoint(request: CLIValidateRequest):
     """Validate CLI challenge"""
     from generators.cli_simulator import CLISession
     
-    if request.session_id not in _cli_sessions:
+    session_data = await get_cli_session(request.session_id)
+    if not session_data:
         raise HTTPException(status_code=404, detail="Session not found")
     
     try:
@@ -1952,7 +1974,7 @@ async def cli_validate_endpoint(request: CLIValidateRequest):
         if request.preferred_model:
             set_request_model(request.preferred_model)
         
-        session = CLISession(**_cli_sessions[request.session_id])
+        session = CLISession(**session_data)
         result = await validate_cli_challenge(session=session, challenge_context=request.challenge_context)
         
         return {
@@ -2193,8 +2215,7 @@ async def generate_notes_endpoint(request: GenerateContentRequest):
         persona = CERTIFICATION_PERSONAS[persona_id]
         
         notes_data = await generate_notes_for_certification(
-            cert_name=persona["cert"],
-            focus_areas=persona["focus"],
+            cert_code=persona_id,
             user_level=request.user_level or "intermediate",
             telemetry=request.telemetry,
         )
@@ -2235,8 +2256,7 @@ async def generate_quiz_endpoint(request: GenerateContentRequest):
             logger.warning(f"Could not get existing questions: {e}")
         
         quiz_data = await generate_quiz_for_certification(
-            cert_name=persona["cert"],
-            focus_areas=persona["focus"],
+            cert_code=persona_id,
             user_level=request.user_level or "intermediate",
             question_count=question_count,
             telemetry=request.telemetry,
@@ -2417,16 +2437,141 @@ Return ONLY valid JSON:
 {{"score": <0-100>, "correct": ["placement/connection achievements"], "missing": ["placement/connection issues - describe as risks"], "suggestions": ["hints about placement/connections"], "feedback": "encouraging message about their puzzle-solving"}}"""
 
 
+ARCHITECT_ARENA_AUDIT_PROMPT_ENHANCED = """You are auditing an AWS architecture PUZZLE submission with DETAILED, PERSONALIZED feedback.
+
+## USER CONTEXT
+- **Target Certification:** {cert_name}
+- **Certification Focus Areas:** {focus_areas}
+- **Skill Level:** {user_level}
+
+## CRITICAL: This is a PUZZLE game, NOT a free-form design!
+The user was given PRE-GENERATED puzzle pieces (AWS services) scattered randomly on a canvas.
+Their job was to:
+1. PLACE pieces correctly (drag into proper containers - e.g., EC2 into private subnet, ALB into public subnet)
+2. CONNECT pieces correctly (draw edges between related services)
+
+## DO NOT give credit for:
+- Having the services present (they were pre-generated, not chosen by the user)
+- The types of services used (the puzzle defined these)
+
+## DO give credit/penalties for:
+- Correct PLACEMENT: Is EC2 inside a private subnet? Is ALB in public subnet? Are subnets inside VPC?
+- Correct CONNECTIONS: Did user connect ALB -> EC2 -> RDS? Are there logical data flows?
+- Correct HIERARCHY: Proper nesting of containers
+
+## Puzzle Context
+Title: {puzzle_title}
+Brief: {puzzle_brief}
+Expected Hierarchy: {expected_hierarchy}
+Expected Connections: {expected_connections}
+
+## User's Submission
+```json
+{diagram_json}
+```
+
+## AWS Knowledge Base Context (for detailed feedback)
+{knowledge_context}
+
+## Scoring Guide (out of 100)
+- 0-30: Pieces not placed in containers, no connections
+- 31-50: Some correct placements, few connections
+- 51-70: Most placements correct, most connections made
+- 71-90: All placements correct, all connections, good hierarchy
+- 91-100: Perfect placement, connections, and hierarchy
+
+## DETAILED FEEDBACK REQUIREMENTS
+
+### For {user_level} skill level:
+- **beginner**: Provide explicit step-by-step guidance, explain WHY each placement matters, use simple language
+- **intermediate**: Explain trade-offs, reference best practices, suggest optimizations
+- **advanced**: Focus on edge cases, multi-AZ considerations, cost vs performance trade-offs
+- **expert**: Discuss enterprise patterns, compliance implications, disaster recovery strategies
+
+### Certification-Specific Feedback ({cert_name}):
+- Reference topics from the certification focus areas: {focus_areas}
+- Mention specific exam domains where applicable
+- Connect architectural decisions to certification exam objectives
+
+### Knowledge References:
+- When suggesting improvements, reference specific AWS documentation from the knowledge base
+- Provide URLs or service names for further reading
+- Connect suggestions to Well-Architected Framework pillars where relevant
+
+## OUTPUT FORMAT
+Return ONLY valid JSON with these fields:
+
+{{
+  "score": <0-100>,
+  "correct": [
+    "Detailed achievement with WHY it's correct for {cert_name}",
+    "Another correct placement with certification context"
+  ],
+  "missing": [
+    "Specific issue described as a RISK (e.g., 'Security boundary violation - EC2 exposed to internet')",
+    "Another issue with architectural impact explanation"
+  ],
+  "suggestions": [
+    "Actionable suggestion with AWS service reference",
+    "Improvement tip with Well-Architected Framework context"
+  ],
+  "feedback": "Encouraging, skill-appropriate message that references their certification goals and provides next steps",
+  "knowledge_refs": [
+    "AWS service or documentation topic relevant to their mistakes/successes",
+    "Another reference for deeper learning"
+  ],
+  "cert_specific_notes": [
+    "Note about how this architecture pattern relates to {cert_name} exam",
+    "Exam tip or common pitfall for this certification"
+  ],
+  "skill_level_guidance": "Personalized guidance appropriate for {user_level} level - what to focus on next"
+}}
+
+## EXAMPLES OF DETAILED FEEDBACK
+
+### Good "correct" entry:
+"VPC properly contains all subnets - demonstrates understanding of network isolation, a key concept for {cert_name}. This follows the Well-Architected Framework's Security pillar."
+
+### Good "missing" entry:
+"EC2 instances in public subnet - Security risk: Direct internet exposure without bastion host. For {cert_name}, remember that compute resources should typically reside in private subnets with controlled egress via NAT Gateway."
+
+### Good "suggestions" entry:
+"Consider adding a NAT Gateway in the public subnet to allow private subnet resources to access the internet securely. Review AWS VPC documentation on NAT Gateways for {cert_name} exam preparation."
+
+### Good "cert_specific_notes" entry:
+"For {cert_name} exam: Multi-AZ deployment patterns are heavily tested. Your current architecture could be enhanced by distributing resources across multiple Availability Zones for high availability."
+
+Be SPECIFIC, DETAILED, and EDUCATIONAL. Help the user learn, not just score points."""
+
+
 @app.post("/api/architect-arena/audit")
 async def audit_architect_arena_endpoint(request: dict):
-    """Audit Architect Arena puzzle - judges PLACEMENT and CONNECTIONS, not presence of pieces."""
-    from utils import set_request_api_key, set_request_model, get_request_api_key, get_request_model
+    """Audit Architect Arena puzzle with personalized, detailed feedback based on certification and skill level."""
+    from utils import set_request_api_key, set_request_model, get_request_api_key, get_request_model, fetch_knowledge_for_generation
+    from prompts import CERTIFICATION_PERSONAS
     
     try:
         if request.get("openai_api_key"):
             set_request_api_key(request["openai_api_key"])
         if request.get("preferred_model"):
             set_request_model(request["preferred_model"])
+        
+        # Extract user context for personalized feedback
+        user_level = request.get("user_level", "intermediate")
+        cert_code = request.get("cert_code", "SAA")
+        
+        # Map cert code to persona
+        from generators.architect_arena import CERT_CODE_TO_PERSONA
+        upper_code = cert_code.upper()
+        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
+        if not persona_id:
+            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+            persona_id = CERT_CODE_TO_PERSONA.get(base_code, "solutions-architect-associate")
+        
+        # Get certification context
+        persona = CERTIFICATION_PERSONAS.get(persona_id, CERTIFICATION_PERSONAS["solutions-architect-associate"])
+        cert_name = persona["cert"]
+        focus_areas = persona["focus"]
         
         nodes = request.get("nodes", [])
         connections = request.get("connections", [])
@@ -2462,12 +2607,25 @@ async def audit_architect_arena_endpoint(request: dict):
             "connections": [{"from": c.get("source"), "to": c.get("target")} for c in connections]
         }
         
-        system_prompt = ARCHITECT_ARENA_AUDIT_PROMPT.format(
+        # Fetch AWS knowledge for validation context
+        puzzle_brief = request.get("puzzle_brief", "Build the architecture")
+        knowledge_context = await fetch_knowledge_for_generation(
+            cert_code=persona_id,
+            topic=f"AWS architecture best practices {puzzle_brief[:100]}",
+            limit=3,
+            api_key=request.get("openai_api_key")
+        )
+        
+        system_prompt = ARCHITECT_ARENA_AUDIT_PROMPT_ENHANCED.format(
             puzzle_title=request.get("puzzle_title", "Architecture Puzzle"),
-            puzzle_brief=request.get("puzzle_brief", "Build the architecture"),
+            puzzle_brief=puzzle_brief,
             expected_hierarchy=json.dumps(request.get("expected_hierarchy", {}), indent=2),
             expected_connections=json.dumps(request.get("expected_connections", []), indent=2),
             diagram_json=json.dumps(diagram_data, indent=2),
+            cert_name=cert_name,
+            focus_areas=", ".join(focus_areas[:3]),
+            user_level=user_level,
+            knowledge_context=knowledge_context,
         )
         
         # Use OpenAI client directly (not _chat_json which doesn't exist here)
@@ -2494,6 +2652,9 @@ async def audit_architect_arena_endpoint(request: dict):
             "missing": result.get("missing", []),
             "suggestions": result.get("suggestions", []),
             "feedback": result.get("feedback", ""),
+            "knowledge_refs": result.get("knowledge_refs", []),
+            "cert_specific_notes": result.get("cert_specific_notes", []),
+            "skill_level_guidance": result.get("skill_level_guidance", ""),
         }
     except Exception as e:
         logger.error(f"Architect Arena audit error: {e}")
@@ -2837,6 +2998,8 @@ class TycoonValidateRequest(PydanticBaseModel):
     required_services: List[Dict[str, Any]]
     contract_value: int
     difficulty: str
+    cert_code: Optional[str] = None
+    user_level: Optional[str] = None
     submitted_services: List[str]
 
 
@@ -2923,6 +3086,8 @@ async def validate_tycoon_services(request: TycoonValidateRequest):
         result = await validate_service_match(
             use_case=use_case,
             submitted_services=request.submitted_services,
+            cert_code=request.cert_code,
+            user_level=request.user_level,
         )
         
         return result
@@ -2954,7 +3119,8 @@ class SlotsValidateRequest(PydanticBaseModel):
     pattern_name: str
     options: List[Dict[str, Any]]
     user_level: str
-    base_payout: float
+    cert_code: Optional[str] = None
+    base_payout: int
     selected_option_id: str
     bet_amount: int
 
@@ -3045,6 +3211,7 @@ async def validate_slots_answer_endpoint(request: SlotsValidateRequest):
             challenge=challenge,
             selected_option_id=request.selected_option_id,
             bet_amount=request.bet_amount,
+            cert_code=request.cert_code,
         )
         
         return result

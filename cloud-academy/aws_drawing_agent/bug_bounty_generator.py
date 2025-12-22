@@ -11,6 +11,7 @@ import json
 import re
 import random
 import logging
+import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from pydantic import BaseModel
@@ -18,6 +19,49 @@ from openai import OpenAI
 import httpx
 
 logger = logging.getLogger(__name__)
+
+# Knowledge base integration via HTTP (learning agent API)
+import os
+LEARNING_AGENT_URL = os.getenv("LEARNING_AGENT_URL", "http://learning-agent:1027")
+
+async def fetch_knowledge_for_generation(
+    cert_code: str,
+    topic: str,
+    limit: int = 5,
+    api_key: Optional[str] = None
+) -> str:
+    """
+    Fetch AWS knowledge from learning agent's knowledge base via HTTP.
+    
+    Args:
+        cert_code: Certification code (e.g., 'solutions-architect-associate')
+        topic: Topic to search for
+        limit: Number of chunks to retrieve
+        api_key: OpenAI API key for embeddings
+    
+    Returns:
+        Formatted knowledge context string
+    """
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{LEARNING_AGENT_URL}/api/knowledge/search",
+                json={
+                    "cert_code": cert_code,
+                    "topic": topic,
+                    "limit": limit,
+                    "openai_api_key": api_key
+                }
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("knowledge_context", "")
+            else:
+                logger.warning(f"Knowledge fetch failed: {response.status_code}")
+                return ""
+    except Exception as e:
+        logger.warning(f"Failed to fetch knowledge from learning agent: {e}")
+        return ""
 
 
 # =============================================================================
@@ -250,7 +294,7 @@ class BugBountyGenerator:
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
     
-    def generate_challenge(
+    async def generate_challenge(
         self,
         difficulty: str = "intermediate",
         certification_code: Optional[str] = None,
@@ -286,12 +330,32 @@ class BugBountyGenerator:
         
         logger.info(f"Generating challenge: {scenario['name']} ({difficulty})")
         
+        # Fetch AWS knowledge from learning agent API
+        knowledge_context = ""
+        if certification_code:
+            try:
+                topic = f"{scenario['name']} {' '.join(scenario['keywords'][:2])}"
+                knowledge_context = await fetch_knowledge_for_generation(
+                    cert_code=certification_code,
+                    topic=topic,
+                    limit=5,
+                    api_key=self.openai_api_key
+                )
+                if knowledge_context:
+                    logger.info(f"Fetched AWS knowledge for {certification_code}: {len(knowledge_context)} chars")
+                else:
+                    logger.info(f"No AWS knowledge fetched for {certification_code}")
+            except Exception as e:
+                logger.warning(f"Failed to fetch knowledge: {e}")
+                knowledge_context = ""
+        
         # Step 1: Generate the use case description with requirements
         description = self._generate_description(
             scenario=scenario,
             difficulty=difficulty,
             certification_code=certification_code,
             complexity=config["complexity"],
+            knowledge_context=knowledge_context,
         )
         
         # Step 2: Generate the flawed architecture diagram
@@ -300,6 +364,7 @@ class BugBountyGenerator:
             description=description,
             difficulty=difficulty,
             bug_count=config["bug_count"],
+            knowledge_context=knowledge_context,
         )
         
         # Step 3: Generate hidden bugs (including diagram bugs + additional)
@@ -348,12 +413,17 @@ class BugBountyGenerator:
         difficulty: str,
         certification_code: Optional[str],
         complexity: str,
+        knowledge_context: str = "",
     ) -> str:
-        """Generate a detailed use case description using LLM."""
+        """Generate a detailed use case description using LLM with AWS knowledge."""
         
         cert_context = ""
         if certification_code:
             cert_context = f"\nTarget certification: {certification_code}. Include relevant AWS services and concepts for this certification."
+        
+        knowledge_section = ""
+        if knowledge_context:
+            knowledge_section = f"\n\nAWS KNOWLEDGE BASE CONTEXT:\n{knowledge_context}\n\nUse this AWS documentation to inform your architecture requirements and ensure certification-relevant services."
         
         prompt = f"""Generate a realistic AWS architecture use case description for a Bug Bounty challenge.
 
@@ -361,7 +431,7 @@ SCENARIO: {scenario['name']}
 TYPE: {scenario['type']}
 DIFFICULTY: {difficulty} ({complexity})
 KEYWORDS: {', '.join(scenario['keywords'])}
-{cert_context}
+{cert_context}{knowledge_section}
 
 Generate a professional use case document with:
 
@@ -401,8 +471,13 @@ Output ONLY the description text, no JSON or markdown code blocks."""
         description: str,
         difficulty: str,
         bug_count: int,
+        knowledge_context: str = "",
     ) -> tuple[Dict, List[Dict]]:
-        """Generate an architecture diagram with intentional flaws using LLM."""
+        """Generate an architecture diagram with intentional flaws using LLM and AWS knowledge."""
+        
+        knowledge_section = ""
+        if knowledge_context:
+            knowledge_section = f"\n\nAWS KNOWLEDGE BASE CONTEXT:\n{knowledge_context}\n\nUse this AWS documentation to select appropriate services and create realistic architectural flaws."
         
         prompt = f"""Generate an AWS architecture diagram with INTENTIONAL FLAWS for a Bug Bounty game.
 
@@ -411,7 +486,7 @@ DIFFICULTY: {difficulty}
 NUMBER OF BUGS TO EMBED: {bug_count}
 
 USE CASE DESCRIPTION:
-{description}
+{description}{knowledge_section}
 
 Generate a React Flow diagram JSON with intentional security, reliability, and architecture flaws.
 
@@ -849,16 +924,21 @@ Return ONLY valid JSON, no markdown."""
         self,
         challenge: BugBountyChallenge,
         claim: Dict,
+        cert_code: Optional[str] = None,
+        user_level: Optional[str] = None,
     ) -> Dict:
         """
         Validate a user's bug claim using semantic matching with LLM.
+        Provides certification-specific and skill-level appropriate feedback.
         
         Args:
             challenge: The challenge being played
             claim: User's bug claim with evidence
+            cert_code: Target certification code (e.g., 'SAA', 'solutions-architect-associate')
+            user_level: User's skill level (beginner, intermediate, advanced, expert)
         
         Returns:
-            Validation result with scoring
+            Validation result with scoring and personalized feedback
         """
         if not self.client:
             return self._simple_validate(challenge, claim)
@@ -882,7 +962,22 @@ Return ONLY valid JSON, no markdown."""
             for bug in challenge.hidden_bugs
         ]
         
-        prompt = f"""You are a strict Bug Bounty claim validator. Determine if the user ACTUALLY identified a real bug.
+        # Build certification and skill level context
+        cert_context = ""
+        if cert_code:
+            cert_context = f"\n\nTARGET CERTIFICATION: {cert_code}\nProvide feedback relevant to this certification's exam focus areas."
+        
+        skill_context = ""
+        if user_level:
+            skill_level_guidance = {
+                "beginner": "Provide explicit, educational feedback. Explain WHY this is/isn't a bug and what to look for.",
+                "intermediate": "Provide feedback with best practices references. Guide them to understand the architectural implications.",
+                "advanced": "Provide concise feedback focused on edge cases and optimization opportunities.",
+                "expert": "Provide minimal feedback. Focus on enterprise-scale implications and compliance considerations."
+            }
+            skill_context = f"\n\nUSER SKILL LEVEL: {user_level}\n{skill_level_guidance.get(user_level, skill_level_guidance['intermediate'])}"
+        
+        prompt = f"""You are a strict Bug Bounty claim validator. Determine if the user ACTUALLY identified a real bug.{cert_context}{skill_context}
 
 HIDDEN BUGS IN THIS CHALLENGE:
 {json.dumps(bugs_summary, indent=2)}
@@ -1024,10 +1119,13 @@ Return ONLY valid JSON."""
         self,
         hidden_bugs: List[BugDefinition],
         claim: Dict,
+        cert_code: Optional[str] = None,
+        user_level: Optional[str] = None,
     ) -> Dict:
         """
         Validate a user's bug claim against a list of hidden bugs.
         Used when challenge is loaded from database instead of memory.
+        Provides certification-specific and skill-level appropriate feedback.
         
         Args:
             hidden_bugs: List of BugDefinition objects (the answers)
@@ -1058,7 +1156,22 @@ Return ONLY valid JSON."""
             for bug in hidden_bugs
         ]
         
-        prompt = f"""You are a strict Bug Bounty claim validator. Determine if the user ACTUALLY identified a real bug.
+        # Build certification and skill level context (same as validate_claim)
+        cert_context = ""
+        if cert_code:
+            cert_context = f"\n\nTARGET CERTIFICATION: {cert_code}\nProvide feedback relevant to this certification's exam focus areas."
+        
+        skill_context = ""
+        if user_level:
+            skill_level_guidance = {
+                "beginner": "Provide explicit, educational feedback. Explain WHY this is/isn't a bug and what to look for.",
+                "intermediate": "Provide feedback with best practices references. Guide them to understand the architectural implications.",
+                "advanced": "Provide concise feedback focused on edge cases and optimization opportunities.",
+                "expert": "Provide minimal feedback. Focus on enterprise-scale implications and compliance considerations."
+            }
+            skill_context = f"\n\nUSER SKILL LEVEL: {user_level}\n{skill_level_guidance.get(user_level, skill_level_guidance['intermediate'])}"
+        
+        prompt = f"""You are a strict Bug Bounty claim validator. Determine if the user ACTUALLY identified a real bug.{cert_context}{skill_context}
 
 HIDDEN BUGS IN THIS CHALLENGE:
 {json.dumps(bugs_summary, indent=2)}
