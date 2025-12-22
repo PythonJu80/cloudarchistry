@@ -38,12 +38,12 @@ export default function LearnLayout({ children }: LearnLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-20">
       {/* Main App Navbar */}
       <Navbar activePath="/learn" variant="transparent" />
 
       {/* Learning Centre Sub-navigation */}
-      <div className="fixed top-[7rem] left-0 right-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-sm">
+      <div className="sticky top-0 left-0 right-0 z-40 border-b border-border/50 bg-background/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6">
           <nav className="flex items-center gap-1 overflow-x-auto">
             {tabs.map((tab) => {
@@ -69,7 +69,7 @@ export default function LearnLayout({ children }: LearnLayoutProps) {
       </div>
 
       {/* Page Content - account for both navbars */}
-      <main className="pt-40 max-w-7xl mx-auto px-6">{children}</main>
+      <main className="pt-6 max-w-7xl mx-auto px-6">{children}</main>
     </div>
   );
 }
