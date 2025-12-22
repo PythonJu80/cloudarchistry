@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Globe, 
   X, 
@@ -819,10 +820,18 @@ export default function WorldPage() {
             {/* Header */}
             <div className="p-4 border-b border-border/50">
               <div className="flex items-center justify-between mb-4">
-                <Link href="/" className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg overflow-hidden">
-                                      </div>
+                <Link href="/" className="flex items-center gap-2 group">
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0">
+                    <Image
+                      src="/logo.png"
+                      alt="Cloud Archistry"
+                      fill
+                      sizes="32px"
+                      className="object-cover"
+                    />
+                  </div>
                   <span className="font-bold">Cloud Archistry</span>
+                  <ArrowLeft className="w-4 h-4 text-muted-foreground group-hover:text-cyan-400 transition-colors" />
                 </Link>
                 <Link href="/guide">
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-cyan-400">
@@ -1005,16 +1014,17 @@ export default function WorldPage() {
                       {!tierFeatures.hasTeamAccess ? (
                         <div className="text-center py-4 space-y-2">
                           <Lock className="w-5 h-5 text-muted-foreground mx-auto" />
-                          <p className="text-xs text-muted-foreground">Team plan required</p>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-xs border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
-                            onClick={() => setShowUpgradeModal(true)}
-                          >
-                            <Crown className="w-3 h-3 mr-1" />
-                            Upgrade to Team
-                          </Button>
+                          <p className="text-xs text-muted-foreground">Sign up to access cohorts</p>
+                          <Link href="/register">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-xs border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+                            >
+                              <Crown className="w-3 h-3 mr-1" />
+                              Start Free Trial
+                            </Button>
+                          </Link>
                         </div>
                       ) : isLoadingCohorts ? (
                         <div className="text-center py-4">

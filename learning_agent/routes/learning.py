@@ -107,22 +107,23 @@ async def generate_scenario_endpoint(request: LocationRequest):
             employee_count=research.company_info.employee_count,
         )
         
-        persona_context = None
-        if request.cert_code and request.cert_code in CERTIFICATION_PERSONAS:
-            persona = CERTIFICATION_PERSONAS[request.cert_code]
-            persona_context = {
-                "cert_code": request.cert_code,
-                "cert_name": persona["cert"],
-                "level": persona["level"],
-                "focus_areas": ", ".join(persona["focus"]),
-                "style": persona["style"],
-            }
+        # Ensure cert_code is provided (required by generator)
+        if not request.cert_code:
+            raise HTTPException(
+                status_code=400,
+                detail="cert_code is required for scenario generation"
+            )
         
         scenario = await gen_scenario(
             company_info=company_info,
+            target_cert=request.cert_code,
             user_level=request.user_level,
-            persona_context=persona_context,
         )
+        
+        # Get cert name for response
+        cert_name = None
+        if request.cert_code in CERTIFICATION_PERSONAS:
+            cert_name = CERTIFICATION_PERSONAS[request.cert_code]["cert"]
         
         if request.place_id:
             try:
@@ -139,7 +140,7 @@ async def generate_scenario_endpoint(request: LocationRequest):
             scenario=scenario,
             company_info=research.company_info,
             cert_code=request.cert_code,
-            cert_name=persona_context["cert_name"] if persona_context else None,
+            cert_name=cert_name,
         )
     except Exception as e:
         logger.error(f"Scenario generation error: {e}")
@@ -257,21 +258,18 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                 logger.warning(f"Knowledge base search failed: {kb_err}")
                 yield f"data: {json.dumps({'type': 'status', 'message': '⚠️ Knowledge base search skipped'})}\n\n"
 
-            # Step 4: Building persona
-            persona_context = None
-            if request.cert_code and request.cert_code in CERTIFICATION_PERSONAS:
-                persona = CERTIFICATION_PERSONAS[request.cert_code]
-                persona_context = {
-                    "cert_code": request.cert_code,
-                    "cert_name": persona["cert"],
-                    "level": persona["level"],
-                    "focus_areas": ", ".join(persona["focus"]),
-                    "style": persona["style"],
-                }
-                cert_name = persona["cert"]
+            # Step 4: Validate cert_code (required by generator)
+            if not request.cert_code:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'cert_code is required for scenario generation'})}\n\n"
+                return
+            
+            # Get cert name for status messages
+            cert_name = None
+            if request.cert_code in CERTIFICATION_PERSONAS:
+                cert_name = CERTIFICATION_PERSONAS[request.cert_code]["cert"]
                 yield f"data: {json.dumps({'type': 'status', 'message': f'🎯 Applying {cert_name} certification focus...', 'step': 4, 'total_steps': 5})}\n\n"
             else:
-                yield f"data: {json.dumps({'type': 'status', 'message': '🎯 Building general cloud scenario...', 'step': 4, 'total_steps': 5})}\n\n"
+                yield f"data: {json.dumps({'type': 'status', 'message': '🎯 Building cloud scenario...', 'step': 4, 'total_steps': 5})}\n\n"
 
             await asyncio.sleep(0.1)
 
@@ -291,8 +289,8 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
 
             scenario = await gen_scenario(
                 company_info=company_info,
+                target_cert=request.cert_code,
                 user_level=request.user_level,
-                persona_context=persona_context,
                 knowledge_context=knowledge_context if knowledge_context else None,
             )
 
@@ -306,7 +304,7 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                 except Exception as db_err:
                     logger.warning(f"Failed to save scenario to DB: {db_err}")
 
-            yield f"data: {json.dumps({'type': 'complete', 'scenario': scenario.model_dump(), 'company_info': research.company_info.model_dump(), 'cert_code': request.cert_code, 'cert_name': persona_context['cert_name'] if persona_context else None})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'scenario': scenario.model_dump(), 'company_info': research.company_info.model_dump(), 'cert_code': request.cert_code, 'cert_name': cert_name})}\n\n"
 
         except Exception as e:
             logger.error(f"Stream generation error: {e}")

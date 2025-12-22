@@ -90,6 +90,55 @@ CERT_CODE_TO_PERSONA = {
     "CLF-C02": "cloud-practitioner",
 }
 
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERT_CODE_TO_PERSONA.keys())
+
+
+class PuzzleValidationError(Exception):
+    """Raised when puzzle parameters are invalid"""
+    pass
+
+
+def validate_puzzle_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification code (e.g., 'SAA-C03', 'DVA-C02')
+    
+    Raises:
+        PuzzleValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise PuzzleValidationError(
+            "user_level is required. Each puzzle must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise PuzzleValidationError(
+            "cert_code is required. Each puzzle must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise PuzzleValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    # Normalize cert_code for validation
+    upper_code = cert_code.upper()
+    base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+    
+    if upper_code not in VALID_CERT_CODES and base_code not in VALID_CERT_CODES:
+        raise PuzzleValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+
 
 class PuzzlePiece(BaseModel):
     """A single AWS service piece for the puzzle"""
@@ -131,6 +180,8 @@ class ArchitectArenaPuzzle(BaseModel):
     title: str
     brief: str  # The scenario description
     difficulty: str  # easy, medium, hard, expert
+    user_level: str  # beginner, intermediate, advanced, expert
+    target_cert: str  # e.g., "AWS Certified Solutions Architect – Associate"
     time_limit_seconds: int = 300  # 5 minutes default
     target_score: int = 100
     
@@ -322,41 +373,47 @@ Return JSON with this SCHEMA:
 
 
 async def generate_architect_arena_puzzle(
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
+    user_level: str,
+    cert_code: str,
     difficulty: Optional[str] = None,
     api_key: Optional[str] = None,
 ) -> ArchitectArenaPuzzle:
     """
     Generate an Architect Arena puzzle based on user profile.
     
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each puzzle must be certification-specific and user-level specific.
+    
     Args:
-        user_level: User's skill level (beginner/intermediate/advanced/expert)
-        cert_code: Target certification code (e.g., "SAA-C03")
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Target certification code (REQUIRED, e.g., 'SAA-C03', 'DVA-C02')
         difficulty: Override difficulty (easy/medium/hard/expert)
         api_key: Optional OpenAI API key
     
     Returns:
-        ArchitectArenaPuzzle with all pieces and scoring rules
+        ArchitectArenaPuzzle with all pieces and scoring rules tailored to cert and level
+    
+    Raises:
+        PuzzleValidationError: If user_level or cert_code are missing/invalid
     """
     
-    # Build cert context
-    cert_name = "AWS Solutions Architect"
-    focus_areas = ["Compute", "Networking", "Storage", "Database", "Security"]
+    # CRITICAL: Validate required parameters
+    validate_puzzle_params(user_level, cert_code)
     
-    # Map cert code to persona
-    persona_id = None
-    if cert_code:
-        upper_code = cert_code.upper()
-        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
-        if not persona_id:
-            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
-            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    # Map cert code to persona (cert_code is now required and validated)
+    upper_code = cert_code.upper()
+    persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
+    if not persona_id:
+        base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
+        persona_id = CERT_CODE_TO_PERSONA.get(base_code)
     
-    if persona_id and persona_id in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[persona_id]
-        cert_name = persona.get("cert", cert_name)
-        focus_areas = persona.get("focus", focus_areas)
+    if not persona_id or persona_id not in CERTIFICATION_PERSONAS:
+        raise PuzzleValidationError(f"Could not map cert_code '{cert_code}' to a valid persona")
+    
+    # Get certification context from persona
+    persona = CERTIFICATION_PERSONAS[persona_id]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
     
     # Determine difficulty based on skill level if not specified
     if not difficulty:
@@ -376,6 +433,15 @@ async def generate_architect_arena_puzzle(
         "expert": 40,
     }
     piece_count = piece_count_map.get(user_level, 20)
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=persona_id,
+        topic=f"AWS architecture patterns {' '.join(focus_areas[:2])}",
+        limit=5,
+        api_key=api_key
+    )
     
     # Fetch AWS services from Cloud Academy (single source of truth)
     services_data = await _fetch_aws_services()
@@ -406,6 +472,8 @@ Context:
 - Difficulty: {difficulty}
 - Focus Areas: {', '.join(focus_areas)}
 - Request ID: {request_id}
+
+{knowledge_context}
 
 **MANDATORY: Generate EXACTLY {piece_count} pieces. This is non-negotiable.**
 
@@ -523,6 +591,8 @@ Be creative with the scenario. Be specific. Generate exactly {piece_count} piece
         title=result.get("title", "AWS Architecture Challenge"),
         brief=result.get("brief", "Design a secure, scalable AWS architecture."),
         difficulty=result.get("difficulty", difficulty),
+        user_level=user_level,
+        target_cert=cert_name,
         time_limit_seconds=result.get("time_limit_seconds", 300),
         target_score=result.get("target_score", 100),
         pieces=pieces,

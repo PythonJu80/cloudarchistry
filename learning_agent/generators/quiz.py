@@ -16,10 +16,56 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from config.settings import logger
-from prompts import QUIZ_GENERATOR_PROMPT, PERSONA_QUIZ_PROMPT
+from prompts import QUIZ_GENERATOR_PROMPT, PERSONA_QUIZ_PROMPT, CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
 DEFAULT_MODEL = "gpt-4o-mini"  # Cheaper model - AI is just formatting
+
+
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class QuizValidationError(Exception):
+    """Raised when quiz generation parameters are invalid"""
+    pass
+
+
+def validate_quiz_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        QuizValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise QuizValidationError(
+            "user_level is required. Quizzes must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise QuizValidationError(
+            "cert_code is required. Quizzes must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise QuizValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise QuizValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
 
 
 class QuizOption(BaseModel):
@@ -96,32 +142,66 @@ async def generate_quiz(
     business_context: str,
     aws_services: List[str],
     learning_objectives: List[str],
-    user_level: str = "intermediate",
+    user_level: str,
+    cert_code: str,
     question_count: int = 10,
     challenges: Optional[List[dict]] = None,
-    persona_context: Optional[Dict] = None,
 ) -> Quiz:
-    """Generate a quiz for a scenario - persona-aware."""
+    """
+    Generate a quiz for a scenario.
     
-    # Use persona-specific prompt if provided
-    if persona_context:
-        base_prompt = PERSONA_QUIZ_PROMPT.format(
-            scenario_title=scenario_title,
-            business_context=business_context,
-            cert_name=persona_context.get("cert_name", "AWS Certification"),
-            focus_areas=persona_context.get("focus_areas", ""),
-            level=persona_context.get("level", "associate"),
-            question_count=question_count,
-        )
-    else:
-        base_prompt = QUIZ_GENERATOR_PROMPT.format(
-            scenario_title=scenario_title,
-            business_context=business_context,
-            aws_services=", ".join(aws_services),
-            learning_objectives="\n".join(f"- {obj}" for obj in learning_objectives),
-            user_level=user_level,
-            question_count=question_count,
-        )
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each quiz must be certification-specific and user-level specific.
+    
+    Args:
+        scenario_title: Title of the scenario
+        business_context: Business context description
+        aws_services: List of AWS services covered
+        learning_objectives: List of learning objectives
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
+        question_count: Number of questions (default 10)
+        challenges: Optional list of challenges to cover
+    
+    Returns:
+        Quiz tailored to cert and level
+    
+    Raises:
+        QuizValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_quiz_params(user_level, cert_code)
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    topic = f"{scenario_title} {' '.join(aws_services[:3])}"
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=topic,
+        limit=5
+    )
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise QuizValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    persona_context = {
+        "cert_name": persona["cert"],
+        "focus_areas": ", ".join(persona["focus"]),
+        "level": persona["level"],
+    }
+    
+    # Use persona-specific prompt (always, since cert_code is required)
+    base_prompt = PERSONA_QUIZ_PROMPT.format(
+        scenario_title=scenario_title,
+        business_context=business_context,
+        cert_name=persona_context["cert_name"],
+        focus_areas=persona_context["focus_areas"],
+        level=persona_context["level"],
+        question_count=question_count,
+    )
     
     system_prompt = f"""You create educational quizzes for cloud architecture.
 Return JSON with: title, description, questions (array of: id, question, question_type, options (array of: id, text, is_correct), explanation, difficulty, points, aws_services, tags)
@@ -129,8 +209,8 @@ Return JSON with: title, description, questions (array of: id, question, questio
 {base_prompt}"""
     
     user_prompt = f"Generate {question_count} questions for: {scenario_title}"
-    if persona_context:
-        user_prompt += f"\nStyle questions like {persona_context.get('cert_name', 'AWS')} certification exam."
+    user_prompt += f"\nStyle questions like {persona_context['cert_name']} certification exam."
+    user_prompt += f"\n\n{knowledge_context}"
     if challenges:
         user_prompt += "\n\nChallenges:\n"
         for c in challenges:
@@ -174,28 +254,81 @@ Return JSON with: title, description, questions (array of: id, question, questio
 
 async def generate_quiz_for_topic(
     topic: str,
+    user_level: str,
+    cert_code: str,
     question_count: int = 10,
-    user_level: str = "intermediate",
 ) -> Quiz:
-    """Generate a quiz on any AWS topic (alias for generate_service_quiz)."""
+    """
+    Generate a quiz on any AWS topic.
+    
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
+    Args:
+        topic: AWS topic/service name
+        user_level: User's skill level (REQUIRED)
+        cert_code: Certification persona ID (REQUIRED)
+        question_count: Number of questions (default 10)
+    
+    Returns:
+        Quiz tailored to cert and level
+    
+    Raises:
+        QuizValidationError: If user_level or cert_code are missing/invalid
+    """
     return await generate_service_quiz(
         service_name=topic,
         user_level=user_level,
+        cert_code=cert_code,
         question_count=question_count,
     )
 
 
 async def generate_service_quiz(
     service_name: str,
-    user_level: str = "intermediate",
+    user_level: str,
+    cert_code: str,
     question_count: int = 10,
     focus_areas: Optional[List[str]] = None,
 ) -> Quiz:
-    """Generate a quiz focused on a specific AWS service."""
+    """
+    Generate a quiz focused on a specific AWS service.
+    
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
+    Args:
+        service_name: AWS service name
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED)
+        question_count: Number of questions (default 10)
+        focus_areas: Optional specific focus areas
+    
+    Returns:
+        Quiz tailored to cert and level
+    
+    Raises:
+        QuizValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_quiz_params(user_level, cert_code)
+    
+    # Get certification context
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise QuizValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas_str = ", ".join(persona["focus"])
     
     system_prompt = f"""Generate a {question_count}-question quiz about AWS {service_name}.
-User Level: {user_level}
-{"Focus Areas: " + ", ".join(focus_areas) if focus_areas else ""}
+
+User Profile:
+- Skill Level: {user_level}
+- Target Certification: {cert_name}
+- Focus Areas: {focus_areas_str}
+{"Additional Focus: " + ", ".join(focus_areas) if focus_areas else ""}
+
+Style questions like {cert_name} certification exam.
 
 Return JSON with: title, description, questions (array of: id, question, question_type, options, explanation, difficulty, points, aws_services, tags)"""
 
@@ -236,15 +369,42 @@ Return JSON with: title, description, questions (array of: id, question, questio
 
 
 async def generate_quiz_for_certification(
-    cert_name: str,
-    focus_areas: List[str],
-    user_level: str = "intermediate",
+    cert_code: str,
+    user_level: str,
     question_count: int = 10,
     telemetry: Optional[Dict] = None,
     existing_questions: Optional[List[str]] = None,
 ) -> Dict:
-    """Generate quiz from certification + telemetry + skill level."""
+    """
+    Generate quiz from certification + telemetry + skill level.
+    
+    IMPORTANT: Both cert_code and user_level are REQUIRED.
+    
+    Args:
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        question_count: Number of questions (default 10)
+        telemetry: Optional user progress telemetry
+        existing_questions: Optional list of questions to avoid
+    
+    Returns:
+        Dict with quiz data
+    
+    Raises:
+        QuizValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_quiz_params(user_level, cert_code)
     import random
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise QuizValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
     
     # Build avoid list for prompt
     avoid_context = ""
@@ -299,6 +459,24 @@ Return JSON: {{"title": "...", "description": "...", "questions": [{{"id": "q1",
     if not result.get("description"):
         result["description"] = f"AI-generated quiz for {cert_name} certification"
     
+    # Calculate aggregate fields
+    questions = result.get("questions", [])
+    total_points = sum(q.get("points", 10) for q in questions)
+    
+    # Calculate difficulty distribution
+    difficulty_counts = {"easy": 0, "medium": 0, "hard": 0}
+    for q in questions:
+        diff = q.get("difficulty", "medium")
+        if diff in difficulty_counts:
+            difficulty_counts[diff] += 1
+    
+    # Add aggregate fields
+    result["total_questions"] = len(questions)
+    result["total_points"] = total_points
+    result["passing_score"] = 70  # 70% passing score
+    result["estimated_time_minutes"] = int(len(questions) * 1.5)  # 1.5 min per question
+    result["difficulty_distribution"] = difficulty_counts
+    
     return result
 
 
@@ -306,7 +484,7 @@ async def grade_free_text_answer(
     question: str,
     expected_answer: str,
     user_answer: str,
-    user_level: str = "intermediate",
+    user_level: str,
 ) -> dict:
     """Grade a free-text answer using AI."""
     from utils import get_request_model

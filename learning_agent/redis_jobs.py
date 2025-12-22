@@ -19,8 +19,8 @@ import uuid
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:4379")
 
 # Rate limiting settings
-MAX_CONCURRENT_CRAWLS_PER_TENANT = int(os.getenv("MAX_CONCURRENT_CRAWLS_PER_TENANT", "5"))
-MAX_CRAWLS_PER_HOUR_PER_TENANT = int(os.getenv("MAX_CRAWLS_PER_HOUR_PER_TENANT", "20"))
+MAX_CONCURRENT_CRAWLS_PER_TENANT = int(os.getenv("MAX_CONCURRENT_CRAWLS_PER_TENANT", "20"))
+MAX_CRAWLS_PER_HOUR_PER_TENANT = int(os.getenv("MAX_CRAWLS_PER_HOUR_PER_TENANT", "100"))
 JOB_EXPIRY_HOURS = int(os.getenv("JOB_EXPIRY_HOURS", "24"))
 
 # Redis key prefixes

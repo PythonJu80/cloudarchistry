@@ -15,6 +15,53 @@ from openai import AsyncOpenAI
 from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
+
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class GameModeValidationError(Exception):
+    """Raised when game mode generation parameters are invalid"""
+    pass
+
+
+def validate_game_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        GameModeValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise GameModeValidationError(
+            "user_level is required. Game questions must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise GameModeValidationError(
+            "cert_code is required. Game questions must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise GameModeValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise GameModeValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+
+
 # Map cert codes (e.g., "SAA-C03") to persona IDs
 CERT_CODE_TO_PERSONA = {
     "SAA": "solutions-architect-associate",
@@ -151,24 +198,22 @@ Return JSON with:
 
 
 async def generate_sniper_quiz_questions(
-    # User context
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
+    user_level: str,
+    cert_code: str,
     weak_topics: Optional[List[str]] = None,
     recent_topics: Optional[List[str]] = None,
-    
-    # Options
     question_count: int = 10,
-    
-    # API config
     api_key: Optional[str] = None,
 ) -> SniperQuizQuestions:
     """
     Generate personalized Sniper Quiz questions based on user profile.
     
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each question set must be certification-specific and user-level specific.
+    
     Args:
-        user_level: User's skill level (beginner/intermediate/advanced/expert)
-        cert_code: Target certification code (e.g., "SAA-C03", "DVA-C02")
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
         weak_topics: Topics the user struggles with (prioritized)
         recent_topics: Topics recently studied (for reinforcement)
         question_count: Number of questions to generate (default 10)
@@ -176,37 +221,40 @@ async def generate_sniper_quiz_questions(
     
     Returns:
         SniperQuizQuestions with personalized questions
+    
+    Raises:
+        GameModeValidationError: If user_level or cert_code are missing/invalid
     """
     
-    # Build cert context
-    cert_name = "AWS Cloud Practitioner"  # Default
-    cert_context = ""
-    focus_areas = ["Core AWS Services", "Cloud Concepts", "Security", "Pricing"]
+    # CRITICAL: Validate required parameters
+    validate_game_params(user_level, cert_code)
     
-    # Map cert code to persona ID
-    persona_id = None
-    if cert_code:
-        # Try direct lookup first, then strip version suffix
-        upper_code = cert_code.upper()
-        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
-        if not persona_id:
-            # Try without version (e.g., "SAA-C03" -> "SAA")
-            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
-            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise GameModeValidationError(f"Unknown certification persona: {cert_code}")
     
-    if persona_id and persona_id in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[persona_id]
-        cert_name = persona.get("cert", cert_name)
-        focus_areas = persona.get("focus", focus_areas)
-        cert_context = f"""
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
+    cert_context = f"""
 This is for the {cert_name} certification.
-Exam Style: {persona.get('style', 'Standard AWS exam format')}
+Exam Style: {persona['style']}
 Key Focus Areas: {', '.join(focus_areas)}
 Question patterns should match the real exam."""
     
     # Handle optional lists
     weak_topics_str = ", ".join(weak_topics) if weak_topics else "None specified - cover all areas"
     recent_topics_str = ", ".join(recent_topics) if recent_topics else "General AWS topics"
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    topic = f"{' '.join(focus_areas[:2])} {weak_topics_str if weak_topics else ''}"
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=topic,
+        limit=5,
+        api_key=api_key
+    )
     
     # Build the prompt
     system_prompt = SNIPER_QUIZ_PROMPT.format(
@@ -223,6 +271,8 @@ Question patterns should match the real exam."""
 - Certification: {cert_name}
 - Skill Level: {user_level}
 - Weak Areas to Focus: {weak_topics_str}
+
+{knowledge_context}
 
 Make them challenging but fair, matching the real exam style."""
 
@@ -265,33 +315,58 @@ Make them challenging but fair, matching the real exam style."""
 
 
 async def generate_speed_round_questions(
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
+    user_level: str,
+    cert_code: str,
     topic_focus: Optional[str] = None,
     question_count: int = 20,
     api_key: Optional[str] = None,
 ) -> SniperQuizQuestions:
     """
     Generate rapid-fire questions for Speed Round mode.
-    These are shorter, more direct questions for quick answers.
+    
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
+    Args:
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED)
+        topic_focus: Optional specific topic to focus on
+        question_count: Number of questions (default 20)
+        api_key: Optional OpenAI API key
+    
+    Returns:
+        SniperQuizQuestions with rapid-fire questions
+    
+    Raises:
+        GameModeValidationError: If user_level or cert_code are missing/invalid
     """
     
-    # Similar to sniper quiz but with shorter questions
-    cert_name = "AWS"
-    if cert_code:
-        upper_code = cert_code.upper()
-        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
-        if not persona_id:
-            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
-            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
-        if persona_id and persona_id in CERTIFICATION_PERSONAS:
-            cert_name = CERTIFICATION_PERSONAS[persona_id].get("cert", "AWS")
+    # CRITICAL: Validate required parameters
+    validate_game_params(user_level, cert_code)
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise GameModeValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    topic = topic_focus or f"{' '.join(persona['focus'][:2])} AWS"
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=topic,
+        limit=5,
+        api_key=api_key
+    )
     
     system_prompt = f"""Generate {question_count} RAPID-FIRE quiz questions for AWS certification practice.
 
 User Level: {user_level}
 Certification: {cert_name}
 Topic Focus: {topic_focus or "All AWS topics"}
+
+{knowledge_context}
 
 These are SPEED ROUND questions - they should be:
 1. SHORT and DIRECT - no long scenarios
@@ -402,8 +477,8 @@ Return JSON:
 
 
 async def generate_hot_streak_questions(
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
+    user_level: str,
+    cert_code: str,
     question_count: int = 25,
     exclude_ids: Optional[List[str]] = None,
     api_key: Optional[str] = None,
@@ -411,40 +486,46 @@ async def generate_hot_streak_questions(
     """
     Generate quick-fire questions for Hot Streak game mode.
     
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
     Args:
-        user_level: User's skill level (beginner/intermediate/advanced/expert)
-        cert_code: Target certification code (e.g., "SAA-C03", "DVA-C02")
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
         question_count: Number of questions to generate
         exclude_ids: Question IDs to exclude (already answered)
         api_key: User's OpenAI API key
     
     Returns:
         HotStreakQuestions with quick-fire questions
+    
+    Raises:
+        GameModeValidationError: If user_level or cert_code are missing/invalid
     """
     
-    # Build cert context
-    cert_name = "AWS Cloud Practitioner"
-    cert_context = ""
-    focus_areas = ["Core AWS Services", "Cloud Concepts", "Security", "Pricing"]
+    # CRITICAL: Validate required parameters
+    validate_game_params(user_level, cert_code)
     
-    # Map cert code to persona
-    persona_id = None
-    if cert_code:
-        upper_code = cert_code.upper()
-        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
-        if not persona_id:
-            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
-            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise GameModeValidationError(f"Unknown certification persona: {cert_code}")
     
-    if persona_id and persona_id in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[persona_id]
-        cert_name = persona.get("cert", cert_name)
-        focus_areas = persona.get("focus", focus_areas)
-        cert_context = f"""
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
+    cert_context = f"""
 This is for the {cert_name} certification.
-Exam Style: {persona.get('style', 'Standard AWS exam format')}
+Exam Style: {persona['style']}
 Key Focus Areas: {', '.join(focus_areas)}
 """
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=f"{' '.join(focus_areas[:2])} AWS",
+        limit=5,
+        api_key=api_key
+    )
     
     # Build the prompt
     system_prompt = HOT_STREAK_PROMPT.format(
@@ -462,6 +543,8 @@ Key Focus Areas: {', '.join(focus_areas)}
     user_prompt = f"""Generate {question_count} unique Hot Streak questions for:
 - Certification: {cert_name}
 - Skill Level: {user_level}
+
+{knowledge_context}
 
 Make them quick to read and answer - this is a 60-second timed game!{exclude_note}"""
 
@@ -567,47 +650,53 @@ Return JSON:
 
 
 async def generate_ticking_bomb_questions(
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
+    user_level: str,
+    cert_code: str,
     question_count: int = 30,
     api_key: Optional[str] = None,
 ) -> TickingBombQuestions:
     """
     Generate quick-fire questions for Ticking Bomb party game.
     
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
     Args:
-        user_level: User's skill level (beginner/intermediate/advanced/expert)
-        cert_code: Target certification code (e.g., "SAA-C03", "DVA-C02")
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
         question_count: Number of questions to generate (default 30 for longer games)
         api_key: User's OpenAI API key
     
     Returns:
         TickingBombQuestions with quick-fire party questions
+    
+    Raises:
+        GameModeValidationError: If user_level or cert_code are missing/invalid
     """
     
-    # Build cert context
-    cert_name = "AWS Cloud Practitioner"
-    cert_context = ""
-    focus_areas = ["Core AWS Services", "Cloud Concepts", "Security", "Pricing"]
+    # CRITICAL: Validate required parameters
+    validate_game_params(user_level, cert_code)
     
-    # Map cert code to persona
-    persona_id = None
-    if cert_code:
-        upper_code = cert_code.upper()
-        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
-        if not persona_id:
-            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
-            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise GameModeValidationError(f"Unknown certification persona: {cert_code}")
     
-    if persona_id and persona_id in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[persona_id]
-        cert_name = persona.get("cert", cert_name)
-        focus_areas = persona.get("focus", focus_areas)
-        cert_context = f"""
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
+    cert_context = f"""
 This is for the {cert_name} certification.
-Exam Style: {persona.get('style', 'Standard AWS exam format')}
+Exam Style: {persona['style']}
 Key Focus Areas: {', '.join(focus_areas)}
 """
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=f"{' '.join(focus_areas[:2])} AWS",
+        limit=5,
+        api_key=api_key
+    )
     
     # Build the prompt
     system_prompt = TICKING_BOMB_PROMPT.format(
@@ -621,6 +710,8 @@ Key Focus Areas: {', '.join(focus_areas)}
     user_prompt = f"""Generate {question_count} unique Ticking Bomb questions for:
 - Certification: {cert_name}
 - Skill Level: {user_level}
+
+{knowledge_context}
 
 Make them QUICK and FUN - this is a party game with a ticking bomb!
 Players need to read and answer in seconds."""

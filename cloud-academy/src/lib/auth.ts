@@ -93,7 +93,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name || "",
-          username: user.username || user.email.split("@")[0],
+          username: user.username,
           role: user.role,
           isSuperuser: false, // Academy users don't have superuser flag
           tenantId: user.tenantId,
@@ -172,7 +172,12 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!existingProfile) {
+          // Calculate trial end date (14 days from now)
+          const trialEndsAt = new Date();
+          trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+          
           // Create AcademyUserProfile with Google metadata
+          // Default to learner tier with 14-day trial for OAuth signups
           await prisma.academyUserProfile.create({
             data: {
               academyUserId: existingUser.id,
@@ -180,7 +185,9 @@ export const authOptions: NextAuthOptions = {
               displayName: user.name || email.split("@")[0],
               avatarUrl: user.image || null, // Google profile picture
               skillLevel: "beginner",
-              subscriptionTier: "free",
+              subscriptionTier: "learner", // Default to learner for beta
+              trialEndsAt, // 14 days from registration
+              trialUsed: false,
             },
           });
         }
@@ -199,7 +206,7 @@ export const authOptions: NextAuthOptions = {
           token.id = dbUser.id;
           token.email = dbUser.email;
           token.name = dbUser.name || "";
-          token.username = dbUser.username || dbUser.email.split("@")[0];
+          token.username = dbUser.username;
           token.role = dbUser.role;
           token.isSuperuser = false;
           token.tenantId = dbUser.tenantId;

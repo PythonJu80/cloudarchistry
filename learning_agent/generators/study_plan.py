@@ -15,6 +15,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from config.settings import logger
+from prompts import CERTIFICATION_PERSONAS
 from utils import (
     ApiKeyRequiredError,
     get_request_api_key,
@@ -22,6 +23,52 @@ from utils import (
 )
 
 DEFAULT_MODEL = "gpt-4o-mini"
+
+
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class StudyPlanValidationError(Exception):
+    """Raised when study plan generation parameters are invalid"""
+    pass
+
+
+def validate_study_plan_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        StudyPlanValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise StudyPlanValidationError(
+            "user_level is required. Study plans must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise StudyPlanValidationError(
+            "cert_code is required. Study plans must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise StudyPlanValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise StudyPlanValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
 
 # Platform features that can be recommended
 PLATFORM_ACTIONS = {
@@ -85,8 +132,8 @@ PLATFORM_ACTIONS = {
 
 class StudyGuideContext(BaseModel):
     """Inputs for generating a personalized study guide."""
-    target_certification: str
-    skill_level: str
+    cert_code: str  # REQUIRED: certification persona ID
+    skill_level: str  # REQUIRED: user skill level
     time_horizon_weeks: int
     hours_per_week: int
     learning_style: str  # visual, auditory, reading, hands_on
@@ -268,17 +315,49 @@ async def generate_study_guide(
     """
     Generate a personalized study guide with platform-specific actions.
     
-    Returns a JSON-serializable dict ready to persist in StudyPlan.planOutput.
+    IMPORTANT: context.cert_code and context.skill_level are REQUIRED.
+    Each study guide must be certification-specific and user-level specific.
+    
+    Args:
+        context: StudyGuideContext with cert_code and skill_level (both REQUIRED)
+        model: Optional model override
+        api_key: Optional OpenAI API key
+    
+    Returns:
+        JSON-serializable dict ready to persist in StudyPlan.planOutput
+    
+    Raises:
+        StudyPlanValidationError: If cert_code or skill_level are missing/invalid
     """
+    
+    # CRITICAL: Validate required parameters
+    validate_study_plan_params(context.skill_level, context.cert_code)
+    
     key = api_key or get_request_api_key()
     if not key:
         raise ApiKeyRequiredError("OpenAI API key required for study guide generation.")
-
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=context.cert_code,
+        topic=f"{context.target_certification} study guide",
+        limit=5,
+        api_key=api_key
+    )
+    
     model_name = model or get_request_model() or DEFAULT_MODEL
+    
+    # Get certification context (cert_code is now required and validated)
+    if context.cert_code not in CERTIFICATION_PERSONAS:
+        raise StudyPlanValidationError(f"Unknown certification persona: {context.cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[context.cert_code]
+    target_certification = persona["cert"]
 
     # Build the prompt
     prompt = STUDY_GUIDE_PROMPT.format(
-        target_certification=context.target_certification,
+        target_certification=target_certification,
         skill_level=context.skill_level,
         time_horizon_weeks=context.time_horizon_weeks,
         hours_per_week=context.hours_per_week,
@@ -289,7 +368,7 @@ async def generate_study_guide(
 
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": "Generate my personalized study plan now."},
+        {"role": "user", "content": f"Generate my personalized study plan now.\n\n{knowledge_context}"},
     ]
 
     client = AsyncOpenAI(api_key=key)
@@ -411,7 +490,7 @@ Output ONLY valid JSON."""
 
 
 async def format_study_guide(
-    target_certification: str,
+    cert_code: str,
     skill_level: str,
     time_horizon_weeks: int,
     hours_per_week: int,
@@ -425,14 +504,40 @@ async def format_study_guide(
     """
     FORMAT a study guide from pre-selected content.
     
-    The tool has already decided what content goes in.
-    The AI just adds themes, targets, and formatting.
+    IMPORTANT: cert_code and skill_level are REQUIRED.
+    
+    Args:
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
+        skill_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        time_horizon_weeks: Study duration in weeks
+        hours_per_week: Hours available per week
+        learning_styles: List of learning style preferences
+        coach_notes: Optional coach notes
+        structured_content: Pre-selected content to format
+        model: Optional model override
+        api_key: Optional OpenAI API key
+    
+    Returns:
+        Formatted study guide JSON
+    
+    Raises:
+        StudyPlanValidationError: If cert_code or skill_level are missing/invalid
     """
+    
+    # CRITICAL: Validate required parameters
+    validate_study_plan_params(skill_level, cert_code)
     key = api_key or get_request_api_key()
     if not key:
         raise ApiKeyRequiredError("OpenAI API key required for study guide formatting.")
 
     model_name = model or get_request_model() or DEFAULT_MODEL
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise StudyPlanValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    target_certification = persona["cert"]
 
     # Build the prompt with the pre-selected content
     prompt = FORMAT_STUDY_GUIDE_PROMPT.format(
@@ -440,7 +545,7 @@ async def format_study_guide(
         skill_level=skill_level,
         time_horizon_weeks=time_horizon_weeks,
         hours_per_week=hours_per_week,
-        learning_styles=", ".join(learning_styles),  # Convert list to comma-separated string
+        learning_styles=", ".join(learning_styles),
         coach_notes=coach_notes or "None provided",
         structured_content_json=json.dumps(structured_content, indent=2),
     )
@@ -474,7 +579,7 @@ async def format_study_guide(
     try:
         from generators.resource_fetcher import fetch_study_resources
         real_resources = await fetch_study_resources(
-            certification=target_certification,
+            cert_code=cert_code,
             learning_styles=learning_styles,
             max_youtube=2,
             max_docs=2

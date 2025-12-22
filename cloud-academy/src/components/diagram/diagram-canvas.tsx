@@ -1311,11 +1311,25 @@ function DiagramCanvasInner({
       } else if (e.key === "Escape") {
         setIsFullscreen(false);
       }
+      // Layer control shortcuts
+      else if (cmdKey && e.shiftKey && e.key === "]") {
+        e.preventDefault();
+        bringToFront();
+      } else if (cmdKey && e.shiftKey && e.key === "[") {
+        e.preventDefault();
+        sendToBack();
+      } else if (cmdKey && e.key === "]") {
+        e.preventDefault();
+        bringForward();
+      } else if (cmdKey && e.key === "[") {
+        e.preventDefault();
+        sendBackward();
+      }
     };
     
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleUndo, handleRedo, handleCopy, handlePaste, handleDuplicate, handleSelectAll, selectedNode, deleteSelectedNode]);
+  }, [handleUndo, handleRedo, handleCopy, handlePaste, handleDuplicate, handleSelectAll, selectedNode, deleteSelectedNode, bringToFront, sendToBack, bringForward, sendBackward]);
 
   // Audit diagram via Learning Agent
   const auditDiagram = useCallback(async () => {

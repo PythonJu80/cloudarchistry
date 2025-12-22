@@ -15,7 +15,54 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 
+from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
+
+
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class CLIValidationError(Exception):
+    """Raised when CLI simulator parameters are invalid"""
+    pass
+
+
+def validate_cli_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        CLIValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise CLIValidationError(
+            "user_level is required. CLI simulation must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise CLIValidationError(
+            "cert_code is required. CLI simulation must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise CLIValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise CLIValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
 
 
 # =============================================================================
@@ -217,7 +264,12 @@ Your job is to:
 3. Be context-aware of their current learning challenge
 4. Track "simulated" resources they create during the session
 
-CURRENT CHALLENGE CONTEXT:
+USER PROFILE:
+- Skill Level: {user_level}
+- Target Certification: {cert_name}
+- Focus Areas: {focus_areas}
+
+CURRENT CHALLENGE CONTEXT (REQUIRED):
 {challenge_context}
 
 COMPANY CONTEXT:
@@ -243,6 +295,13 @@ RULES:
 7. For dangerous commands (delete, terminate), set is_dangerous=true and warn them
 8. If the command has syntax errors, return a realistic AWS CLI error message
 9. Tailor examples to their company/industry context when relevant
+10. ADAPT to user's skill level ({user_level}):
+    - beginner: More explanation, simpler commands, guide them step-by-step
+    - intermediate: Balanced guidance, introduce best practices
+    - advanced: Minimal hand-holding, focus on optimization
+    - expert: Peer-level, discuss edge cases and trade-offs
+11. FOCUS on {cert_name} exam-relevant commands and patterns
+12. Emphasize certification focus areas: {focus_areas}
 
 CHALLENGE OBJECTIVES (if applicable):
 {challenge_objectives}
@@ -307,48 +366,88 @@ async def _chat_json(
 async def simulate_cli_command(
     command: str,
     session: CLISession,
-    challenge_context: Optional[Dict] = None,
-    company_name: str = "Acme Corp",
-    industry: str = "Technology",
-    business_context: str = "",
+    challenge_context: Dict,
+    user_level: str,
+    cert_code: str,
+    company_name: str,
+    industry: str,
+    business_context: str,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
 ) -> CLIResponse:
     """
     Simulate an AWS CLI command and return realistic output.
     
+    IMPORTANT: user_level, cert_code, and challenge_context are REQUIRED.
+    CLI commands must be tailored to the specific challenge the user is working on.
+    
     Args:
         command: The AWS CLI command to simulate
         session: Current CLI session with state
-        challenge_context: Current challenge info (title, description, aws_services)
-        company_name: Company name for context
-        industry: Industry for context
-        business_context: Business scenario description
+        challenge_context: Current challenge info (REQUIRED: title, description, aws_services)
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
+        company_name: Company name for context (REQUIRED)
+        industry: Industry for context (REQUIRED)
+        business_context: Business scenario description (REQUIRED)
+        api_key: Optional OpenAI API key
+        model: Optional model override
         
     Returns:
         CLIResponse with realistic output and teaching content
+    
+    Raises:
+        CLIValidationError: If user_level or cert_code are missing/invalid
     """
     
-    # Build challenge context string
-    challenge_str = "No specific challenge - free practice mode"
-    challenge_objectives = "No specific objectives - free practice"
-    if challenge_context:
-        challenge_str = f"""
+    # CRITICAL: Validate required parameters
+    validate_cli_params(user_level, cert_code)
+    
+    if not challenge_context:
+        raise CLIValidationError(
+            "challenge_context is required. CLI commands must be tailored to the specific "
+            "challenge/scenario the user is working on."
+        )
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise CLIValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = ", ".join(persona["focus"])
+    
+    # Build challenge context string (challenge_context is now required)
+    challenge_str = f"""
 Challenge: {challenge_context.get('title', 'Unknown')}
 Description: {challenge_context.get('description', '')}
 Relevant AWS Services: {', '.join(challenge_context.get('aws_services', []))}
 Success Criteria: {', '.join(challenge_context.get('success_criteria', []))}
 """
-        # Build objectives from success criteria
-        objectives = challenge_context.get('success_criteria', [])
-        if objectives:
-            challenge_objectives = "\n".join(f"- {obj}" for obj in objectives)
+    
+    # Build objectives from success criteria
+    objectives = challenge_context.get('success_criteria', [])
+    challenge_objectives = "\n".join(f"- {obj}" for obj in objectives) if objectives else "Complete the challenge"
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    aws_services = challenge_context.get('aws_services', [])
+    topic = f"AWS CLI {' '.join(aws_services[:3])} commands"
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=topic,
+        limit=5,
+        api_key=api_key
+    )
     
     # Build session resources string
     resources_str = json.dumps(session.resources_created, indent=2) if session.resources_created else "{}"
     
     # Build the system prompt
     system_prompt = CLI_SIMULATOR_PROMPT.format(
+        user_level=user_level,
+        cert_name=cert_name,
+        focus_areas=focus_areas,
         challenge_context=challenge_str,
         challenge_objectives=challenge_objectives,
         company_name=company_name,
@@ -370,6 +469,8 @@ Success Criteria: {', '.join(challenge_context.get('success_criteria', []))}
 
 $ {command}
 {history_context}
+
+{knowledge_context}
 
 Return realistic AWS CLI output. If they're creating resources, generate realistic IDs.
 If the command relates to their challenge, tailor the output to be educational."""
@@ -438,34 +539,63 @@ If the command relates to their challenge, tailor the output to be educational."
 
 async def get_cli_help(
     topic: str,
-    challenge_context: Optional[Dict] = None,
-    user_level: str = "intermediate",
+    user_level: str,
+    cert_code: str,
+    challenge_context: Dict,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
 ) -> Dict:
     """
     Get contextual CLI help for a topic.
     
+    IMPORTANT: user_level, cert_code, and challenge_context are REQUIRED.
+    Help must be tailored to the user's certification and current challenge.
+    
     Args:
         topic: AWS service or command to get help for (e.g., "ec2", "s3 cp", "vpc")
-        challenge_context: Current challenge for tailored examples
-        user_level: User's skill level
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED)
+        challenge_context: Current challenge for tailored examples (REQUIRED)
+        api_key: Optional OpenAI API key
+        model: Optional model override
         
     Returns:
         Dict with help content, examples, and tips
+    
+    Raises:
+        CLIValidationError: If user_level or cert_code are missing/invalid
     """
     
-    challenge_str = ""
-    if challenge_context:
-        challenge_str = f"""
+    # CRITICAL: Validate required parameters
+    validate_cli_params(user_level, cert_code)
+    
+    if not challenge_context:
+        raise CLIValidationError(
+            "challenge_context is required. CLI help must be tailored to the current challenge."
+        )
+    
+    # Get certification context
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise CLIValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = ", ".join(persona["focus"])
+    
+    challenge_str = f"""
 The user is working on this challenge:
 - {challenge_context.get('title', '')}
 - {challenge_context.get('description', '')}
-Tailor examples to this context."""
+- AWS Services: {', '.join(challenge_context.get('aws_services', []))}
+Tailor examples to this context and their certification focus ({cert_name})."""
 
     system_prompt = f"""You are an AWS CLI tutor. Provide helpful, practical guidance.
 
-User skill level: {user_level}
+User Profile:
+- Skill Level: {user_level}
+- Target Certification: {cert_name}
+- Focus Areas: {focus_areas}
+
 {challenge_str}
 
 AWS CLI Reference:

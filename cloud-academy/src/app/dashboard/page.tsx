@@ -715,12 +715,6 @@ export default function DashboardPage() {
                       Explore World Map
                     </Button>
                   </Link>
-                  <Link href="/challenges" className="block">
-                    <Button variant="outline" className="w-full justify-start gap-2">
-                      <Target className="w-4 h-4 text-amber-400" />
-                      Browse Challenges
-                    </Button>
-                  </Link>
                   <Link href="/leaderboard" className="block">
                     <Button variant="outline" className="w-full justify-start gap-2">
                       <Trophy className="w-4 h-4 text-purple-400" />

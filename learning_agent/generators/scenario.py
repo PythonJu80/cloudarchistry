@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 
-from prompts import SCENARIO_GENERATOR_PROMPT, PERSONA_SCENARIO_PROMPT
+from prompts import SCENARIO_GENERATOR_PROMPT, PERSONA_SCENARIO_PROMPT, AWS_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
 
@@ -56,6 +56,52 @@ class CompanyInfo(BaseModel):
     employee_count: Optional[str] = None
 
 
+# Valid certification IDs and user levels
+VALID_CERTIFICATIONS = list(AWS_PERSONAS.keys())
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+
+
+class ScenarioValidationError(Exception):
+    """Raised when scenario parameters are invalid"""
+    pass
+
+
+def validate_scenario_params(target_cert: str, user_level: str) -> None:
+    """
+    Validate that target_cert and user_level are provided and valid.
+    
+    Args:
+        target_cert: AWS certification ID (e.g., 'solutions-architect-associate')
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+    
+    Raises:
+        ScenarioValidationError: If parameters are missing or invalid
+    """
+    if not target_cert:
+        raise ScenarioValidationError(
+            "target_cert is required. Each scenario must be certification-specific. "
+            f"Valid certifications: {', '.join(VALID_CERTIFICATIONS)}"
+        )
+    
+    if not user_level:
+        raise ScenarioValidationError(
+            "user_level is required. Each scenario must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if target_cert not in VALID_CERTIFICATIONS:
+        raise ScenarioValidationError(
+            f"Invalid target_cert '{target_cert}'. "
+            f"Valid certifications: {', '.join(VALID_CERTIFICATIONS)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise ScenarioValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+
+
 async def _chat_json(
     messages: List[Dict], 
     model: Optional[str] = None, 
@@ -82,44 +128,65 @@ async def _chat_json(
 
 async def generate_scenario(
     company_info: CompanyInfo,
-    user_level: str = "intermediate",
+    target_cert: str,
+    user_level: str,
     research_data: Optional[str] = None,
-    persona_context: Optional[Dict] = None,
     knowledge_context: Optional[str] = None,
 ) -> CloudScenario:
     """
     Generate a cloud architecture scenario based on company info.
     
+    IMPORTANT: Both target_cert and user_level are REQUIRED.
+    Each scenario must be certification-specific and user-level specific.
+    
     Args:
         company_info: Company details from research
-        user_level: Target difficulty level
+        target_cert: AWS certification ID (REQUIRED, e.g., 'solutions-architect-associate')
+        user_level: User skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
         research_data: Optional raw research data
-        persona_context: Optional certification persona context
+        knowledge_context: Optional AWS knowledge base content
     
     Returns:
-        CloudScenario with challenges
+        CloudScenario with challenges tailored to certification and user level
+    
+    Raises:
+        ScenarioValidationError: If target_cert or user_level are missing/invalid
     """
     
-    # Build the prompt based on whether we have persona context
-    if persona_context:
-        base_prompt = PERSONA_SCENARIO_PROMPT.format(
-            company_name=company_info.name,
-            industry=company_info.industry,
-            business_context=company_info.description,
-            cert_name=persona_context.get("cert_name", "AWS Certification"),
-            focus_areas=persona_context.get("focus_areas", ""),
-            level=persona_context.get("level", "associate"),
-            user_level=user_level,
+    # CRITICAL: Validate required parameters
+    validate_scenario_params(target_cert, user_level)
+    
+    # Fetch current AWS knowledge from database if not provided
+    if not knowledge_context:
+        from utils import fetch_knowledge_for_generation
+        knowledge_context = await fetch_knowledge_for_generation(
+            cert_code=target_cert,
+            topic=f"{company_info.industry} AWS architecture",
+            limit=5
         )
-    else:
-        base_prompt = SCENARIO_GENERATOR_PROMPT.format(
-            company_name=company_info.name,
-            industry=company_info.industry,
-            business_context=company_info.description,
-            key_services=", ".join(company_info.key_services),
-            research_data=research_data or "No additional research data",
-            user_level=user_level,
-        )
+    
+    # Get persona context from target certification
+    persona = AWS_PERSONAS.get(target_cert)
+    if not persona:
+        raise ScenarioValidationError(f"Unknown certification: {target_cert}")
+    
+    persona_context = {
+        "cert_name": persona["cert"],
+        "focus_areas": ", ".join(persona["focus"]),
+        "level": persona["level"],
+        "style": persona["style"],
+    }
+    
+    # Build certification-specific prompt
+    base_prompt = PERSONA_SCENARIO_PROMPT.format(
+        company_name=company_info.name,
+        industry=company_info.industry,
+        business_context=company_info.description,
+        cert_name=persona_context["cert_name"],
+        focus_areas=persona_context["focus_areas"],
+        level=persona_context["level"],
+        user_level=user_level,
+    )
     
     system_prompt = f"""You are a senior AWS Solutions Architect creating training scenarios.
 
@@ -164,8 +231,7 @@ USER LEVEL: {user_level}
 
 Create 3-5 progressive challenges. Make it feel like a real consulting engagement."""
 
-    if persona_context:
-        user_prompt += f"\n\nFocus on {persona_context.get('cert_name', 'AWS')} certification topics: {persona_context.get('focus_areas', '')}"
+    user_prompt += f"\n\nCERTIFICATION FOCUS: {persona_context['cert_name']}\nKey Topics: {persona_context['focus_areas']}\nCert Level: {persona_context['level']}\nUser Skill: {user_level}"
 
     if knowledge_context:
         user_prompt += f"\n\nRELEVANT AWS KNOWLEDGE BASE CONTENT:\n{knowledge_context}\n\nUse this AWS knowledge to inform the challenges and ensure they align with AWS best practices."
@@ -194,24 +260,32 @@ Create 3-5 progressive challenges. Make it feel like a real consulting engagemen
 async def generate_scenario_from_location(
     company_name: str,
     industry: str,
+    target_cert: str,
+    user_level: str,
     address: Optional[str] = None,
-    user_level: str = "intermediate",
-    persona_context: Optional[Dict] = None,
 ) -> CloudScenario:
     """
     Generate a scenario from basic location/business info.
     Useful for map-based challenge creation.
     
+    IMPORTANT: Both target_cert and user_level are REQUIRED.
+    
     Args:
         company_name: Business name
         industry: Industry type
+        target_cert: AWS certification ID (REQUIRED)
+        user_level: User skill level (REQUIRED)
         address: Optional business address
-        user_level: Target difficulty
-        persona_context: Optional certification context
     
     Returns:
-        CloudScenario
+        CloudScenario tailored to certification and user level
+    
+    Raises:
+        ScenarioValidationError: If target_cert or user_level are missing/invalid
     """
+    
+    # CRITICAL: Validate required parameters
+    validate_scenario_params(target_cert, user_level)
     company_info = CompanyInfo(
         name=company_name,
         industry=industry,
@@ -221,8 +295,8 @@ async def generate_scenario_from_location(
     
     return await generate_scenario(
         company_info=company_info,
+        target_cert=target_cert,
         user_level=user_level,
-        persona_context=persona_context,
     )
 
 

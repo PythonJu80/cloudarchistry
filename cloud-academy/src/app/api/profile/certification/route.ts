@@ -18,6 +18,12 @@ const CERT_CODE_MAP: Record<string, string> = {
   "CLF": "cloud-practitioner",
 };
 
+// Reverse mapping: long code -> short code
+const REVERSE_CERT_MAP: Record<string, string> = Object.entries(CERT_CODE_MAP).reduce(
+  (acc, [short, long]) => ({ ...acc, [long]: short }),
+  {}
+);
+
 // GET - fetch current target certification and skill level
 export async function GET() {
   try {
@@ -71,7 +77,9 @@ export async function PUT(request: NextRequest) {
       if (!validCerts.includes(certCode)) {
         return NextResponse.json({ error: "Invalid certification code" }, { status: 400 });
       }
-      updateData.targetCertification = certCode;
+      // Convert long code to short code for consistent storage
+      const shortCode = REVERSE_CERT_MAP[certCode] || certCode;
+      updateData.targetCertification = shortCode;
     }
     
     // Validate and set skill level if provided

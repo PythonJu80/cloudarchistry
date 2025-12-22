@@ -15,10 +15,56 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from config.settings import logger
-from prompts import NOTES_GENERATOR_PROMPT, PERSONA_NOTES_PROMPT
+from prompts import NOTES_GENERATOR_PROMPT, PERSONA_NOTES_PROMPT, CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
 DEFAULT_MODEL = "gpt-4o-mini"  # Cheaper model - AI is just formatting
+
+
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class NotesValidationError(Exception):
+    """Raised when notes generation parameters are invalid"""
+    pass
+
+
+def validate_notes_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        NotesValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise NotesValidationError(
+            "user_level is required. Study notes must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise NotesValidationError(
+            "cert_code is required. Study notes must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise NotesValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise NotesValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
 
 
 class NotesSection(BaseModel):
@@ -83,31 +129,56 @@ async def generate_notes(
     technical_requirements: List[str],
     compliance_requirements: List[str],
     aws_services: List[str],
-    user_level: str = "intermediate",
+    user_level: str,
+    cert_code: str,
     challenges: Optional[List[dict]] = None,
-    persona_context: Optional[Dict] = None,
 ) -> StudyNotes:
-    """Generate study notes for a scenario - persona-aware."""
+    """
+    Generate study notes for a scenario.
     
-    # Use persona-specific prompt if provided
-    if persona_context:
-        base_prompt = PERSONA_NOTES_PROMPT.format(
-            scenario_title=scenario_title,
-            business_context=business_context,
-            aws_services=", ".join(aws_services),
-            cert_name=persona_context.get("cert_name", "AWS Certification"),
-            focus_areas=persona_context.get("focus_areas", ""),
-            level=persona_context.get("level", "associate"),
-        )
-    else:
-        base_prompt = NOTES_GENERATOR_PROMPT.format(
-            scenario_title=scenario_title,
-            business_context=business_context,
-            technical_requirements="\n".join(f"- {r}" for r in technical_requirements),
-            compliance_requirements="\n".join(f"- {r}" for r in compliance_requirements),
-            aws_services=", ".join(aws_services),
-            user_level=user_level,
-        )
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each study guide must be certification-specific and user-level specific.
+    
+    Args:
+        scenario_title: Title of the scenario
+        business_context: Business context description
+        technical_requirements: List of technical requirements
+        compliance_requirements: List of compliance requirements
+        aws_services: List of AWS services covered
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
+        challenges: Optional list of challenges to cover
+    
+    Returns:
+        StudyNotes tailored to cert and level
+    
+    Raises:
+        NotesValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_notes_params(user_level, cert_code)
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise NotesValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    persona_context = {
+        "cert_name": persona["cert"],
+        "focus_areas": ", ".join(persona["focus"]),
+        "level": persona["level"],
+    }
+    
+    # Use persona-specific prompt (always, since cert_code is required)
+    base_prompt = PERSONA_NOTES_PROMPT.format(
+        scenario_title=scenario_title,
+        business_context=business_context,
+        aws_services=", ".join(aws_services),
+        cert_name=persona_context["cert_name"],
+        focus_areas=persona_context["focus_areas"],
+        level=persona_context["level"],
+    )
     
     system_prompt = f"""You are an expert technical writer creating study guides.
 Return JSON with: title, summary, content (markdown), sections (array of: id, title, level, content, aws_services), aws_services, key_takeaways
@@ -115,8 +186,7 @@ Return JSON with: title, summary, content (markdown), sections (array of: id, ti
 {base_prompt}"""
     
     user_prompt = f"Generate study notes for: {scenario_title}"
-    if persona_context:
-        user_prompt += f"\nFocus on {persona_context.get('cert_name', 'AWS')} certification exam topics."
+    user_prompt += f"\nFocus on {persona_context['cert_name']} certification exam topics."
     if challenges:
         user_prompt += "\n\nChallenges:\n"
         for c in challenges:
@@ -143,14 +213,48 @@ Return JSON with: title, summary, content (markdown), sections (array of: id, ti
 
 async def generate_service_deep_dive(
     service_name: str,
-    user_level: str = "intermediate",
+    user_level: str,
+    cert_code: str,
     use_case: Optional[str] = None,
 ) -> StudyNotes:
-    """Generate a deep-dive study guide for a specific AWS service."""
+    """
+    Generate a deep-dive study guide for a specific AWS service.
+    
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
+    Args:
+        service_name: AWS service name
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED)
+        use_case: Optional specific use case
+    
+    Returns:
+        StudyNotes tailored to cert and level
+    
+    Raises:
+        NotesValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_notes_params(user_level, cert_code)
+    
+    # Get certification context
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise NotesValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = ", ".join(persona["focus"])
     
     system_prompt = f"""Create a comprehensive study guide for AWS {service_name}.
-User Level: {user_level}
+
+User Profile:
+- Skill Level: {user_level}
+- Target Certification: {cert_name}
+- Focus Areas: {focus_areas}
 {"Use Case: " + use_case if use_case else ""}
+
+Focus on {cert_name} exam-relevant knowledge about {service_name}.
 
 Return JSON with: title, summary, content (markdown), sections, aws_services, key_takeaways"""
 
@@ -175,14 +279,49 @@ Return JSON with: title, summary, content (markdown), sections, aws_services, ke
 async def generate_migration_guide(
     source_system: str,
     target_service: str,
-    user_level: str = "intermediate",
+    user_level: str,
+    cert_code: str,
     constraints: Optional[List[str]] = None,
 ) -> StudyNotes:
-    """Generate a migration-focused study guide."""
+    """
+    Generate a migration-focused study guide.
+    
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
+    Args:
+        source_system: Source system name
+        target_service: Target AWS service
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED)
+        constraints: Optional list of constraints
+    
+    Returns:
+        StudyNotes tailored to cert and level
+    
+    Raises:
+        NotesValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_notes_params(user_level, cert_code)
+    
+    # Get certification context
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise NotesValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = ", ".join(persona["focus"])
     
     system_prompt = f"""Create a migration study guide: {source_system} → AWS {target_service}
-User Level: {user_level}
+
+User Profile:
+- Skill Level: {user_level}
+- Target Certification: {cert_name}
+- Focus Areas: {focus_areas}
 {"Constraints: " + ", ".join(constraints) if constraints else ""}
+
+Focus on {cert_name} exam-relevant migration patterns.
 
 Return JSON with: title, summary, content (markdown), sections, aws_services, key_takeaways"""
 
@@ -205,13 +344,38 @@ Return JSON with: title, summary, content (markdown), sections, aws_services, ke
 
 
 async def generate_notes_for_certification(
-    cert_name: str,
-    focus_areas: List[str],
-    user_level: str = "intermediate",
+    cert_code: str,
+    user_level: str,
     telemetry: Optional[Dict] = None,
 ) -> Dict:
-    """Generate study notes from certification + telemetry + skill level."""
+    """
+    Generate study notes from certification + telemetry + skill level.
+    
+    IMPORTANT: Both cert_code and user_level are REQUIRED.
+    
+    Args:
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        telemetry: Optional user progress telemetry
+    
+    Returns:
+        Dict with study notes data
+    
+    Raises:
+        NotesValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_notes_params(user_level, cert_code)
     import random
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise NotesValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
     
     # Build telemetry context
     telemetry_context = ""

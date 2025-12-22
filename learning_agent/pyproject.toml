@@ -16,6 +16,7 @@ dependencies = [
     "asyncpg>=0.29.0",
     "fastapi",
     "uvicorn",
+    "gunicorn",
     "redis>=5.0.0"
 ]
 

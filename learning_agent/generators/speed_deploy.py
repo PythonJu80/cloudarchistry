@@ -28,6 +28,53 @@ from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 from generators.cloud_tycoon import VALID_SERVICE_IDS, AWS_SERVICES_REFERENCE
 
+
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class SpeedDeployValidationError(Exception):
+    """Raised when speed deploy generation parameters are invalid"""
+    pass
+
+
+def validate_deploy_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        SpeedDeployValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise SpeedDeployValidationError(
+            "user_level is required. Speed deploy challenges must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise SpeedDeployValidationError(
+            "cert_code is required. Speed deploy challenges must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise SpeedDeployValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise SpeedDeployValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+
+
 # Map cert codes (e.g., "SAA-C03" from DB) to persona IDs
 CERT_CODE_TO_PERSONA = {
     "SAA": "solutions-architect-associate",
@@ -202,8 +249,8 @@ CRITICAL RULES:
 # =============================================================================
 
 async def generate_deploy_brief(
-    user_level: str = "intermediate",
-    cert_code: Optional[str] = None,
+    user_level: str,
+    cert_code: str,
     _difficulty: Optional[str] = None,  # DEPRECATED - ignored, kept for backward compat
     api_key: Optional[str] = None,
     model: Optional[str] = None,
@@ -211,39 +258,37 @@ async def generate_deploy_brief(
     """
     Generate a Speed Deploy challenge brief.
     
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each challenge must be certification-specific and user-level specific.
+    
     Args:
-        user_level: User's skill level from profile - this drives challenge complexity
-        cert_code: Target certification code
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
         _difficulty: DEPRECATED - ignored, user_level is used instead
         api_key: OpenAI API key
         model: Preferred model
     
     Returns:
         DeployBrief with client requirements and service palette
+    
+    Raises:
+        SpeedDeployValidationError: If user_level or cert_code are missing/invalid
     """
+    
+    # CRITICAL: Validate required parameters
+    validate_deploy_params(user_level, cert_code)
     # Get API key
     key = api_key or get_request_api_key()
     if not key:
         raise ApiKeyRequiredError("OpenAI API key required")
     
-    # Build cert context
-    cert_name = "AWS Cloud Practitioner"
-    focus_areas = ["Core AWS Services", "Cloud Concepts", "Security"]
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise SpeedDeployValidationError(f"Unknown certification persona: {cert_code}")
     
-    # Map cert code (e.g., "SAA-C03") to persona ID (e.g., "solutions-architect-associate")
-    persona_id = None
-    if cert_code:
-        upper_code = cert_code.upper()
-        persona_id = CERT_CODE_TO_PERSONA.get(upper_code)
-        if not persona_id:
-            # Try without version (e.g., "SAA-C03" -> "SAA")
-            base_code = upper_code.split("-")[0] if "-" in upper_code else upper_code
-            persona_id = CERT_CODE_TO_PERSONA.get(base_code)
-    
-    if persona_id and persona_id in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[persona_id]
-        cert_name = persona.get("cert", cert_name)
-        focus_areas = persona.get("focus", focus_areas)
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = persona["focus"]
     
     # Normalize user_level for lookups
     user_level = user_level.lower()
@@ -268,6 +313,15 @@ async def generate_deploy_brief(
     ]
     theme = random.choice(themes)
     
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=f"{theme} {' '.join(focus_areas[:2])}",
+        limit=5,
+        api_key=api_key
+    )
+    
     # Build prompt
     system_prompt = SPEED_DEPLOY_PROMPT.format(
         user_level=user_level,
@@ -281,6 +335,8 @@ async def generate_deploy_brief(
 Target certification: {cert_name}
 Skill level: {user_level}
 Scenario theme: {theme}
+
+{knowledge_context}
 
 Create a realistic client brief that tests architectural TRADEOFFS, not memorization.
 Focus on patterns relevant to {cert_name} certification.

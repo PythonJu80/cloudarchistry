@@ -483,6 +483,80 @@ async def log_tool_usage(user_id: str, tool_name: str, total_tokens: int, cost_u
     pass
 
 
+async def fetch_knowledge_for_generation(
+    cert_code: str,
+    topic: str,
+    limit: int = 5,
+    api_key: Optional[str] = None
+) -> str:
+    """
+    Fetch relevant AWS knowledge from AcademyKnowledgeChunks database.
+    
+    This ensures all generated content uses up-to-date AWS documentation (December 2025)
+    instead of relying on outdated model training data.
+    
+    Args:
+        cert_code: Certification persona ID (e.g., 'solutions-architect-associate')
+        topic: Topic/context to search for (e.g., 'S3 security', 'Lambda performance')
+        limit: Number of knowledge chunks to retrieve (default: 5)
+        api_key: Optional OpenAI API key for embedding generation
+    
+    Returns:
+        Formatted knowledge context string to inject into prompts
+    """
+    try:
+        from openai import AsyncOpenAI
+        from prompts import CERTIFICATION_PERSONAS
+        
+        # Build search query based on cert focus areas + topic
+        query_parts = [topic]
+        if cert_code in CERTIFICATION_PERSONAS:
+            persona = CERTIFICATION_PERSONAS[cert_code]
+            # Add cert focus areas to query for better relevance
+            focus_areas = persona.get("focus", [])
+            if focus_areas:
+                query_parts.extend(focus_areas[:2])  # Add top 2 focus areas
+        
+        search_query = " ".join(query_parts) + " AWS"
+        
+        # Get API key (prioritize .env, then explicit param)
+        key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+        if not key:
+            return ""  # Gracefully degrade if no key available
+        
+        # Generate embedding for search
+        client = AsyncOpenAI(api_key=key)
+        embed_response = await client.embeddings.create(
+            model="text-embedding-3-small",
+            input=search_query
+        )
+        query_embedding = embed_response.data[0].embedding
+        
+        # Search knowledge base
+        kb_results = await db.search_knowledge_chunks(
+            query_embedding=query_embedding,
+            limit=limit
+        )
+        
+        if not kb_results:
+            return ""
+        
+        # Format knowledge context
+        knowledge_context = "\n\n=== CURRENT AWS KNOWLEDGE (December 2025) ===\n"
+        knowledge_context += "Use this up-to-date AWS documentation to ensure accuracy:\n\n"
+        
+        for idx, chunk in enumerate(kb_results, 1):
+            knowledge_context += f"[Source {idx}] {chunk['url']}\n"
+            knowledge_context += f"{chunk['content'][:800]}\n\n"  # First 800 chars per chunk
+        
+        return knowledge_context
+        
+    except Exception as e:
+        # Log error but don't fail generation
+        print(f"Warning: Failed to fetch knowledge base: {e}")
+        return ""
+
+
 # Aliases for old function names
 async def add_documents_to_supabase(
     urls: List[str],

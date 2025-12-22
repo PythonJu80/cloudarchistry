@@ -16,6 +16,52 @@ from prompts import CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
 
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class QuestionValidationError(Exception):
+    """Raised when question generation parameters are invalid"""
+    pass
+
+
+def validate_question_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        QuestionValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise QuestionValidationError(
+            "user_level is required. Each question set must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise QuestionValidationError(
+            "cert_code is required. Each question set must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise QuestionValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise QuestionValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+
+
 class QuestionOption(BaseModel):
     """Option for multiple choice questions"""
     id: str
@@ -145,11 +191,9 @@ async def generate_challenge_questions(
     industry: str,
     business_context: str,
     
-    # User context
-    user_level: str = "intermediate",
-    
-    # Cert context (optional)
-    cert_code: Optional[str] = None,
+    # User context (REQUIRED)
+    user_level: str,
+    cert_code: str,
     
     # Options
     question_count: int = 5,
@@ -157,28 +201,48 @@ async def generate_challenge_questions(
     """
     Generate questions for a specific challenge, tailored to the business case.
     
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each question set must be certification-specific and user-level specific.
+    
     Args:
         challenge: Challenge dict with id, title, description, hints, success_criteria, aws_services_relevant
         company_name: The business name
         industry: Business industry
         business_context: Scenario description
-        user_level: User's skill level (beginner/intermediate/advanced/expert)
-        cert_code: Optional certification code for persona context
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
         question_count: Number of questions to generate (default 5)
     
     Returns:
-        ChallengeQuestions with brief and questions
+        ChallengeQuestions with brief and questions tailored to cert and level
+    
+    Raises:
+        QuestionValidationError: If user_level or cert_code are missing/invalid
     """
     
-    # Build cert context if provided
-    cert_context = ""
-    if cert_code and cert_code in CERTIFICATION_PERSONAS:
-        persona = CERTIFICATION_PERSONAS[cert_code]
-        cert_context = f"""
+    # CRITICAL: Validate required parameters
+    validate_question_params(user_level, cert_code)
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise QuestionValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_context = f"""
 CERTIFICATION FOCUS: {persona['cert']}
 Focus Areas: {', '.join(persona['focus'])}
 Style: {persona['style']}
 Frame questions as if preparing for this certification exam."""
+    
+    # Fetch current AWS knowledge from database
+    from utils import fetch_knowledge_for_generation
+    aws_services_list = challenge.get("aws_services_relevant", [])
+    topic = f"{challenge.get('title', '')} {' '.join(aws_services_list[:3])}"
+    knowledge_context = await fetch_knowledge_for_generation(
+        cert_code=cert_code,
+        topic=topic,
+        limit=5
+    )
     
     # Extract challenge fields
     challenge_id = challenge.get("id", str(uuid.uuid4()))
@@ -208,6 +272,8 @@ Frame questions as if preparing for this certification exam."""
 Challenge: {challenge_title}
 Company: {company_name} ({industry})
 User Level: {user_level}
+
+{knowledge_context}
 
 Make the questions specific to this business case, not generic AWS questions."""
 
@@ -279,7 +345,7 @@ async def grade_challenge_answer(
     question: ChallengeQuestion,
     user_answer: str,
     company_context: str,
-    user_level: str = "intermediate",
+    user_level: str,
 ) -> Dict:
     """
     Grade a user's answer to a challenge question.

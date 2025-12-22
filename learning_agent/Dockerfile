@@ -22,5 +22,5 @@ RUN uv pip install --system -e . && \
 
 EXPOSE ${PORT}
 
-# Command to run the agent
-CMD ["python3", "crawl4ai_mcp.py"]
+# Command to run the agent with gunicorn for production
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "crawl4ai_mcp:app"]

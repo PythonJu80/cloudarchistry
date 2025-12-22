@@ -15,10 +15,56 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from config.settings import logger
-from prompts import FLASHCARD_GENERATOR_PROMPT, PERSONA_FLASHCARD_PROMPT
+from prompts import FLASHCARD_GENERATOR_PROMPT, PERSONA_FLASHCARD_PROMPT, CERTIFICATION_PERSONAS
 from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
 
 DEFAULT_MODEL = "gpt-4o-mini"  # Cheaper model - AI is just formatting
+
+
+# Valid user levels
+VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+
+class FlashcardValidationError(Exception):
+    """Raised when flashcard generation parameters are invalid"""
+    pass
+
+
+def validate_flashcard_params(user_level: str, cert_code: str) -> None:
+    """
+    Validate that user_level and cert_code are provided and valid.
+    
+    Args:
+        user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+    
+    Raises:
+        FlashcardValidationError: If parameters are missing or invalid
+    """
+    if not user_level:
+        raise FlashcardValidationError(
+            "user_level is required. Flashcards must be user-level specific. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if not cert_code:
+        raise FlashcardValidationError(
+            "cert_code is required. Flashcards must be certification-specific. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
+    
+    if user_level not in VALID_USER_LEVELS:
+        raise FlashcardValidationError(
+            f"Invalid user_level '{user_level}'. "
+            f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
+        )
+    
+    if cert_code not in VALID_CERT_CODES:
+        raise FlashcardValidationError(
+            f"Invalid cert_code '{cert_code}'. "
+            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+        )
 
 
 class Flashcard(BaseModel):
@@ -78,31 +124,56 @@ async def generate_flashcards(
     scenario_title: str,
     business_context: str,
     aws_services: List[str],
-    user_level: str = "intermediate",
+    user_level: str,
+    cert_code: str,
     card_count: int = 20,
     challenges: Optional[List[dict]] = None,
-    persona_context: Optional[Dict] = None,
 ) -> FlashcardDeck:
-    """Generate flashcards for a scenario - persona-aware."""
+    """
+    Generate flashcards for a scenario.
     
-    # Use persona-specific prompt if persona provided
-    if persona_context:
-        base_prompt = PERSONA_FLASHCARD_PROMPT.format(
-            scenario_title=scenario_title,
-            business_context=business_context,
-            cert_name=persona_context.get("cert_name", "AWS Certification"),
-            focus_areas=persona_context.get("focus_areas", ""),
-            level=persona_context.get("level", "associate"),
-            card_count=card_count,
-        )
-    else:
-        base_prompt = FLASHCARD_GENERATOR_PROMPT.format(
-            scenario_title=scenario_title,
-            business_context=business_context,
-            aws_services=", ".join(aws_services),
-            user_level=user_level,
-            card_count=card_count,
-        )
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    Each flashcard deck must be certification-specific and user-level specific.
+    
+    Args:
+        scenario_title: Title of the scenario
+        business_context: Business context description
+        aws_services: List of AWS services covered
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
+        card_count: Number of cards to generate (default 20)
+        challenges: Optional list of challenges to cover
+    
+    Returns:
+        FlashcardDeck tailored to cert and level
+    
+    Raises:
+        FlashcardValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_flashcard_params(user_level, cert_code)
+    
+    # Get certification context (cert_code is now required and validated)
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise FlashcardValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    persona_context = {
+        "cert_name": persona["cert"],
+        "focus_areas": ", ".join(persona["focus"]),
+        "level": persona["level"],
+    }
+    
+    # Use persona-specific prompt (always, since cert_code is required)
+    base_prompt = PERSONA_FLASHCARD_PROMPT.format(
+        scenario_title=scenario_title,
+        business_context=business_context,
+        cert_name=persona_context["cert_name"],
+        focus_areas=persona_context["focus_areas"],
+        level=persona_context["level"],
+        card_count=card_count,
+    )
     
     system_prompt = f"""You create educational flashcards for cloud architecture.
 Return JSON with: title, description, cards (array of: front, back, difficulty, aws_services, tags)
@@ -110,8 +181,7 @@ Return JSON with: title, description, cards (array of: front, back, difficulty, 
 {base_prompt}"""
     
     user_prompt = f"Generate {card_count} flashcards for: {scenario_title}"
-    if persona_context:
-        user_prompt += f"\nFocus on {persona_context.get('cert_name', 'AWS')} certification topics."
+    user_prompt += f"\nFocus on {persona_context['cert_name']} certification topics."
     if challenges:
         user_prompt += "\n\nChallenges to cover:\n"
         for c in challenges:
@@ -139,15 +209,50 @@ Return JSON with: title, description, cards (array of: front, back, difficulty, 
 
 async def generate_flashcards_for_service(
     service_name: str,
-    user_level: str = "intermediate",
+    user_level: str,
+    cert_code: str,
     card_count: int = 10,
     context: Optional[str] = None,
 ) -> FlashcardDeck:
-    """Generate flashcards focused on a specific AWS service."""
+    """
+    Generate flashcards focused on a specific AWS service.
+    
+    IMPORTANT: Both user_level and cert_code are REQUIRED.
+    
+    Args:
+        service_name: AWS service name
+        user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
+        cert_code: Certification persona ID (REQUIRED)
+        card_count: Number of cards to generate (default 10)
+        context: Optional additional context
+    
+    Returns:
+        FlashcardDeck tailored to cert and level
+    
+    Raises:
+        FlashcardValidationError: If user_level or cert_code are missing/invalid
+    """
+    
+    # CRITICAL: Validate required parameters
+    validate_flashcard_params(user_level, cert_code)
+    
+    # Get certification context
+    if cert_code not in CERTIFICATION_PERSONAS:
+        raise FlashcardValidationError(f"Unknown certification persona: {cert_code}")
+    
+    persona = CERTIFICATION_PERSONAS[cert_code]
+    cert_name = persona["cert"]
+    focus_areas = ", ".join(persona["focus"])
     
     system_prompt = f"""Create {card_count} flashcards about AWS {service_name}.
-User Level: {user_level}
+
+User Profile:
+- Skill Level: {user_level}
+- Target Certification: {cert_name}
+- Focus Areas: {focus_areas}
 {"Context: " + context if context else ""}
+
+Focus on {cert_name} exam-relevant knowledge about {service_name}.
 
 Return JSON with: title, description, cards (array of: front, back, difficulty, aws_services, tags)"""
 
