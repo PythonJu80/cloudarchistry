@@ -81,14 +81,8 @@ export async function POST(
           },
         });
 
-        // Get API key for AI generation
+        // Get API key for AI generation (optional - will use .env if not provided)
         const aiConfig = await getAiConfigForRequest(session.user.academyProfileId || session.user.id);
-        if (!aiConfig) {
-          return NextResponse.json(
-            { error: "Please configure your OpenAI API key in Settings" },
-            { status: 402 }
-          );
-        }
 
         // Generate brief from learning agent
         const briefResponse = await fetch(`${LEARNING_AGENT_URL}/api/speed-deploy/brief/generate`, {
@@ -97,8 +91,8 @@ export async function POST(
           body: JSON.stringify({
             user_level: profile?.skillLevel || "intermediate",
             cert_code: profile?.targetCertification || "SAA-C03",
-            openai_api_key: aiConfig.key,
-            preferred_model: aiConfig.preferredModel,
+            openai_api_key: aiConfig?.key,
+            preferred_model: aiConfig?.preferredModel,
           }),
         });
 

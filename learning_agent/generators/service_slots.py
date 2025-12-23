@@ -8,6 +8,7 @@ Economy: Players bet virtual money, win more if correct, lose if wrong.
 """
 
 import json
+import os
 import uuid
 import random
 from typing import List, Optional, Dict, Any
@@ -243,12 +244,16 @@ async def generate_slot_challenge(
         ServiceSlotsValidationError: If user_level or cert_code are missing/invalid
     """
     
+    # Normalize cert_code: Convert database format (SAA-C03) to persona ID (solutions-architect-associate)
+    if cert_code and cert_code in CERT_CODE_TO_PERSONA:
+        cert_code = CERT_CODE_TO_PERSONA[cert_code]
+    
     # CRITICAL: Validate required parameters
     validate_slots_params(user_level, cert_code)
-    # Get API key
-    key = api_key or get_request_api_key()
+    # Get API key - Priority: explicit param > request context > environment variable
+    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
     if not key:
-        raise ApiKeyRequiredError("OpenAI API key required")
+        raise ApiKeyRequiredError("OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file.")
     
     # Get certification context (cert_code is now required and validated)
     if cert_code not in CERTIFICATION_PERSONAS:

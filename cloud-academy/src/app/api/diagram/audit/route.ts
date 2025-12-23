@@ -55,15 +55,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get AI config (API key + model)
+    // Get AI config (optional - will use .env if not provided)
     const aiConfig = await getAiConfigForRequest(session.user.academyProfileId);
-    
-    if (!aiConfig?.key) {
-      return NextResponse.json(
-        { error: "Please configure your OpenAI API key in Settings" },
-        { status: 402 }
-      );
-    }
 
     // Call the dedicated audit-diagram endpoint
     const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/audit-diagram`, {
@@ -87,8 +80,8 @@ export async function POST(request: NextRequest) {
         challenge_brief: challengeBrief,
         expected_services: [], // Could be passed from challenge data
         session_id: sessionId,
-        openai_api_key: aiConfig.key,
-        preferred_model: aiConfig.preferredModel,
+        openai_api_key: aiConfig?.key,
+        preferred_model: aiConfig?.preferredModel,
       }),
     });
 

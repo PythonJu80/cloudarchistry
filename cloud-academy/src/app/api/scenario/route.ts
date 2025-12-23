@@ -16,27 +16,15 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get API key and preferred model from user's settings - no fallback
+    // Get AI config (returns empty key - backend uses .env)
     const aiConfig = await getAiConfigForRequest(session.user.academyProfileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        { 
-          error: "OpenAI API key required",
-          message: "Please configure your OpenAI API key in Settings to use AI features.",
-          action: "configure_api_key",
-          settingsUrl: "/dashboard/settings"
-        },
-        { status: 402 }
-      );
-    }
     
     const body = await request.json();
     
-    // Pass the API key and preferred model to the learning agent
     const requestBody = {
       ...body,
-      openai_api_key: aiConfig.key,
-      preferred_model: aiConfig.preferredModel,
+      openai_api_key: aiConfig?.key,
+      preferred_model: aiConfig?.preferredModel,
     };
     
     const response = await fetch(`${LEARNING_AGENT_URL}/generate-scenario`, {

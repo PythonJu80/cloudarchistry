@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get API key and preferred model from user's settings (optional - learning agent has platform key)
+    // Get AI config (returns empty key - backend uses .env)
     const aiConfig = await getAiConfigForRequest(session.user.academyProfileId);
     
     // Get user's learning profile with stats and recent activity
@@ -207,11 +207,10 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json();
     
-    // Pass the API key (if user has BYOK), model, and rich learner context to the learning agent
     const requestBody = {
       ...body,
-      openai_api_key: aiConfig?.key, // Optional - learning agent uses .env if not provided
-      preferred_model: body.preferred_model || aiConfig?.preferredModel,
+      openai_api_key: aiConfig?.key,
+      preferred_model: aiConfig?.preferredModel,
       context: {
         ...body.context,
         // Basic profile

@@ -22,14 +22,8 @@ export async function POST(req: NextRequest) {
     const profileId = session.user.academyProfileId;
     const body = await req.json();
 
-    // Get AI config
+    // Get AI config (optional - will use .env if not provided)
     const aiConfig = await getAiConfigForRequest(profileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        { error: "OpenAI API key required" },
-        { status: 402 }
-      );
-    }
 
     console.log(`[Architect Arena Audit] Auditing puzzle: ${body.puzzle_title}`);
 
@@ -46,8 +40,8 @@ export async function POST(req: NextRequest) {
           expected_connections: body.expected_connections || [],
           nodes: body.nodes || [],
           connections: body.connections || [],
-          openai_api_key: aiConfig.key,
-          preferred_model: aiConfig.preferredModel,
+          openai_api_key: aiConfig?.key,
+          preferred_model: aiConfig?.preferredModel,
         }),
       }
     );

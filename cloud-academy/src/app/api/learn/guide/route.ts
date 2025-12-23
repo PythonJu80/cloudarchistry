@@ -96,18 +96,8 @@ export async function POST(request: NextRequest) {
 
     const profileId = session.user.academyProfileId;
 
-    // Get user's AI config
+    // Get user's AI config (optional - will use .env if not provided)
     const aiConfig = await getAiConfigForRequest(profileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        {
-          error: "OpenAI API key required",
-          message: "Add an API key in Settings to generate study plans.",
-          action: "configure_api_key",
-        },
-        { status: 402 }
-      );
-    }
 
     // Get profile data
     const profile = await prisma.academyUserProfile.findUnique({
@@ -170,8 +160,8 @@ export async function POST(request: NextRequest) {
         // PRE-SELECTED content - AI just formats this
         structured_content: structuredContent,
         // AI config
-        openai_api_key: aiConfig.key,
-        preferred_model: aiConfig.preferredModel,
+        openai_api_key: aiConfig?.key,
+        preferred_model: aiConfig?.preferredModel,
       }),
     });
 

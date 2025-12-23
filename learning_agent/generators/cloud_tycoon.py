@@ -7,6 +7,7 @@ to their use cases to earn contract money.
 """
 
 import json
+import os
 import uuid
 from typing import List, Optional, Dict
 from pydantic import BaseModel
@@ -60,6 +61,31 @@ def validate_tycoon_params(user_level: str, cert_code: str) -> None:
             f"Invalid cert_code '{cert_code}'. "
             f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
         )
+
+
+# Map cert codes (e.g., "SAA-C03" from DB) to persona IDs
+CERT_CODE_TO_PERSONA = {
+    "SAA": "solutions-architect-associate",
+    "SAA-C03": "solutions-architect-associate",
+    "SAP": "solutions-architect-professional",
+    "SAP-C02": "solutions-architect-professional",
+    "DVA": "developer-associate",
+    "DVA-C02": "developer-associate",
+    "SOA": "sysops-administrator-associate",
+    "SOA-C02": "sysops-administrator-associate",
+    "DOP": "devops-engineer-professional",
+    "DOP-C02": "devops-engineer-professional",
+    "CLF": "cloud-practitioner",
+    "CLF-C02": "cloud-practitioner",
+    "ANS": "advanced-networking-specialty",
+    "ANS-C01": "advanced-networking-specialty",
+    "SCS": "security-specialty",
+    "SCS-C02": "security-specialty",
+    "DBS": "database-specialty",
+    "DBS-C01": "database-specialty",
+    "MLS": "machine-learning-specialty",
+    "MLS-C01": "machine-learning-specialty",
+}
 
 
 # =============================================================================
@@ -364,10 +390,10 @@ async def _chat_json(
     api_key: Optional[str] = None
 ) -> Dict:
     """JSON chat completion with request-scoped key support."""
-    key = api_key or get_request_api_key()
+    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings."
+            "OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file."
         )
     
     model = model or get_request_model() or "gpt-4o"
@@ -406,6 +432,10 @@ async def generate_tycoon_journey(
     Raises:
         TycoonValidationError: If user_level or cert_code are missing/invalid
     """
+    
+    # Normalize cert_code: Convert database format (SAA-C03) to persona ID (solutions-architect-associate)
+    if cert_code and cert_code in CERT_CODE_TO_PERSONA:
+        cert_code = CERT_CODE_TO_PERSONA[cert_code]
     
     # CRITICAL: Validate required parameters
     validate_tycoon_params(user_level, cert_code)

@@ -275,17 +275,8 @@ export async function POST(request: NextRequest) {
       learnerNotes,
     } = body;
 
+    // Get AI config (optional - will use .env if not provided)
     const aiConfig = await getAiConfigForRequest(profileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        {
-          error: "OpenAI API key required",
-          message: "Add an API key in Settings to generate study plans.",
-          action: "configure_api_key",
-        },
-        { status: 402 }
-      );
-    }
 
     const telemetry = await buildTelemetry(profileId);
     const weeks = calculateWeeksUntil(examDate || null);

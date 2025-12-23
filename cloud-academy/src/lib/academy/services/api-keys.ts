@@ -233,32 +233,20 @@ export async function getApiKeyForRequest(profileId: string): Promise<{
 
 /**
  * Get both API key and preferred model for a request
- * Returns user's key and model preference - no fallback
+ * Returns platform .env key - no BYOK
  */
 export async function getAiConfigForRequest(profileId: string): Promise<{
   key: string;
   preferredModel: string;
 } | null> {
+  // Return empty string - backend will use its .env OPENAI_API_KEY when it sees empty/null
   const profile = await prisma.academyUserProfile.findUnique({
     where: { id: profileId },
-    select: { 
-      openaiApiKey: true,
-      preferredModel: true,
-    },
+    select: { preferredModel: true },
   });
-
-  if (!profile?.openaiApiKey) {
-    return null;
-  }
-
-  try {
-    const key = decrypt(profile.openaiApiKey);
-    return { 
-      key, 
-      preferredModel: profile.preferredModel || "gpt-4.1" 
-    };
-  } catch {
-    console.error("Failed to decrypt API key");
-    return null;
-  }
+  
+  return { 
+    key: "", // Empty key - backend uses .env
+    preferredModel: profile?.preferredModel || "gpt-4o" 
+  };
 }

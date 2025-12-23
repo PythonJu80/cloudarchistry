@@ -79,13 +79,21 @@ export async function GET() {
       });
     }
 
-    // Get user's API key
-    const apiKey = await getDecryptedApiKey(profileId);
+    // Get user's API key, fall back to platform key from .env
+    let apiKey = await getDecryptedApiKey(profileId);
+    let keySource = "user";
+    
+    if (!apiKey) {
+      // Fall back to platform's API key
+      apiKey = process.env.OPENAI_API_KEY || null;
+      keySource = "platform";
+    }
+    
     if (!apiKey) {
       return NextResponse.json(
         { 
           error: "OpenAI API key required",
-          message: "Please configure your OpenAI API key in Settings.",
+          message: "Please configure your OpenAI API key in Settings or contact support.",
           action: "configure_api_key",
         },
         { status: 402 }

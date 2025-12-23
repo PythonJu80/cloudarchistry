@@ -16,17 +16,8 @@ export async function POST(req: NextRequest) {
     const profileId = session.user.academyProfileId;
     const body = await req.json();
 
+    // Get AI config (optional - will use .env if not provided)
     const aiConfig = await getAiConfigForRequest(profileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        {
-          error: "OpenAI API key required",
-          message: "Add an API key in Settings to play Bug Bounty.",
-          action: "configure_api_key",
-        },
-        { status: 402 }
-      );
-    }
 
     const profile = await prisma.academyUserProfile.findUnique({
       where: { id: profileId },
@@ -57,7 +48,7 @@ export async function POST(req: NextRequest) {
         difficulty,
         certification_code: profile.targetCertification,
         scenario_type: scenarioType,
-        openai_api_key: aiConfig.key,
+        openai_api_key: aiConfig?.key,
         profile_id: profileId,  // For database persistence
       }),
     });

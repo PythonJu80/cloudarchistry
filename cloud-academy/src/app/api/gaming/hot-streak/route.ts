@@ -24,18 +24,8 @@ export async function POST(req: NextRequest) {
     const count = Math.min(body.count || 25, 50);
     const excludeIds = body.excludeIds || [];
 
-    // Get AI config
+    // Get AI config (returns empty key - backend uses .env)
     const aiConfig = await getAiConfigForRequest(profileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        {
-          error: "OpenAI API key required",
-          message: "Add an API key in Settings to play Hot Streak.",
-          action: "configure_api_key",
-        },
-        { status: 402 }
-      );
-    }
 
     // Get user profile
     const profile = await prisma.academyUserProfile.findUnique({
@@ -76,8 +66,8 @@ export async function POST(req: NextRequest) {
             question_count: count,
             exclude_ids: excludeIds,
           },
-          openai_api_key: aiConfig.key,
-          preferred_model: aiConfig.preferredModel,
+          openai_api_key: aiConfig?.key,
+          preferred_model: aiConfig?.preferredModel,
         }),
       }
     );

@@ -28,14 +28,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User profile not found" }, { status: 404 });
     }
 
-    // Get API key and preferred model from user's settings
+    // Get API key and preferred model from user's settings (optional - will use .env if not provided)
     const aiConfig = await getAiConfigForRequest(session.user.academyProfileId || session.user.id);
-    if (!aiConfig) {
-      return NextResponse.json(
-        { error: "Please configure your OpenAI API key in Settings" },
-        { status: 402 }
-      );
-    }
 
     // Call learning agent to generate a slot challenge
     const response = await fetch(`${LEARNING_AGENT_URL}/api/slots/challenge/generate`, {
@@ -45,8 +39,8 @@ export async function POST(request: NextRequest) {
         user_level: profile.skillLevel || "intermediate",
         cert_code: profile.targetCertification || "SAA-C03",
         difficulty: body.difficulty || null, // null = random
-        openai_api_key: aiConfig.key,
-        preferred_model: aiConfig.preferredModel,
+        openai_api_key: aiConfig?.key,
+        preferred_model: aiConfig?.preferredModel,
       }),
     });
 

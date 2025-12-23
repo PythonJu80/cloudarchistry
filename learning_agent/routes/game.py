@@ -170,7 +170,7 @@ class HotStreakResponse(BaseModel):
 async def generate_hot_streak(request: HotStreakRequest):
     """
     Generate Hot Streak questions - quick-fire questions for 60-second timed gameplay.
-    Uses dedicated Hot Streak generator with user's API key.
+    Uses .env OPENAI_API_KEY by default, with optional BYOK fallback.
     """
     try:
         result = await generate_hot_streak_questions(

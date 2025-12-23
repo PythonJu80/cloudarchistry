@@ -111,18 +111,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { questionCount = 10 } = body;
 
-    // Get AI config
+    // Get AI config (optional - will use .env if not provided)
     const aiConfig = await getAiConfigForRequest(profileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        {
-          error: "OpenAI API key required",
-          message: "Add an API key in Settings to generate quizzes.",
-          action: "configure_api_key",
-        },
-        { status: 402 }
-      );
-    }
 
     // Get user profile with telemetry data
     const profile = await prisma.academyUserProfile.findUnique({
@@ -169,8 +159,8 @@ export async function POST(request: NextRequest) {
           user_level: profile.skillLevel || "intermediate",
           telemetry: telemetrySummary,
           options: { question_count: questionCount },
-          openai_api_key: aiConfig.key,
-          preferred_model: aiConfig.preferredModel,
+          openai_api_key: aiConfig?.key,
+          preferred_model: aiConfig?.preferredModel,
         }),
       }
     );

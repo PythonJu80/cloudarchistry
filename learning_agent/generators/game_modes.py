@@ -226,6 +226,10 @@ async def generate_sniper_quiz_questions(
         GameModeValidationError: If user_level or cert_code are missing/invalid
     """
     
+    # Normalize cert_code: Convert database format (SAA-C03) to persona ID (solutions-architect-associate)
+    if cert_code and cert_code in CERT_CODE_TO_PERSONA:
+        cert_code = CERT_CODE_TO_PERSONA[cert_code]
+    
     # CRITICAL: Validate required parameters
     validate_game_params(user_level, cert_code)
     
@@ -339,6 +343,10 @@ async def generate_speed_round_questions(
     Raises:
         GameModeValidationError: If user_level or cert_code are missing/invalid
     """
+    
+    # Normalize cert_code: Convert database format (SAA-C03) to persona ID (solutions-architect-associate)
+    if cert_code and cert_code in CERT_CODE_TO_PERSONA:
+        cert_code = CERT_CODE_TO_PERSONA[cert_code]
     
     # CRITICAL: Validate required parameters
     validate_game_params(user_level, cert_code)
@@ -501,6 +509,10 @@ async def generate_hot_streak_questions(
     Raises:
         GameModeValidationError: If user_level or cert_code are missing/invalid
     """
+    
+    # Normalize cert_code: Convert database format (SAA-C03) to persona ID (solutions-architect-associate)
+    if cert_code and cert_code in CERT_CODE_TO_PERSONA:
+        cert_code = CERT_CODE_TO_PERSONA[cert_code]
     
     # CRITICAL: Validate required parameters
     validate_game_params(user_level, cert_code)
@@ -672,6 +684,10 @@ async def generate_ticking_bomb_questions(
     Raises:
         GameModeValidationError: If user_level or cert_code are missing/invalid
     """
+    
+    # Normalize cert_code: Convert database format (SAA-C03) to persona ID (solutions-architect-associate)
+    if cert_code and cert_code in CERT_CODE_TO_PERSONA:
+        cert_code = CERT_CODE_TO_PERSONA[cert_code]
     
     # CRITICAL: Validate required parameters
     validate_game_params(user_level, cert_code)

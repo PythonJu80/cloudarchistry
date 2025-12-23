@@ -104,11 +104,11 @@ class FlashcardStructuredContent(BaseModel):
 
 async def _chat_json(messages: List[Dict], model: str = "gpt-4o", api_key: Optional[str] = None) -> Dict:
     """Simple JSON chat completion."""
-    # Priority: explicit param > request context (no environment fallback)
-    key = api_key or get_request_api_key()
+    # Priority: explicit param > request context > environment variable
+    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings."
+            "OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file."
         )
     client = AsyncOpenAI(api_key=key)
     response = await client.chat.completions.create(

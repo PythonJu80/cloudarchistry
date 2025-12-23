@@ -21,18 +21,8 @@ export async function POST(req: NextRequest) {
     const profileId = session.user.academyProfileId;
     const body = await req.json().catch(() => ({}));
 
-    // Get AI config
+    // Get AI config (optional - will use .env if not provided)
     const aiConfig = await getAiConfigForRequest(profileId);
-    if (!aiConfig) {
-      return NextResponse.json(
-        {
-          error: "OpenAI API key required",
-          message: "Add an API key in Settings to play Architect Arena.",
-          action: "configure_api_key",
-        },
-        { status: 402 }
-      );
-    }
 
     // Get user profile for certification and skill level
     const profile = await prisma.academyUserProfile.findUnique({
@@ -70,8 +60,8 @@ export async function POST(req: NextRequest) {
           certification_code: profile.targetCertification,
           user_level: profile.skillLevel || "intermediate",
           options: { difficulty: body?.difficulty || null },
-          openai_api_key: aiConfig.key,
-          preferred_model: aiConfig.preferredModel,
+          openai_api_key: aiConfig?.key,
+          preferred_model: aiConfig?.preferredModel,
         }),
       }
     );

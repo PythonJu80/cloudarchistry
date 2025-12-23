@@ -41,7 +41,7 @@ interface Challenge {
   pattern_name: string;
   pattern_description: string;
   options: AnswerOption[];
-  difficulty: string;
+  user_level: string;
   base_payout: number;
 }
 
@@ -636,7 +636,7 @@ export default function ServiceSlotsPage() {
           services: challenge.services,
           pattern_name: challenge.pattern_name,
           options: challenge.options,
-          difficulty: challenge.difficulty,
+          user_level: challenge.user_level,
           base_payout: challenge.base_payout,
           selected_option_id: optionId,
           bet_amount: betAmount,
@@ -999,9 +999,9 @@ export default function ServiceSlotsPage() {
                       <div className="flex items-center justify-center gap-6 mt-2">
                         <span className={cn(
                           "px-3 py-1 rounded-full text-sm font-black",
-                          DIFFICULTY_COLORS[challenge.difficulty as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
+                          DIFFICULTY_COLORS[challenge.user_level as keyof typeof DIFFICULTY_COLORS] || DIFFICULTY_COLORS.medium
                         )}>
-                          {challenge.difficulty.toUpperCase()}
+                          {challenge.user_level.toUpperCase()}
                         </span>
                         <span className="text-red-900 text-lg font-black">
                           💰 {challenge.base_payout}x PAYOUT 💰
