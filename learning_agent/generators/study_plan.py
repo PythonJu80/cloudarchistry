@@ -8,6 +8,7 @@ Knows about the Cloud Academy platform features: games, exams, quizzes, challeng
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from typing import List, Optional, Dict, Any
 
@@ -18,7 +19,6 @@ from config.settings import logger
 from prompts import CERTIFICATION_PERSONAS
 from utils import (
     ApiKeyRequiredError,
-    get_request_api_key,
     get_request_model,
 )
 
@@ -351,9 +351,9 @@ async def generate_study_plan(
     Legacy study plan generator - kept for backward compatibility.
     Uses the old endpoint that other code depends on.
     """
-    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
-        raise ApiKeyRequiredError("OpenAI API key required for study plan generation. Please configure your API key in Settings or set OPENAI_API_KEY in .env file.")
+        raise ApiKeyRequiredError("OpenAI API key required. Set OPENAI_API_KEY in .env file.")
 
     model_name = model or get_request_model() or DEFAULT_MODEL
 
@@ -423,9 +423,9 @@ async def generate_study_guide(
     # CRITICAL: Validate required parameters
     validate_study_plan_params(context.skill_level, context.cert_code)
     
-    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
-        raise ApiKeyRequiredError("OpenAI API key required for study guide generation. Please configure your API key in Settings or set OPENAI_API_KEY in .env file.")
+        raise ApiKeyRequiredError("OpenAI API key required. Set OPENAI_API_KEY in .env file.")
     
     # Fetch current AWS knowledge from database
     from utils import fetch_knowledge_for_generation
@@ -657,9 +657,9 @@ async def format_study_guide(
     
     # CRITICAL: Validate required parameters
     validate_study_plan_params(skill_level, cert_code)
-    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
-        raise ApiKeyRequiredError("OpenAI API key required for study guide formatting. Please configure your API key in Settings or set OPENAI_API_KEY in .env file.")
+        raise ApiKeyRequiredError("OpenAI API key required. Set OPENAI_API_KEY in .env file.")
 
     model_name = model or get_request_model() or DEFAULT_MODEL
     

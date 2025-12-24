@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from prompts import CERTIFICATION_PERSONAS
-from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError
 from generators.cloud_tycoon import VALID_SERVICE_IDS, AWS_SERVICES_REFERENCE
 
 
@@ -282,10 +282,9 @@ async def generate_deploy_brief(
     
     # CRITICAL: Validate required parameters
     validate_deploy_params(user_level, cert_code)
-    # Get API key - Priority: explicit param > request context > environment variable
-    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
-        raise ApiKeyRequiredError("OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file.")
+        raise ApiKeyRequiredError("OpenAI API key required. Set OPENAI_API_KEY in .env file.")
     
     # Get certification context (cert_code is now required and validated)
     if cert_code not in CERTIFICATION_PERSONAS:
@@ -464,9 +463,8 @@ async def validate_deployment_with_ai(
     
     Grades: S (95%+), A (85%+), B (70%+), C (50%+), D (30%+), F (<30%)
     """
-    key = api_key or get_request_api_key()
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
-        # Fallback to deterministic validation if no API key
         return validate_deployment_deterministic(brief, submitted_services, time_remaining)
     
     submitted_set = set(s.lower().strip() for s in submitted_services)

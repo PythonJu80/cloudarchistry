@@ -107,16 +107,9 @@ def get_async_openai(api_key: Optional[str] = None) -> AsyncOpenAI:
     
     Returns: AsyncOpenAI client
     """
-    from utils import get_request_api_key
-    
-    # Priority 1: Environment variable (platform key) - USE THIS FIRST
+    # Use .env only
     key = os.getenv("OPENAI_API_KEY")
     
-    # Priority 2: Request context (BYOK fallback if .env not set)
-    if not key:
-        key = get_request_api_key()
-    
-    # Priority 3: Explicit parameter (BYOK fallback if neither above set)
     if not key:
         key = api_key
     

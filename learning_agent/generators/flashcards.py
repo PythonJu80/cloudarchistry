@@ -10,13 +10,14 @@ PATTERN: "Tool uses AI" - The tool pre-gathers all data, AI just formats.
 """
 
 import json
+import os
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from config.settings import logger
 from prompts import FLASHCARD_GENERATOR_PROMPT, PERSONA_FLASHCARD_PROMPT, CERTIFICATION_PERSONAS
-from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError
 
 DEFAULT_MODEL = "gpt-4o-mini"  # Cheaper model - AI is just formatting
 
@@ -104,11 +105,10 @@ class FlashcardStructuredContent(BaseModel):
 
 async def _chat_json(messages: List[Dict], model: str = "gpt-4o", api_key: Optional[str] = None) -> Dict:
     """Simple JSON chat completion."""
-    # Priority: explicit param > request context > environment variable
-    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file."
+            "OpenAI API key required. Set OPENAI_API_KEY in .env file."
         )
     client = AsyncOpenAI(api_key=key)
     response = await client.chat.completions.create(
@@ -357,9 +357,9 @@ async def format_flashcards(
     
     AI just formats the knowledge into Q&A pairs.
     """
-    key = api_key or get_request_api_key()
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
-        raise ApiKeyRequiredError("OpenAI API key required for flashcard formatting.")
+        raise ApiKeyRequiredError("OpenAI API key required. Set OPENAI_API_KEY in .env file.")
     
     model_name = model or get_request_model() or DEFAULT_MODEL
     

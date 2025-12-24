@@ -7,13 +7,14 @@ user skill level, and certification focus.
 """
 
 import json
+import os
 import uuid
 from typing import List, Optional, Dict
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from prompts import CERTIFICATION_PERSONAS
-from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError
 
 
 # Valid user levels
@@ -98,11 +99,11 @@ async def _chat_json(
     model: Optional[str] = None,
     api_key: Optional[str] = None
 ) -> Dict:
-    """JSON chat completion with request-scoped key support."""
-    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+    """JSON chat completion with .env only."""
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file."
+            "OpenAI API key required. Set OPENAI_API_KEY in .env file."
         )
     
     model = model or get_request_model() or "gpt-4o"

@@ -53,12 +53,11 @@ class ApiKeyRequiredError(Exception):
 
 
 def get_openai_client(api_key: Optional[str] = None) -> openai.OpenAI:
-    """Get OpenAI client with .env first, then BYOK fallback."""
-    # Priority: environment variable > request context > explicit param
-    key = os.getenv("OPENAI_API_KEY") or get_request_api_key() or api_key
+    """Get OpenAI client with .env only."""
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file."
+            "OpenAI API key required. Set OPENAI_API_KEY in .env file."
         )
     return openai.OpenAI(api_key=key)
 
@@ -466,11 +465,11 @@ async def get_supabase_user_id(user_id: str) -> str:
 
 
 async def check_usage_limits_and_get_key(user_id: str) -> Dict[str, Any]:
-    """Returns request context API key. No fallback."""
-    key = get_request_api_key()
+    """Returns .env API key only."""
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings."
+            "OpenAI API key required. Set OPENAI_API_KEY in .env file."
         )
     return {
         "api_key": key,
@@ -519,8 +518,8 @@ async def fetch_knowledge_for_generation(
         
         search_query = " ".join(query_parts) + " AWS"
         
-        # Get API key (prioritize .env, then explicit param)
-        key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+        # Get API key from .env only
+        key = os.getenv("OPENAI_API_KEY")
         if not key:
             return ""  # Gracefully degrade if no key available
         

@@ -41,7 +41,7 @@ async def _enrich_with_aws_knowledge(company_info: CompanyInfo, industry: Option
     try:
         import db
         from openai import AsyncOpenAI
-        from utils import get_request_api_key
+        import os
         
         # Build query for AWS knowledge
         kb_query_parts = []
@@ -53,7 +53,7 @@ async def _enrich_with_aws_knowledge(company_info: CompanyInfo, industry: Option
         kb_query = f"{' '.join(kb_query_parts)} AWS architecture patterns best practices"
         
         # Get embedding
-        api_key = get_request_api_key()
+        api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             return ""
         

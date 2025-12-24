@@ -24,7 +24,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from prompts import CERTIFICATION_PERSONAS
-from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError
 
 # Cloud Academy API URL for fetching AWS services
 CLOUD_ACADEMY_URL = os.getenv("CLOUD_ACADEMY_URL", "http://cloud-academy:6060")
@@ -206,11 +206,11 @@ async def _chat_json(
     model: Optional[str] = None,
     api_key: Optional[str] = None
 ) -> Dict:
-    """JSON chat completion with request-scoped key support."""
-    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+    """JSON chat completion with .env only."""
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError(
-            "OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file."
+            "OpenAI API key required. Set OPENAI_API_KEY in .env file."
         )
     
     model = model or get_request_model() or "gpt-4o"

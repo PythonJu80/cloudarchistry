@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from prompts import CERTIFICATION_PERSONAS
-from utils import get_request_api_key, get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError
 from generators.cloud_tycoon import VALID_SERVICE_IDS, AWS_SERVICES_REFERENCE
 
 
@@ -250,10 +250,9 @@ async def generate_slot_challenge(
     
     # CRITICAL: Validate required parameters
     validate_slots_params(user_level, cert_code)
-    # Get API key - Priority: explicit param > request context > environment variable
-    key = api_key or get_request_api_key() or os.getenv("OPENAI_API_KEY")
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
-        raise ApiKeyRequiredError("OpenAI API key required. Please configure your API key in Settings or set OPENAI_API_KEY in .env file.")
+        raise ApiKeyRequiredError("OpenAI API key required. Set OPENAI_API_KEY in .env file.")
     
     # Get certification context (cert_code is now required and validated)
     if cert_code not in CERTIFICATION_PERSONAS:

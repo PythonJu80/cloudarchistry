@@ -47,3 +47,8 @@ mcp-crawl4ai-rag/.env
 mcp-crawl4ai-rag/__pycache__/
 mcp-crawl4ai-rag/src/__pycache__/
 mcp-crawl4ai-rag/uv.lock
+
+# Nginx SSL certificates
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt

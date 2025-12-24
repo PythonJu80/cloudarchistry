@@ -305,26 +305,30 @@ async def get_existing_flashcard_topics(certification_code: str = None, limit: i
 
 async def get_existing_quiz_questions(certification_code: str = None, limit: int = 50) -> List[str]:
     """Get existing quiz questions to avoid duplicates."""
-    pool = await get_pool()
-    
-    async with pool.acquire() as conn:
-        if certification_code:
-            rows = await conn.fetch("""
-                SELECT q.question FROM "QuizQuestion" q
-                JOIN "AcademyQuiz" qz ON q."quizId" = qz.id
-                WHERE qz."certificationCode" = $1
-                ORDER BY qz."createdAt" DESC
-                LIMIT $2
-            """, certification_code, limit)
-        else:
-            rows = await conn.fetch("""
-                SELECT question FROM "QuizQuestion" q
-                JOIN "AcademyQuiz" qz ON q."quizId" = qz.id
-                ORDER BY qz."createdAt" DESC
-                LIMIT $1
-            """, limit)
+    try:
+        pool = await get_pool()
         
-        return [row["question"] for row in rows]
+        async with pool.acquire() as conn:
+            if certification_code:
+                rows = await conn.fetch("""
+                    SELECT q.question FROM "QuizQuestion" q
+                    JOIN "AcademyQuiz" qz ON q."quizId" = qz.id
+                    WHERE qz."certificationCode" = $1
+                    ORDER BY qz."createdAt" DESC
+                    LIMIT $2
+                """, certification_code, limit)
+            else:
+                rows = await conn.fetch("""
+                    SELECT question FROM "QuizQuestion" q
+                    JOIN "AcademyQuiz" qz ON q."quizId" = qz.id
+                    ORDER BY qz."createdAt" DESC
+                    LIMIT $1
+                """, limit)
+            
+            return [row["question"] for row in rows]
+    except Exception as e:
+        logger.warning(f"Could not get existing questions: {e}")
+        return []
 
 
 async def get_flashcard_decks_for_scenario(scenario_id: str) -> List[dict]:

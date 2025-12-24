@@ -263,6 +263,23 @@ services:
       - prod
       - dev
 
+  # Nginx Reverse Proxy - HTTPS termination for all services
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "680:80"
+      - "6443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - learning-agent
+      - cloud-academy
+    profiles:
+      - prod
+      - dev
+
   # Learning Agent - AI-powered scenario generator for CloudAcademy
   learning-agent:
     build:
