@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { emitToMatch } from "@/lib/socket";
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 const TOTAL_FUSE = 10; // Total fuse time in seconds
 
 interface QuestionFromAPI {

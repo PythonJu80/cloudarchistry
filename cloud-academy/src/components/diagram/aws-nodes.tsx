@@ -679,16 +679,18 @@ export const AWSCloudNode = memo(({ data, selected }: { data: BoundaryNodeData; 
         "rounded-lg border-2 border-dashed relative",
         selected ? "border-orange-400 bg-orange-500/5" : "border-slate-500 bg-slate-800/30"
       )}
-      style={{ width: "100%", height: "100%", minWidth: 300, minHeight: 200 }}
+      style={{ width: "100%", height: "100%", minWidth: 300, minHeight: 200, pointerEvents: "none" }}
     >
-      <NodeResizer
-        isVisible={selected}
-        minWidth={300}
-        minHeight={200}
-        lineClassName="!border-orange-400"
-        handleClassName="!w-3 !h-3 !bg-orange-400 !border-2 !border-white"
-      />
-      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-slate-800 px-2 py-0.5 border border-slate-600 rounded z-10">
+      <div style={{ pointerEvents: "auto" }}>
+        <NodeResizer
+          isVisible={selected}
+          minWidth={300}
+          minHeight={200}
+          lineClassName="!border-orange-400"
+          handleClassName="!w-3 !h-3 !bg-orange-400 !border-2 !border-white"
+        />
+      </div>
+      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-slate-800 px-2 py-0.5 border border-slate-600 rounded z-10" style={{ pointerEvents: "auto" }}>
         <span className="text-sm">☁️</span>
         <span className="text-white text-xs font-medium">{data.label}</span>
       </div>
@@ -710,16 +712,18 @@ export const RegionNode = memo(({ data, selected }: { data: BoundaryNodeData; se
         "rounded-lg border-2 border-dashed relative",
         selected ? "border-cyan-400 bg-cyan-500/5" : "border-blue-400 bg-blue-500/10"
       )}
-      style={{ width: "100%", height: "100%", minWidth: 250, minHeight: 180 }}
+      style={{ width: "100%", height: "100%", minWidth: 250, minHeight: 180, pointerEvents: "none" }}
     >
-      <NodeResizer
-        isVisible={selected}
-        minWidth={250}
-        minHeight={180}
-        lineClassName="!border-blue-400"
-        handleClassName="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
-      />
-      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-blue-600 px-2 py-0.5 border border-blue-500 rounded z-10">
+      <div style={{ pointerEvents: "auto" }}>
+        <NodeResizer
+          isVisible={selected}
+          minWidth={250}
+          minHeight={180}
+          lineClassName="!border-blue-400"
+          handleClassName="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
+        />
+      </div>
+      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-blue-600 px-2 py-0.5 border border-blue-500 rounded z-10" style={{ pointerEvents: "auto" }}>
         <span className="text-sm">🌍</span>
         <span className="text-white text-xs font-medium">{data.label}</span>
       </div>
@@ -741,16 +745,18 @@ export const AvailabilityZoneNode = memo(({ data, selected }: { data: BoundaryNo
         "rounded-lg border-2 relative",
         selected ? "border-cyan-400 bg-cyan-500/5" : "border-sky-400 bg-sky-500/10"
       )}
-      style={{ width: "100%", height: "100%", minWidth: 180, minHeight: 120 }}
+      style={{ width: "100%", height: "100%", minWidth: 180, minHeight: 120, pointerEvents: "none" }}
     >
-      <NodeResizer
-        isVisible={selected}
-        minWidth={180}
-        minHeight={120}
-        lineClassName="!border-sky-400"
-        handleClassName="!w-3 !h-3 !bg-sky-400 !border-2 !border-white"
-      />
-      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-sky-500 px-2 py-0.5 border border-sky-400 rounded z-10">
+      <div style={{ pointerEvents: "auto" }}>
+        <NodeResizer
+          isVisible={selected}
+          minWidth={180}
+          minHeight={120}
+          lineClassName="!border-sky-400"
+          handleClassName="!w-3 !h-3 !bg-sky-400 !border-2 !border-white"
+        />
+      </div>
+      <div className="absolute -top-3 left-4 flex items-center gap-1.5 bg-sky-500 px-2 py-0.5 border border-sky-400 rounded z-10" style={{ pointerEvents: "auto" }}>
         <span className="text-sm">📍</span>
         <span className="text-white text-xs font-medium">{data.label}</span>
       </div>

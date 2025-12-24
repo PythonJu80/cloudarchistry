@@ -10,6 +10,8 @@ class CLISimulatorRequest(BaseModel):
     command: str
     session_id: Optional[str] = None
     challenge_context: Optional[Dict[str, Any]] = None  # title, description, aws_services, success_criteria
+    user_level: str
+    cert_code: str
     company_name: str = "Acme Corp"
     industry: str = "Technology"
     business_context: str = ""

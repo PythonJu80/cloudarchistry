@@ -522,9 +522,14 @@ If the command relates to their challenge, tailor the output to be educational."
         "objective": objective,
     })
     
+    # Convert output to string if it's a dict/object (AI sometimes returns JSON objects)
+    output = result.get("output", "")
+    if isinstance(output, dict):
+        output = json.dumps(output, indent=2)
+    
     return CLIResponse(
         command=command,
-        output=result.get("output", ""),
+        output=output,
         exit_code=exit_code,
         explanation=result.get("explanation"),
         next_steps=result.get("next_steps"),

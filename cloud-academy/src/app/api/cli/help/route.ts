@@ -10,36 +10,35 @@ export async function POST(request: NextRequest) {
     
     if (!session?.user?.academyProfileId) {
       return NextResponse.json(
-        { error: "Please sign in to use AI features" },
+        { error: "Please sign in to use CLI help" },
         { status: 401 }
       );
     }
-    
+
     const body = await request.json();
-    const requestBody = body;
-    
-    const response = await fetch(`${LEARNING_AGENT_URL}/research`, {
+
+    const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/cli-help`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const errorText = await response.text();
+      console.error("Learning Agent cli-help error:", errorText);
       return NextResponse.json(
-        { error: `Learning agent error: ${error}` },
-        { status: response.status }
+        { error: "Failed to get CLI help" },
+        { status: 500 }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const result = await response.json();
+    return NextResponse.json(result);
+
   } catch (error) {
-    console.error("Research error:", error);
+    console.error("CLI help error:", error);
     return NextResponse.json(
-      { error: "Failed to research company" },
+      { error: "Failed to get CLI help", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

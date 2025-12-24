@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 
 interface DiagramNode {
   id: string;
@@ -55,9 +54,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get AI config (optional - will use .env if not provided)
-    const aiConfig = await getAiConfigForRequest(session.user.academyProfileId);
-
     // Call the dedicated audit-diagram endpoint
     const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/audit-diagram`, {
       method: "POST",
@@ -68,7 +64,7 @@ export async function POST(request: NextRequest) {
           type: n.type,
           label: n.label,
           config: n.config,
-          parent_id: n.parentId,  // Send parent for hierarchy analysis
+          parent_id: n.parentId,
           position: n.position,
         })),
         connections: connections.map((c) => ({
@@ -78,10 +74,8 @@ export async function POST(request: NextRequest) {
         challenge_id: challengeId,
         challenge_title: challengeTitle,
         challenge_brief: challengeBrief,
-        expected_services: [], // Could be passed from challenge data
+        expected_services: [],
         session_id: sessionId,
-        openai_api_key: aiConfig?.key,
-        preferred_model: aiConfig?.preferredModel,
       }),
     });
 

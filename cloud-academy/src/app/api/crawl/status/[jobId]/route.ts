@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const CRAWL_SERVICE_URL = process.env.CRAWL4AI_URL || "http://10.121.19.210:1027";
+const CRAWL_SERVICE_URL = process.env.CRAWL4AI_URL || "https://cloudarchistry.com";
 
 export async function GET(
   request: NextRequest,

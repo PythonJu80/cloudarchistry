@@ -14,7 +14,7 @@ interface QuestionFromAPI {
   explanation: string;
 }
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 
 // Generate questions for a Ticking Bomb game
 export async function POST(req: NextRequest) {

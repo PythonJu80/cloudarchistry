@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { prisma } from "@/lib/db";
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 
 // GET - List all quizzes for the user's profile
 export async function GET(request: NextRequest) {

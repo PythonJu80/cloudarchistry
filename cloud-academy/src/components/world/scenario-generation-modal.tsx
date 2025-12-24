@@ -180,8 +180,7 @@ export function ScenarioGenerationModal({
     setLogs([]);
 
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
-      const response = await fetch(`${learningAgentUrl}/api/learning/generate-scenario-stream`, {
+      const response = await fetch('/api/scenario', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -191,8 +190,6 @@ export function ScenarioGenerationModal({
           user_level: userLevel,
           latitude: latitude,
           longitude: longitude,
-          openai_api_key: apiKey,
-          preferred_model: preferredModel,
         }),
       });
 

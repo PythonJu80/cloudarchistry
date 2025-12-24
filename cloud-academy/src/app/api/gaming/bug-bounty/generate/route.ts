@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { prisma } from "@/lib/db";
 
-const DRAWING_AGENT_URL = process.env.DRAWING_AGENT_URL || "http://10.121.19.210:6098";
+const DRAWING_AGENT_URL = process.env.DRAWING_AGENT_URL || "https://cloudarchistry.com";
 
 export async function POST(req: NextRequest) {
   try {

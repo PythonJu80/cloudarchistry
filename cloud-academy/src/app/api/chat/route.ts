@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { prisma } from "@/lib/db";
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,8 +16,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get AI config (returns empty key - backend uses .env)
-    const aiConfig = await getAiConfigForRequest(session.user.academyProfileId);
     
     // Get user's learning profile with stats and recent activity
     const profile = await prisma.academyUserProfile.findUnique({
@@ -209,8 +206,6 @@ export async function POST(request: NextRequest) {
     
     const requestBody = {
       ...body,
-      openai_api_key: aiConfig?.key,
-      preferred_model: aiConfig?.preferredModel,
       context: {
         ...body.context,
         // Basic profile

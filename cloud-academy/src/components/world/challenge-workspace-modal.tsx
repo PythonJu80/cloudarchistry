@@ -222,7 +222,7 @@ export function ChallengeWorkspaceModal({
       console.error("Failed to load existing progress:", err);
     }
     return null;
-  }, [attemptId, challenge?.id]);
+  }, [attemptId, challenge?.id, setChallengeProgressId, setDiagramScore, setDiagramData]);
 
   // Fetch questions when modal opens or challenge changes
   const fetchQuestions = useCallback(async () => {
@@ -280,9 +280,8 @@ export function ChallengeWorkspaceModal({
         return;
       }
       
-      // No saved progress - generate new questions
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
-      const response = await fetch(`${learningAgentUrl}/api/learning/challenge-questions`, {
+      // No saved progress - generate new questions via Next.js proxy
+      const response = await fetch('/api/challenge/questions', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -300,8 +299,6 @@ export function ChallengeWorkspaceModal({
           user_level: userLevel,
           cert_code: certCode,
           question_count: 5,
-          openai_api_key: apiKey,
-          preferred_model: preferredModel,
         }),
       });
 
@@ -368,7 +365,7 @@ export function ChallengeWorkspaceModal({
     } finally {
       setIsLoadingQuestions(false);
     }
-  }, [challenge, scenario, companyInfo, userLevel, certCode, industry, apiKey, preferredModel, loadExistingProgress, attemptId]);
+  }, [challenge, scenario, companyInfo, userLevel, certCode, industry, attemptId, challengeProgressId, loadExistingProgress]);
 
   useEffect(() => {
     if (isOpen && challenge?.id) {
@@ -384,7 +381,8 @@ export function ChallengeWorkspaceModal({
       setDiagramScore(createInitialScore());
       fetchQuestions();
     }
-  }, [isOpen, challenge?.id, fetchQuestions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, challenge?.id]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -410,8 +408,7 @@ export function ChallengeWorkspaceModal({
     setIsChatLoading(true);
 
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
-      const response = await fetch(`${learningAgentUrl}/api/learning/chat`, {
+      const response = await fetch('/api/chat', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -935,8 +932,6 @@ export function ChallengeWorkspaceModal({
                       }}
                       challengeProgressId={challengeProgressId || undefined}
                       sessionId={diagramSessionId}
-                      apiKey={apiKey || undefined}
-                      preferredModel={preferredModel || undefined}
                       onSave={async (data, score) => {
                         setDiagramData(data);
                         setDiagramScore(score);

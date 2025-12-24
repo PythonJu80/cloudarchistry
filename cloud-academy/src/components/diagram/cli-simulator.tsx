@@ -254,8 +254,7 @@ export function CLISimulator({
     setIsExecuting(true);
     
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
-      const response = await fetch(`${learningAgentUrl}/api/learning/cli-simulate`, {
+      const response = await fetch('/api/cli/simulate', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -271,8 +270,6 @@ export function CLISimulator({
           company_name: companyName,
           industry: industry,
           business_context: businessContext,
-          openai_api_key: apiKey,
-          preferred_model: preferredModel,
         }),
       });
       
@@ -367,8 +364,7 @@ export function CLISimulator({
     addLine("info", `Fetching help for: ${topic}...`);
     
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
-      const response = await fetch(`${learningAgentUrl}/api/learning/cli-help`, {
+      const response = await fetch('/api/cli/help', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -451,8 +447,7 @@ export function CLISimulator({
     addLine("info", "Thinking...");
     
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
-      const response = await fetch(`${learningAgentUrl}/api/chat`, {
+      const response = await fetch('/api/chat', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

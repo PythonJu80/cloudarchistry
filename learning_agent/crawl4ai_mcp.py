@@ -1835,7 +1835,7 @@ async def cli_simulate_endpoint(request: CLISimulatorRequest):
     Simulate an AWS CLI command in a sandboxed environment.
     Returns realistic AWS CLI output with teaching content.
     """
-    from generators.cli_simulator import simulate_cli_command, create_cli_session, CLISession
+    from generators.cli_simulator import simulate_cli_command, create_session, CLISession
     
     try:
         # Set request-scoped API key and model if provided (BYOK)
@@ -1852,21 +1852,28 @@ async def cli_simulate_endpoint(request: CLISimulatorRequest):
             if session_data:
                 session = CLISession(**session_data)
             else:
-                session = create_cli_session(
+                session = create_session(
                     challenge_id=request.challenge_context.get("id") if request.challenge_context else None
                 )
                 session_id = session.session_id
         else:
-            session = create_cli_session(
+            session = create_session(
                 challenge_id=request.challenge_context.get("id") if request.challenge_context else None
             )
             session_id = session.session_id
+        
+        # Normalize cert_code: Convert database format (SAA, SAA-C03) to persona ID (solutions-architect-associate)
+        cert_code = request.cert_code
+        if cert_code and cert_code in CERT_CODE_TO_PERSONA:
+            cert_code = CERT_CODE_TO_PERSONA[cert_code]
         
         # Simulate the command
         result = await simulate_cli_command(
             command=request.command,
             session=session,
             challenge_context=request.challenge_context,
+            user_level=request.user_level,
+            cert_code=cert_code,
             company_name=request.company_name,
             industry=request.industry,
             business_context=request.business_context,

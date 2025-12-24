@@ -3,9 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-const DIAGRAM_API_URL = process.env.DIAGRAM_API_URL || "http://10.121.19.210:6097";
-const DIAGRAM_INGESTION_URL = process.env.DIAGRAM_INGESTION_URL || "http://10.121.19.210:6095";
-const DIAGRAM_PARSER_URL = process.env.DIAGRAM_PARSER_URL || "http://10.121.19.210:6096";
+const DIAGRAM_API_URL = process.env.DIAGRAM_API_URL || "http://diagram-api:8002";
+const DIAGRAM_INGESTION_URL = process.env.DIAGRAM_INGESTION_URL || "http://diagram-ingestion:8000";
+const DIAGRAM_PARSER_URL = process.env.DIAGRAM_PARSER_URL || "http://diagram-parser:8001";
 
 export async function GET(req: NextRequest) {
   try {

@@ -128,9 +128,6 @@ interface DiagramCanvasProps {
   challengeProgressId?: string;
   // Session for agent chat continuity
   sessionId?: string;
-  // API key for Learning Agent
-  apiKey?: string;
-  preferredModel?: string;
   // Callbacks
   onSave?: (data: DiagramData, score: DiagramScore) => void | Promise<void>;
   onScoreChange?: (score: DiagramScore) => void;
@@ -176,8 +173,6 @@ function DiagramCanvasInner({
   challengeContext,
   challengeProgressId,
   sessionId,
-  apiKey,
-  preferredModel,
   onSave,
   onScoreChange,
   onAuditComplete,
@@ -287,17 +282,17 @@ function DiagramCanvasInner({
   const calculateZIndex = useCallback((node: DiagramNode, allNodes: DiagramNode[]): number => {
     // Base z-index by node type (lower = further back)
     const baseZIndex: Record<string, number> = {
-      // Organizational boundaries (furthest back)
-      orgNode: -4,
-      accountNode: -3,
-      awsCloud: -3,
-      region: -2,
-      availabilityZone: -1,
-      // Service containers (should be behind their children)
-      vpc: 1,
-      subnet: 2,
-      securityGroup: 3,
-      autoScaling: 4,
+      // Organizational boundaries (furthest back) - use very low values
+      orgNode: -100,
+      accountNode: -90,
+      awsCloud: -80,
+      region: -70,
+      availabilityZone: -60,
+      // Service containers (should be behind their children but above boundaries)
+      vpc: -50,
+      subnet: -40,
+      securityGroup: -30,
+      autoScaling: -20,
       // Regular services and elements
       awsResource: 10,
       genericIcon: 10,
@@ -656,12 +651,11 @@ function DiagramCanvasInner({
         if (shape.type === "boundary") {
           // AWS boundary containers - ONLY the ones not in Services
           // VPC, Subnet, Security Group come from Services > Networking
-          // Z-index hierarchy: Higher = more in front (selectable/movable)
-          // Boundaries should be ABOVE service containers so users can interact with them
-          const boundaryConfig: Record<string, { width: number; height: number; nodeType: string; zIndex: number }> = {
-            "AWS Cloud": { width: 500, height: 350, nodeType: "awsCloud", zIndex: 5 },
-            "Region": { width: 400, height: 280, nodeType: "region", zIndex: 6 },
-            "Availability Zone": { width: 220, height: 160, nodeType: "availabilityZone", zIndex: 7 },
+          // Z-index will be calculated by calculateZIndex based on hierarchy
+          const boundaryConfig: Record<string, { width: number; height: number; nodeType: string }> = {
+            "AWS Cloud": { width: 500, height: 350, nodeType: "awsCloud" },
+            "Region": { width: 400, height: 280, nodeType: "region" },
+            "Availability Zone": { width: 220, height: 160, nodeType: "availabilityZone" },
           };
           
           const config = boundaryConfig[shape.label];
@@ -677,7 +671,7 @@ function DiagramCanvasInner({
               label: shape.label,
               color: shape.color,
             },
-            zIndex: config.zIndex, // Proper z-ordering for nesting
+            // z-index will be set by calculateZIndex
           };
           
           setNodes((nds) => nds.concat(newNode));
@@ -842,14 +836,14 @@ function DiagramCanvasInner({
       };
       
       // Z-index hierarchy for proper layering (lower = further back)
-      // Shapes & Elements: Org(-4) < Account(-3) < AWS Cloud(-3) < Region(-2) < AZ(-1)
-      // Services containers: VPC(1) < Subnet(2) < Security Group(3) < Auto Scaling(4)
+      // Shapes & Elements: Org(-100) < Account(-90) < AWS Cloud(-80) < Region(-70) < AZ(-60)
+      // Services containers: VPC(-50) < Subnet(-40) < Security Group(-30) < Auto Scaling(-20)
       // Regular services: 10
       const containerZIndex: Record<string, number> = {
-        vpc: 1,
-        subnet: 2,
-        securityGroup: 3,
-        autoScaling: 4,
+        vpc: -50,
+        subnet: -40,
+        securityGroup: -30,
+        autoScaling: -20,
       };
 
       // Check if dropping inside a container
@@ -1343,10 +1337,8 @@ function DiagramCanvasInner({
     setAuditResult(null);
 
     try {
-      const learningAgentUrl = process.env.NEXT_PUBLIC_LEARNING_AGENT_URL!;
-      
-      // Use the dedicated audit endpoint with full hierarchy data
-      const response = await fetch(`${learningAgentUrl}/api/learning/audit-diagram`, {
+      // Use Next.js API proxy route for proper auth and API key handling
+      const response = await fetch('/api/diagram/audit', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1355,30 +1347,28 @@ function DiagramCanvasInner({
             type: n.data?.serviceId || n.type,
             label: n.data?.label,
             config: n.data?.config,
-            parent_id: n.parentId,  // Critical for hierarchy analysis
+            parentId: n.parentId,  // Critical for hierarchy analysis
             position: n.position,
           })),
           connections: edges.map((e) => ({
             from: e.source,
             to: e.target,
           })),
-          challenge_id: challengeContext?.challengeId,
-          challenge_title: challengeContext?.challengeTitle,
-          challenge_brief: challengeContext?.challengeBrief,
-          expected_services: challengeContext?.awsServices,
-          session_id: sessionId,
-          openai_api_key: apiKey,
-          preferred_model: preferredModel,
+          challengeId: challengeContext?.challengeId,
+          challengeTitle: challengeContext?.challengeTitle,
+          challengeBrief: challengeContext?.challengeBrief,
+          sessionId: sessionId,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || "Failed to get audit response");
+        throw new Error(errorData.error || errorData.detail || "Failed to get audit response");
       }
 
-      // The endpoint returns structured JSON directly
-      const result: AuditResult = await response.json();
+      // The Next.js proxy wraps the response in { success, audit, sessionId }
+      const data = await response.json();
+      const result: AuditResult = data.audit || data;
 
       setAuditResult(result);
       onAuditComplete?.(result);
@@ -1391,7 +1381,7 @@ function DiagramCanvasInner({
     } finally {
       setIsAuditing(false);
     }
-  }, [nodes, edges, challengeContext, sessionId, apiKey, preferredModel, onAuditComplete, saveTipsFromAudit]);
+  }, [nodes, edges, challengeContext, sessionId, onAuditComplete, saveTipsFromAudit]);
 
   return (
     <div className={cn(
@@ -1598,6 +1588,7 @@ function DiagramCanvasInner({
             zoomOnScroll={!isTextEditing}
             zoomOnPinch={!isTextEditing}
             zoomOnDoubleClick={false}
+            elevateNodesOnSelect={false}
             defaultEdgeOptions={{
               type: "smoothstep",
               animated: true,

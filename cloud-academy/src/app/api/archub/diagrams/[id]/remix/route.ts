@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-const DIAGRAM_API_URL = process.env.DIAGRAM_API_URL || "http://10.121.19.210:6097";
+const DIAGRAM_API_URL = process.env.DIAGRAM_API_URL || "http://diagram-api:8002";
 
 export async function POST(
   req: NextRequest,
