@@ -1989,9 +1989,9 @@ async def update_user_persona(user_id: str, persona_id: str) -> bool:
 async def save_bug_bounty_challenge(
     challenge_id: str,
     profile_id: Optional[str],
-    difficulty: str,
+    user_level: str,
     scenario_type: str,
-    certification_code: Optional[str],
+    target_cert: Optional[str],
     description: str,
     diagram: dict,
     aws_environment: dict,
@@ -2003,6 +2003,10 @@ async def save_bug_bounty_challenge(
     """
     Save a generated Bug Bounty challenge to the database.
     Stores the complete challenge including hidden bugs (answers).
+    
+    Args:
+        user_level: From AcademyUserProfile.skillLevel (beginner, intermediate, advanced, expert)
+        target_cert: From AcademyUserProfile.targetCertification (SAA, SAP, DVA, etc.)
     """
     pool = await get_pool()
     
@@ -2020,9 +2024,9 @@ async def save_bug_bounty_challenge(
         """,
             challenge_id,
             profile_id,
-            difficulty,
+            user_level,  # Maps to difficulty column in DB
             scenario_type,
-            certification_code,
+            target_cert,  # Maps to certificationCode column in DB
             description,
             json.dumps(diagram),
             json.dumps(aws_environment),
@@ -2036,7 +2040,7 @@ async def save_bug_bounty_challenge(
             json.dumps([]),  # claimsHistory
         )
     
-    logger.info(f"Saved Bug Bounty challenge {challenge_id} with {bug_count} bugs")
+    logger.info(f"Saved Bug Bounty challenge {challenge_id} with {bug_count} bugs (user_level={user_level}, target_cert={target_cert})")
     return challenge_id
 
 
@@ -2058,9 +2062,9 @@ async def get_bug_bounty_challenge(challenge_id: str) -> Optional[dict]:
         return {
             "challenge_id": row["id"],
             "profile_id": row["profileId"],
-            "difficulty": row["difficulty"],
+            "user_level": row["difficulty"],  # DB column is 'difficulty', API uses 'user_level'
             "scenario_type": row["scenarioType"],
-            "certification_code": row["certificationCode"],
+            "target_cert": row["certificationCode"],  # DB column is 'certificationCode', API uses 'target_cert'
             "description": row["description"],
             "diagram": json.loads(row["diagram"]) if row["diagram"] else {},
             "aws_environment": json.loads(row["awsEnvironment"]) if row["awsEnvironment"] else {},

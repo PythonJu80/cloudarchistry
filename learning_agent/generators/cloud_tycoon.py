@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from prompts import CERTIFICATION_PERSONAS
-from utils import get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError, DEFAULT_MODEL
 
 
 # Valid user levels
@@ -65,26 +65,39 @@ def validate_tycoon_params(user_level: str, cert_code: str) -> None:
 
 # Map cert codes (e.g., "SAA-C03" from DB) to persona IDs
 CERT_CODE_TO_PERSONA = {
-    "SAA": "solutions-architect-associate",
-    "SAA-C03": "solutions-architect-associate",
-    "SAP": "solutions-architect-professional",
-    "SAP-C02": "solutions-architect-professional",
-    "DVA": "developer-associate",
-    "DVA-C02": "developer-associate",
-    "SOA": "sysops-administrator-associate",
-    "SOA-C02": "sysops-administrator-associate",
-    "DOP": "devops-engineer-professional",
-    "DOP-C02": "devops-engineer-professional",
+    # Foundational
     "CLF": "cloud-practitioner",
     "CLF-C02": "cloud-practitioner",
-    "ANS": "advanced-networking-specialty",
-    "ANS-C01": "advanced-networking-specialty",
+    "AIF": "ai-practitioner",
+    "AIF-C01": "ai-practitioner",
+    # Associate
+    "SAA": "solutions-architect-associate",
+    "SAA-C03": "solutions-architect-associate",
+    "DVA": "developer-associate",
+    "DVA-C02": "developer-associate",
+    "SOA": "sysops-associate",
+    "SOA-C02": "sysops-associate",
+    "DEA": "data-engineer-associate",
+    "DEA-C01": "data-engineer-associate",
+    "MLA": "machine-learning-engineer-associate",
+    "MLA-C01": "machine-learning-engineer-associate",
+    # Professional
+    "SAP": "solutions-architect-professional",
+    "SAP-C02": "solutions-architect-professional",
+    "DOP": "devops-professional",
+    "DOP-C02": "devops-professional",
+    # Specialty
+    "ANS": "networking-specialty",
+    "ANS-C01": "networking-specialty",
     "SCS": "security-specialty",
     "SCS-C02": "security-specialty",
-    "DBS": "database-specialty",
-    "DBS-C01": "database-specialty",
     "MLS": "machine-learning-specialty",
     "MLS-C01": "machine-learning-specialty",
+    "PAS": "sap-specialty",
+    "PAS-C01": "sap-specialty",
+    # Legacy (retired but kept for backward compatibility)
+    "DBS": "database-specialty",
+    "DBS-C01": "database-specialty",
 }
 
 
@@ -126,44 +139,121 @@ class TycoonJourney(BaseModel):
 
 
 # =============================================================================
-# VALID SERVICE IDS - Must match frontend aws-services.ts (95+ services)
+# VALID SERVICE IDS - Complete AWS service catalog (200+ services)
 # =============================================================================
 
 VALID_SERVICE_IDS = {
-    # Networking
+    # Networking & Content Delivery
     "vpc", "subnet-public", "subnet-private", "route-table", "nacl", "security-group",
-    "internet-gateway", "nat-gateway", "vpc-peering", "transit-gateway", "alb", "nlb",
+    "internet-gateway", "nat-gateway", "vpc-peering", "transit-gateway", "alb", "nlb", "gwlb",
     "route53", "cloudfront", "global-accelerator", "vpn-gateway", "direct-connect",
-    "privatelink", "elastic-ip",
+    "privatelink", "elastic-ip", "vpc-endpoint", "client-vpn", "site-to-site-vpn",
+    "network-firewall", "cloud-wan", "app-mesh", "private-5g",
+    
     # Compute
     "ec2", "auto-scaling", "lambda", "ebs", "efs", "batch", "lightsail",
+    "elastic-beanstalk", "ebsk", "outposts", "wavelength", "local-zones",
+    "ec2-image-builder", "app-runner", "serverless-application-repository",
+    
     # Containers
-    "ecs", "eks", "fargate", "ecr",
+    "ecs", "eks", "fargate", "ecr", "eks-anywhere", "eks-distro",
+    "red-hat-openshift",
+    
     # Database
     "rds", "aurora", "dynamodb", "elasticache", "redshift", "neptune",
-    "documentdb", "memorydb", "rds-replica",
+    "documentdb", "memorydb", "rds-replica", "keyspaces", "timestream",
+    "qldb", "rds-proxy", "aurora-serverless",
+    
     # Storage
     "s3", "glacier", "backup", "fsx", "storage-gateway", "datasync",
-    # Security
+    "s3-glacier-deep-archive", "s3-intelligent-tiering", "s3-outposts",
+    "elastic-disaster-recovery", "snow-family", "snowball", "snowmobile",
+    
+    # Security, Identity & Compliance
     "iam", "kms", "secrets-manager", "cognito", "waf", "shield", "guardduty",
     "iam-role", "iam-policy", "permission-boundary", "acm", "inspector", "macie",
     "security-hub", "detective", "iam-user", "iam-group", "resource-policy",
-    "trust-policy", "identity-provider", "iam-identity-center",
-    # Integration
-    "api-gateway", "eventbridge", "sns", "sqs", "step-functions", "appsync", "mq", "ses",
-    # Management
-    "cloudwatch", "cloudtrail", "systems-manager", "config", "xray",
-    "cloudwatch-logs", "cloudwatch-alarms", "cloudformation", "health-dashboard", "trusted-advisor",
+    "trust-policy", "identity-provider", "iam-identity-center", "directory-service",
+    "ram", "certificate-manager", "cloudhsm", "audit-manager", "artifact",
+    "firewall-manager", "verified-access", "private-ca", "signer",
+    
     # Analytics
     "kinesis-streams", "kinesis-firehose", "kinesis-analytics", "msk", "athena",
-    "glue", "quicksight", "opensearch",
-    # DevOps
+    "glue", "quicksight", "opensearch", "emr", "data-pipeline", "lake-formation",
+    "kinesis-video-streams", "managed-streaming-kafka", "redshift-spectrum",
+    "data-exchange", "clean-rooms", "finspace",
+    
+    # Machine Learning & AI
+    "sagemaker", "comprehend", "lex", "polly", "rekognition", "textract",
+    "translate", "transcribe", "forecast", "personalize", "kendra",
+    "augmented-ai", "deepracer", "deeplens", "lookout-metrics",
+    "lookout-vision", "monitron", "panorama", "healthlake", "devops-guru",
+    "codeguru", "fraud-detector", "bedrock", "q",
+    
+    # Integration & Application Services
+    "api-gateway", "eventbridge", "sns", "sqs", "step-functions", "appsync", "mq", "ses",
+    "swf", "managed-workflows-apache-airflow", "appflow", "event-notifications",
+    
+    # Management & Governance
+    "cloudwatch", "cloudtrail", "systems-manager", "config", "xray",
+    "cloudwatch-logs", "cloudwatch-alarms", "cloudformation", "health-dashboard", "trusted-advisor",
+    "service-catalog", "control-tower", "organizations", "compute-optimizer",
+    "license-manager", "managed-grafana", "managed-prometheus", "opsworks",
+    "chatbot", "launch-wizard", "resilience-hub", "resource-explorer",
+    "service-management-connector", "telco-network-builder", "well-architected-tool",
+    "backint-agent", "fault-injection-simulator", "incident-manager",
+    "proton", "resource-groups", "tag-editor", "application-cost-profiler",
+    
+    # Developer Tools
     "codecommit", "codepipeline", "codebuild", "codedeploy", "codeartifact", "cloud9",
-    # Governance
-    "organizations", "scp", "control-tower", "service-catalog", "license-manager", "resource-groups",
-    # Policies
+    "codestar", "x-ray", "application-composer", "cloud-control-api",
+    "cloudshell", "corretto", "tools-and-sdks",
+    
+    # Migration & Transfer
+    "migration-hub", "application-migration-service", "database-migration-service",
+    "transfer-family", "mainframe-modernization", "application-discovery-service",
+    
+    # IoT
+    "iot-core", "iot-greengrass", "iot-analytics", "iot-device-defender",
+    "iot-device-management", "iot-events", "iot-sitewise", "iot-things-graph",
+    "iot-1-click", "iot-button", "iot-fleetwise", "iot-roborunner",
+    "iot-twinmaker", "freertos",
+    
+    # Media Services
+    "elastic-transcoder", "kinesis-video-streams", "mediaconnect", "mediaconvert",
+    "medialive", "mediapackage", "mediastore", "mediatailor", "elemental-appliances",
+    "nimble-studio", "interactive-video-service",
+    
+    # Business Applications
+    "alexa-for-business", "chime", "connect", "pinpoint", "ses",
+    "simple-email-service", "workdocs", "workmail", "supply-chain",
+    
+    # End User Computing
+    "workspaces", "appstream", "workspaces-web", "worklink",
+    
+    # Blockchain
+    "managed-blockchain", "quantum-ledger-database", "qldb",
+    
+    # Game Development
+    "gamelift", "gamesparks",
+    
+    # Robotics
+    "robomaker",
+    
+    # Satellite
+    "ground-station",
+    
+    # Quantum Technologies
+    "braket",
+    
+    # Policies & Rules
     "s3-lifecycle-policy", "s3-bucket-policy", "iam-identity-policy", "iam-trust-policy",
     "resource-based-policy", "vpc-endpoint-policy", "backup-policy", "scaling-policy", "dlm-policy",
+    "ecr-lifecycle-policy", "permission-boundary-policy", "rds-parameter-group",
+    "elasticache-parameter-group", "waf-rules", "scp", "tag-policy", "ai-services-opt-out-policy",
+    
+    # Governance
+    "control-tower", "service-catalog", "license-manager", "resource-groups",
 }
 
 # =============================================================================
@@ -173,11 +263,12 @@ VALID_SERVICE_IDS = {
 AWS_SERVICES_REFERENCE = """
 Available AWS Services (use these exact IDs). Pick services appropriate for the use case:
 
-NETWORKING:
+NETWORKING & CONTENT DELIVERY:
 - vpc: Amazon VPC - Virtual private cloud
 - subnet-public / subnet-private: Public/Private Subnets
 - alb: Application Load Balancer - HTTP/HTTPS load balancing
 - nlb: Network Load Balancer - TCP/UDP load balancing
+- gwlb: Gateway Load Balancer - Third-party appliances
 - cloudfront: Amazon CloudFront - CDN
 - route53: Amazon Route 53 - DNS
 - api-gateway: Amazon API Gateway - API management
@@ -188,6 +279,10 @@ NETWORKING:
 - global-accelerator: AWS Global Accelerator - Global traffic management
 - vpn-gateway: VPN Gateway - Site-to-site VPN
 - privatelink: AWS PrivateLink - Private connectivity to services
+- vpc-endpoint: VPC Endpoint - Private AWS service access
+- client-vpn: AWS Client VPN - Remote access VPN
+- network-firewall: AWS Network Firewall - Network protection
+- app-mesh: AWS App Mesh - Service mesh
 
 COMPUTE:
 - ec2: Amazon EC2 - Virtual servers
@@ -195,6 +290,10 @@ COMPUTE:
 - auto-scaling: Auto Scaling Group - Scale EC2 automatically
 - batch: AWS Batch - Batch computing
 - lightsail: Amazon Lightsail - Simple VPS
+- elastic-beanstalk: AWS Elastic Beanstalk - PaaS
+- app-runner: AWS App Runner - Containerized web apps
+- outposts: AWS Outposts - On-premises AWS
+- wavelength: AWS Wavelength - 5G edge computing
 
 CONTAINERS:
 - ecs: Amazon ECS - Container orchestration
@@ -211,6 +310,9 @@ DATABASE:
 - neptune: Amazon Neptune - Graph database
 - documentdb: Amazon DocumentDB - MongoDB-compatible
 - memorydb: Amazon MemoryDB - Redis-compatible durable database
+- keyspaces: Amazon Keyspaces - Cassandra-compatible
+- timestream: Amazon Timestream - Time series database
+- qldb: Amazon QLDB - Ledger database
 
 STORAGE:
 - s3: Amazon S3 - Object storage
@@ -222,7 +324,7 @@ STORAGE:
 - storage-gateway: AWS Storage Gateway - Hybrid storage
 - datasync: AWS DataSync - Data transfer
 
-SECURITY:
+SECURITY, IDENTITY & COMPLIANCE:
 - iam: AWS IAM - Identity and access management
 - iam-role: IAM Role - Service/cross-account access
 - kms: AWS KMS - Key management
@@ -236,8 +338,11 @@ SECURITY:
 - security-hub: AWS Security Hub - Security posture
 - acm: AWS Certificate Manager - SSL/TLS certificates
 - iam-identity-center: IAM Identity Center - SSO
+- directory-service: AWS Directory Service - Active Directory
+- cloudhsm: AWS CloudHSM - Hardware security module
+- firewall-manager: AWS Firewall Manager - Centralized firewall management
 
-INTEGRATION:
+INTEGRATION & APPLICATION SERVICES:
 - sqs: Amazon SQS - Message queuing
 - sns: Amazon SNS - Pub/sub messaging
 - eventbridge: Amazon EventBridge - Event bus
@@ -245,17 +350,36 @@ INTEGRATION:
 - appsync: AWS AppSync - GraphQL API
 - mq: Amazon MQ - Message broker (ActiveMQ/RabbitMQ)
 - ses: Amazon SES - Email service
+- appflow: Amazon AppFlow - SaaS integration
 
 ANALYTICS:
 - kinesis-streams: Amazon Kinesis Data Streams - Real-time streaming
 - kinesis-firehose: Amazon Kinesis Firehose - Data delivery
+- kinesis-analytics: Amazon Kinesis Analytics - Stream processing
 - athena: Amazon Athena - Query S3 with SQL
 - glue: AWS Glue - ETL service
 - quicksight: Amazon QuickSight - BI dashboards
 - opensearch: Amazon OpenSearch - Search and analytics
 - msk: Amazon MSK - Managed Kafka
+- emr: Amazon EMR - Big data processing
+- lake-formation: AWS Lake Formation - Data lake management
+- data-exchange: AWS Data Exchange - Data marketplace
 
-MANAGEMENT:
+MACHINE LEARNING & AI:
+- sagemaker: Amazon SageMaker - ML platform
+- comprehend: Amazon Comprehend - NLP
+- lex: Amazon Lex - Chatbots
+- polly: Amazon Polly - Text-to-speech
+- rekognition: Amazon Rekognition - Image/video analysis
+- textract: Amazon Textract - Document text extraction
+- translate: Amazon Translate - Language translation
+- transcribe: Amazon Transcribe - Speech-to-text
+- forecast: Amazon Forecast - Time series forecasting
+- personalize: Amazon Personalize - Recommendations
+- kendra: Amazon Kendra - Enterprise search
+- bedrock: Amazon Bedrock - Generative AI
+
+MANAGEMENT & GOVERNANCE:
 - cloudwatch: Amazon CloudWatch - Monitoring
 - cloudwatch-logs: CloudWatch Logs - Log management
 - cloudwatch-alarms: CloudWatch Alarms - Alerting
@@ -265,13 +389,46 @@ MANAGEMENT:
 - config: AWS Config - Resource compliance
 - xray: AWS X-Ray - Distributed tracing
 - trusted-advisor: AWS Trusted Advisor - Best practices
+- service-catalog: AWS Service Catalog - Approved products
+- control-tower: AWS Control Tower - Landing zone
+- organizations: AWS Organizations - Multi-account management
+- compute-optimizer: AWS Compute Optimizer - Resource optimization
+- resilience-hub: AWS Resilience Hub - Application resilience
 
-DEVOPS:
+DEVELOPER TOOLS:
 - codepipeline: AWS CodePipeline - CI/CD pipeline
 - codebuild: AWS CodeBuild - Build service
 - codedeploy: AWS CodeDeploy - Deployment automation
 - codecommit: AWS CodeCommit - Git repository
 - codeartifact: AWS CodeArtifact - Artifact repository
+- cloud9: AWS Cloud9 - Cloud IDE
+- codestar: AWS CodeStar - Project templates
+
+MIGRATION & TRANSFER:
+- migration-hub: AWS Migration Hub - Migration tracking
+- application-migration-service: AWS Application Migration Service - Lift-and-shift
+- database-migration-service: AWS Database Migration Service - Database migration
+- transfer-family: AWS Transfer Family - SFTP/FTPS/FTP
+
+IOT:
+- iot-core: AWS IoT Core - IoT device connectivity
+- iot-greengrass: AWS IoT Greengrass - Edge computing for IoT
+- iot-analytics: AWS IoT Analytics - IoT data analytics
+- iot-sitewise: AWS IoT SiteWise - Industrial data collection
+
+MEDIA SERVICES:
+- mediaconvert: AWS Elemental MediaConvert - Video transcoding
+- medialive: AWS Elemental MediaLive - Live video processing
+- mediapackage: AWS Elemental MediaPackage - Video packaging
+
+BUSINESS APPLICATIONS:
+- connect: Amazon Connect - Contact center
+- chime: Amazon Chime - Communications
+- workmail: Amazon WorkMail - Email and calendar
+
+END USER COMPUTING:
+- workspaces: Amazon WorkSpaces - Virtual desktops
+- appstream: Amazon AppStream 2.0 - Application streaming
 
 GOVERNANCE:
 - organizations: AWS Organizations - Multi-account management
@@ -319,16 +476,16 @@ Each business should:
    - 3 hard (4-5 services, nuanced choices)
 
 4. CALCULATE REALISTIC CONTRACT VALUES:
-   Use the AWS pricing data provided above to calculate:
    - Sum the typical annual costs for each required service
    - Add 35-45% for consulting, implementation, and migration fees
    - Add 15% for ongoing support
-   
-   Examples based on services:
-   - Simple (Lambda + S3 + DynamoDB): ~$15K AWS + fees = $25,000-35,000
-   - Medium (EC2 + RDS + ALB + S3 + CloudWatch): ~$50K AWS + fees = $75,000-100,000  
-   - Complex (EKS + Aurora + ElastiCache + CloudFront + WAF): ~$150K AWS + fees = $220,000-280,000
-   - Enterprise (Redshift + Kinesis + Glue + QuickSight + Shield): ~$250K+ AWS + fees = $400,000+
+   - Base contract value on the ACTUAL services you select for each business
+   - DO NOT use these examples as templates - they are for reference ONLY:
+     * Simple serverless: ~$25,000-35,000
+     * Medium traditional: ~$75,000-100,000  
+     * Complex multi-tier: ~$220,000-280,000
+     * Enterprise data platform: ~$400,000+
+   - Calculate based on YOUR chosen services, not these examples
 
 5. PROVIDE HELPFUL HINTS:
    - 2-3 hints per use case
@@ -365,18 +522,134 @@ Return JSON with this structure:
 }}
 """
 
-# Journey themes for variety
+# Journey themes for variety (50+ themes to prevent repetition)
 JOURNEY_THEMES = [
+    # Technology & Startups
     "Silicon Valley Startup Sprint",
+    "SaaS Unicorn Boulevard",
+    "AI & Machine Learning Valley",
+    "Blockchain Innovation District",
+    "Cybersecurity Command Center",
+    "DevOps & Cloud Native Campus",
+    "Open Source Software Hub",
+    "Web3 & Metaverse Quarter",
+    
+    # Healthcare & Life Sciences
     "Healthcare Innovation Hub",
+    "Telemedicine Transformation",
+    "Biotech Research Campus",
+    "Pharmaceutical Supply Chain",
+    "Medical Imaging & Diagnostics",
+    "Clinical Trials & Research",
+    "Mental Health & Wellness Tech",
+    "Genomics & Precision Medicine",
+    
+    # Financial Services
     "FinTech Revolution",
+    "Digital Banking Boulevard",
+    "InsurTech Innovation District",
+    "Cryptocurrency Exchange Hub",
+    "Payment Processing Plaza",
+    "Wealth Management & Robo-Advisory",
+    "RegTech Compliance Center",
+    "Trading & Investment Platform",
+    
+    # Retail & E-Commerce
     "E-Commerce Empire",
+    "Omnichannel Retail District",
+    "Direct-to-Consumer Brands",
+    "Marketplace & Platform Economy",
+    "Supply Chain & Logistics Hub",
+    "Fashion & Luxury Retail",
+    "Grocery & Food Delivery",
+    "Subscription Commerce Quarter",
+    
+    # Media & Entertainment
     "Media & Entertainment District",
-    "Government & Public Sector",
-    "Manufacturing 4.0",
-    "Education Technology Campus",
+    "Streaming & OTT Platform",
     "Gaming & Esports Arena",
+    "Music & Audio Streaming",
+    "Digital Publishing & News",
+    "Social Media & Content Creation",
+    "Virtual Events & Conferences",
+    "Sports Analytics & Fan Engagement",
+    
+    # Manufacturing & Industrial
+    "Manufacturing 4.0",
+    "Smart Factory & IoT",
+    "Automotive & Mobility Tech",
+    "Aerospace & Defense Systems",
+    "Energy & Utilities Grid",
+    "Oil & Gas Operations",
+    "Mining & Resources Management",
+    "Construction & Real Estate Tech",
+    
+    # Education & Training
+    "Education Technology Campus",
+    "Online Learning Platform",
+    "Corporate Training & LMS",
+    "Student Information Systems",
+    "Educational Content & Publishing",
+    "Skill Development & Bootcamps",
+    "Language Learning & Translation",
+    "Research & Academic Institutions",
+    
+    # Government & Public Sector
+    "Government & Public Sector",
+    "Smart City Infrastructure",
+    "Public Safety & Emergency Response",
+    "Citizen Services Portal",
+    "Defense & National Security",
+    "Transportation & Transit Systems",
+    "Environmental Monitoring & Conservation",
+    "Tax & Revenue Management",
+    
+    # Sustainability & Environment
     "Sustainability & Green Tech",
+    "Renewable Energy Systems",
+    "Carbon Tracking & ESG Reporting",
+    "Circular Economy & Recycling",
+    "Climate Tech & Weather Analytics",
+    "Water Management & Conservation",
+    "Agriculture & Precision Farming",
+    "Electric Vehicle Charging Network",
+    
+    # Travel & Hospitality
+    "Travel & Tourism Platform",
+    "Hotel & Accommodation Management",
+    "Airlines & Aviation Systems",
+    "Restaurant & Food Service Tech",
+    "Event Management & Ticketing",
+    "Vacation Rental & Property Management",
+    "Travel Booking & Aggregation",
+    "Cruise & Maritime Operations",
+    
+    # Telecommunications
+    "Telecom & 5G Networks",
+    "Satellite Communications",
+    "IoT & Connected Devices",
+    "Network Infrastructure & CDN",
+    "Unified Communications Platform",
+    "Mobile App & Services",
+    
+    # Professional Services
+    "Legal Tech & Case Management",
+    "Accounting & Tax Software",
+    "HR & Talent Management",
+    "Marketing & Advertising Tech",
+    "Real Estate & Property Tech",
+    "Consulting & Advisory Services",
+    "Recruitment & Job Platforms",
+    
+    # Specialized Industries
+    "Non-Profit & Charity Tech",
+    "Religious & Faith-Based Organizations",
+    "Arts & Culture Institutions",
+    "Scientific Research & Labs",
+    "Space Technology & Satellite",
+    "Quantum Computing Research",
+    "Robotics & Automation",
+    "Drone & UAV Operations",
 ]
 
 
@@ -396,7 +669,7 @@ async def _chat_json(
             "OpenAI API key required. Set OPENAI_API_KEY in .env file."
         )
     
-    model = model or get_request_model() or "gpt-4o"
+    model = model or get_request_model() or DEFAULT_MODEL
     client = AsyncOpenAI(api_key=key)
     
     response = await client.chat.completions.create(

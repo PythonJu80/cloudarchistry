@@ -257,7 +257,7 @@ export default function HotStreakPage() {
     
     const newQuestions = await fetchQuestions(25);
     if (newQuestions.length === 0) {
-      alert("Failed to load AI questions. Please ensure you have an API key configured in Settings and the Learning Agent is running.");
+      alert("Failed to load questions. Please ensure the Learning Agent is running.");
       setGameState(prev => ({ ...prev, status: "ready" }));
       setIsLoading(false);
       return;

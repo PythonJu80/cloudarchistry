@@ -33,17 +33,23 @@ import {
 
 // Certification display names
 const CERT_NAMES: Record<string, string> = {
+  // Foundational
+  CLF: "Cloud Practitioner",
+  AIF: "AI Practitioner",
+  // Associate
   SAA: "Solutions Architect Associate",
-  SAP: "Solutions Architect Professional",
   DVA: "Developer Associate",
   SOA: "SysOps Administrator Associate",
+  DEA: "Data Engineer Associate",
+  MLA: "Machine Learning Engineer Associate",
+  // Professional
+  SAP: "Solutions Architect Professional",
   DOP: "DevOps Engineer Professional",
+  // Specialty
   ANS: "Advanced Networking Specialty",
   SCS: "Security Specialty",
-  DBS: "Database Specialty",
   MLS: "Machine Learning Specialty",
-  PAS: "Data Analytics Specialty",
-  CLF: "Cloud Practitioner",
+  PAS: "SAP on AWS Specialty",
 };
 
 // Skill level display

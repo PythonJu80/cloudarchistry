@@ -58,15 +58,23 @@ const DIFFICULTY_OPTIONS = [
 ];
 
 const CERTIFICATIONS = [
+  // Foundational
+  { id: "CLF", label: "Cloud Practitioner" },
+  { id: "AIF", label: "AI Practitioner" },
+  // Associate
   { id: "SAA", label: "Solutions Architect Associate" },
-  { id: "SAP", label: "Solutions Architect Professional" },
   { id: "DVA", label: "Developer Associate" },
   { id: "SOA", label: "SysOps Administrator Associate" },
+  { id: "DEA", label: "Data Engineer Associate" },
+  { id: "MLA", label: "Machine Learning Engineer Associate" },
+  // Professional
+  { id: "SAP", label: "Solutions Architect Professional" },
   { id: "DOP", label: "DevOps Engineer Professional" },
+  // Specialty
   { id: "ANS", label: "Advanced Networking Specialty" },
   { id: "SCS", label: "Security Specialty" },
-  { id: "DBS", label: "Database Specialty" },
   { id: "MLS", label: "Machine Learning Specialty" },
+  { id: "PAS", label: "SAP on AWS Specialty" },
 ];
 
 const INDUSTRIES = [

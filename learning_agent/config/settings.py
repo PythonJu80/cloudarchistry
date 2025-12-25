@@ -65,7 +65,7 @@ AVAILABLE_MODELS = {
     },
 }
 
-DEFAULT_MODEL = "gpt-4.1"
+DEFAULT_MODEL = os.getenv("MODEL_CHOICE", "gpt-4.1")
 
 
 # ============================================

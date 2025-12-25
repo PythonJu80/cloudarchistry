@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from prompts import CERTIFICATION_PERSONAS
-from utils import get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError, DEFAULT_MODEL
 from generators.cloud_tycoon import VALID_SERVICE_IDS, AWS_SERVICES_REFERENCE
 
 
@@ -78,26 +78,39 @@ def validate_deploy_params(user_level: str, cert_code: str) -> None:
 
 # Map cert codes (e.g., "SAA-C03" from DB) to persona IDs
 CERT_CODE_TO_PERSONA = {
-    "SAA": "solutions-architect-associate",
-    "SAA-C03": "solutions-architect-associate",
-    "SAP": "solutions-architect-professional",
-    "SAP-C02": "solutions-architect-professional",
-    "DVA": "developer-associate",
-    "DVA-C02": "developer-associate",
-    "SOA": "sysops-administrator-associate",
-    "SOA-C02": "sysops-administrator-associate",
-    "DOP": "devops-engineer-professional",
-    "DOP-C02": "devops-engineer-professional",
+    # Foundational
     "CLF": "cloud-practitioner",
     "CLF-C02": "cloud-practitioner",
-    "ANS": "advanced-networking-specialty",
-    "ANS-C01": "advanced-networking-specialty",
+    "AIF": "ai-practitioner",
+    "AIF-C01": "ai-practitioner",
+    # Associate
+    "SAA": "solutions-architect-associate",
+    "SAA-C03": "solutions-architect-associate",
+    "DVA": "developer-associate",
+    "DVA-C02": "developer-associate",
+    "SOA": "sysops-associate",
+    "SOA-C02": "sysops-associate",
+    "DEA": "data-engineer-associate",
+    "DEA-C01": "data-engineer-associate",
+    "MLA": "machine-learning-engineer-associate",
+    "MLA-C01": "machine-learning-engineer-associate",
+    # Professional
+    "SAP": "solutions-architect-professional",
+    "SAP-C02": "solutions-architect-professional",
+    "DOP": "devops-professional",
+    "DOP-C02": "devops-professional",
+    # Specialty
+    "ANS": "networking-specialty",
+    "ANS-C01": "networking-specialty",
     "SCS": "security-specialty",
     "SCS-C02": "security-specialty",
-    "DBS": "database-specialty",
-    "DBS-C01": "database-specialty",
     "MLS": "machine-learning-specialty",
     "MLS-C01": "machine-learning-specialty",
+    "PAS": "sap-specialty",
+    "PAS-C01": "sap-specialty",
+    # Legacy (retired but kept for backward compatibility)
+    "DBS": "database-specialty",
+    "DBS-C01": "database-specialty",
 }
 
 
@@ -351,7 +364,7 @@ Remember:
 - Include a learning_point that teaches the key architectural lesson"""
 
     # Call OpenAI
-    model_to_use = model or get_request_model() or "gpt-4o"
+    model_to_use = model or get_request_model() or DEFAULT_MODEL
     client = AsyncOpenAI(api_key=key)
     
     response = await client.chat.completions.create(
@@ -527,7 +540,7 @@ Return JSON:
 Be strict but fair. Consider what the {brief.target_cert or "AWS"} exam would expect."""
 
     # Call OpenAI for evaluation
-    model_to_use = model or get_request_model() or "gpt-4o"
+    model_to_use = model or get_request_model() or DEFAULT_MODEL
     client = AsyncOpenAI(api_key=key)
     
     try:

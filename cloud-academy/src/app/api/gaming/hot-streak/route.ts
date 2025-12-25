@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { prisma } from "@/lib/db";
 
 // Learning Agent URL
@@ -23,9 +22,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const count = Math.min(body.count || 25, 50);
     const excludeIds = body.excludeIds || [];
-
-    // Get AI config (returns empty key - backend uses .env)
-    const aiConfig = await getAiConfigForRequest(profileId);
 
     // Get user profile
     const profile = await prisma.academyUserProfile.findUnique({
@@ -66,8 +62,6 @@ export async function POST(req: NextRequest) {
             question_count: count,
             exclude_ids: excludeIds,
           },
-          openai_api_key: aiConfig?.key,
-          preferred_model: aiConfig?.preferredModel,
         }),
       }
     );

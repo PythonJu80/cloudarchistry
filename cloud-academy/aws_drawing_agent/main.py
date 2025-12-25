@@ -73,8 +73,8 @@ class DiagramGenerationRequest(BaseModel):
     difficulty: Optional[str] = None  # beginner, intermediate, advanced
 
 class BugBountyGenerateRequest(BaseModel):
-    difficulty: str = "intermediate"  # beginner, intermediate, advanced
-    certification_code: Optional[str] = None
+    user_level: str = "intermediate"  # beginner, intermediate, advanced, expert (from AcademyUserProfile.skillLevel)
+    target_cert: Optional[str] = None  # AWS certification goal (from AcademyUserProfile.targetCertification)
     scenario_type: str = "ecommerce"
     openai_api_key: Optional[str] = None
     profile_id: Optional[str] = None  # For database persistence
@@ -268,8 +268,8 @@ async def generate_bug_bounty(request: BugBountyGenerateRequest):
         
         # Generate challenge (now async with knowledge base integration)
         challenge = await generator.generate_challenge(
-            difficulty=request.difficulty,
-            certification_code=request.certification_code,
+            user_level=request.user_level,
+            target_cert=request.target_cert,
             scenario_type=request.scenario_type,
         )
         
@@ -291,9 +291,9 @@ async def generate_bug_bounty(request: BugBountyGenerateRequest):
         await db.save_bug_bounty_challenge(
             challenge_id=challenge.challenge_id,
             profile_id=request.profile_id,
-            difficulty=challenge.difficulty,
+            user_level=challenge.user_level,
             scenario_type=request.scenario_type,
-            certification_code=request.certification_code,
+            target_cert=request.target_cert,
             description=challenge.description,
             diagram=challenge.diagram,
             aws_environment=aws_env_dict,
@@ -312,7 +312,8 @@ async def generate_bug_bounty(request: BugBountyGenerateRequest):
             "diagram": challenge.diagram,
             "description": challenge.description,
             "aws_environment": aws_env_dict,
-            "difficulty": challenge.difficulty,
+            "user_level": challenge.user_level,
+            "target_cert": request.target_cert,
             "bounty_value": challenge.bounty_value,
             "time_limit": challenge.time_limit,
             "bug_count": len(challenge.hidden_bugs),

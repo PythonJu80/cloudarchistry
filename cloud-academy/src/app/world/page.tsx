@@ -684,15 +684,23 @@ export default function WorldPage() {
   
   // Available certifications - using full IDs that match backend
   const certifications = [
+    // Foundational
+    { code: "cloud-practitioner", name: "Cloud Practitioner", level: "foundational" },
+    { code: "ai-practitioner", name: "AI Practitioner", level: "foundational" },
+    // Associate
     { code: "solutions-architect-associate", name: "Solutions Architect Associate", level: "associate" },
     { code: "developer-associate", name: "Developer Associate", level: "associate" },
     { code: "sysops-associate", name: "SysOps Administrator Associate", level: "associate" },
+    { code: "data-engineer-associate", name: "Data Engineer Associate", level: "associate" },
+    { code: "machine-learning-engineer-associate", name: "ML Engineer Associate", level: "associate" },
+    // Professional
     { code: "solutions-architect-professional", name: "Solutions Architect Professional", level: "professional" },
     { code: "devops-professional", name: "DevOps Engineer Professional", level: "professional" },
+    // Specialty
     { code: "networking-specialty", name: "Advanced Networking Specialty", level: "specialty" },
     { code: "security-specialty", name: "Security Specialty", level: "specialty" },
     { code: "machine-learning-specialty", name: "Machine Learning Specialty", level: "specialty" },
-    { code: "database-specialty", name: "Database Specialty", level: "specialty" },
+    { code: "sap-specialty", name: "SAP on AWS Specialty", level: "specialty" },
   ];
   
   // User's API key for generation

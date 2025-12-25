@@ -133,10 +133,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check subscription tier - tutors can create cohorts
-    if (!academyUser.profile || !["tutor", "team", "pro", "enterprise"].includes(academyUser.profile.subscriptionTier)) {
+    // Check subscription tier - only tutors can create cohorts
+    if (!academyUser.profile || academyUser.profile.subscriptionTier !== "tutor") {
       return NextResponse.json(
-        { error: "Cohort creation requires a Tutor, Team, Pro, or Enterprise subscription" },
+        { error: "Cohort creation requires a Tutor subscription" },
         { status: 403 }
       );
     }

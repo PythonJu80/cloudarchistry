@@ -15,8 +15,8 @@ import contextvars
 # Use db.py for database operations
 import db
 
-# Default model (fallback only - prefer user's preferredModel)
-DEFAULT_MODEL = "gpt-4o-mini"
+# Default model from .env
+DEFAULT_MODEL = os.getenv("MODEL_CHOICE", "gpt-4.1")
 
 # Context variables to store per-request API key and model
 _request_api_key: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(

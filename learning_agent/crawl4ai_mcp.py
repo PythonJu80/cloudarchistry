@@ -201,17 +201,26 @@ import db
 
 # Map short cert codes (stored in DB) to full persona IDs (used in CERTIFICATION_PERSONAS)
 CERT_CODE_TO_PERSONA = {
+    # Foundational
+    "CLF": "cloud-practitioner",
+    "AIF": "ai-practitioner",
+    # Associate
     "SAA": "solutions-architect-associate",
-    "SAP": "solutions-architect-professional",
     "DVA": "developer-associate",
     "SOA": "sysops-associate",
+    "DEA": "data-engineer-associate",
+    "MLA": "machine-learning-engineer-associate",
+    # Professional
+    "SAP": "solutions-architect-professional",
     "DOP": "devops-professional",
+    # Specialty
     "ANS": "networking-specialty",
     "SCS": "security-specialty",
-    "DBS": "database-specialty",
     "MLS": "machine-learning-specialty",
-    "PAS": "data-analytics-specialty",
-    "CLF": "cloud-practitioner",
+    "PAS": "sap-specialty",
+    "PAS-C01": "sap-specialty",
+    # Legacy (retired but kept for backward compatibility)
+    "DBS": "database-specialty",
 }
 
 
@@ -1411,12 +1420,19 @@ async def get_coaching_response(
     from agent_prompt import SYSTEM_PROMPT as BASE_AGENT_PROMPT
     
     CERT_TO_PERSONA = {
-        "CLF": "cloud-practitioner", "SAA": "solutions-architect-associate",
-        "DVA": "developer-associate", "SOA": "sysops-associate",
+        # Foundational
+        "CLF": "cloud-practitioner", "AIF": "ai-practitioner",
+        # Associate
+        "SAA": "solutions-architect-associate", "DVA": "developer-associate",
+        "SOA": "sysops-associate", "DEA": "data-engineer-associate",
+        "MLA": "machine-learning-engineer-associate",
+        # Professional
         "SAP": "solutions-architect-professional", "DOP": "devops-professional",
-        "ANS": "networking-specialty", "DAS": "data-analytics-specialty",
-        "SCS": "security-specialty", "MLS": "machine-learning-specialty",
-        "DBS": "database-specialty", "PAS": "sap-specialty",
+        # Specialty
+        "ANS": "networking-specialty", "SCS": "security-specialty",
+        "MLS": "machine-learning-specialty", "PAS": "sap-specialty",
+        # Legacy
+        "DBS": "database-specialty",
     }
     
     target_cert = context.get("target_certification") if context else None
@@ -2286,46 +2302,36 @@ async def generate_quiz_endpoint(request: GenerateContentRequest):
 @app.post("/api/gaming/hot-streak/generate")
 async def generate_hot_streak_endpoint(request: GenerateContentRequest):
     """Generate quick-fire questions for Hot Streak game mode."""
-    from utils import set_request_api_key, set_request_model
     from generators.game_modes import generate_hot_streak_questions
     
-    try:
-        if request.openai_api_key:
-            set_request_api_key(request.openai_api_key)
-        if request.preferred_model:
-            set_request_model(request.preferred_model)
-        
-        short_code = (request.certification_code or "SAA").upper()
-        question_count = request.options.get("question_count", 25) if request.options else 25
-        exclude_ids = request.options.get("exclude_ids", []) if request.options else []
-        
-        result = await generate_hot_streak_questions(
-            user_level=request.user_level or "intermediate",
-            cert_code=short_code,
-            question_count=question_count,
-            exclude_ids=exclude_ids,
-        )
-        
-        return {
-            "success": True,
-            "questions": [
-                {
-                    "id": q.id,
-                    "question": q.question,
-                    "options": q.options,
-                    "correct_index": q.correct_index,
-                    "topic": q.topic,
-                    "difficulty": q.difficulty,
-                    "explanation": q.explanation,
-                }
-                for q in result.questions
-            ],
-            "topics_covered": result.topics_covered,
-            "certification": short_code,
-        }
-    finally:
-        set_request_api_key(None)
-        set_request_model(None)
+    short_code = (request.certification_code or "SAA").upper()
+    question_count = request.options.get("question_count", 25) if request.options else 25
+    exclude_ids = request.options.get("exclude_ids", []) if request.options else []
+    
+    result = await generate_hot_streak_questions(
+        user_level=request.user_level or "intermediate",
+        cert_code=short_code,
+        question_count=question_count,
+        exclude_ids=exclude_ids,
+    )
+    
+    return {
+        "success": True,
+        "questions": [
+            {
+                "id": q.id,
+                "question": q.question,
+                "options": q.options,
+                "correct_index": q.correct_index,
+                "topic": q.topic,
+                "difficulty": q.difficulty,
+                "explanation": q.explanation,
+            }
+            for q in result.questions
+        ],
+        "topics_covered": result.topics_covered,
+        "certification": short_code,
+    }
 
 
 @app.post("/api/gaming/ticking-bomb/generate")
@@ -3139,19 +3145,11 @@ class SlotsValidateRequest(PydanticBaseModel):
 async def generate_slots_challenge_endpoint(request: SlotsGenerateRequest):
     """Generate a Service Slots challenge with 3 services and 4 options."""
     try:
-        from utils import set_request_api_key, set_request_model
         from generators.service_slots import generate_slot_challenge
-        
-        if request.openai_api_key:
-            set_request_api_key(request.openai_api_key)
-        if request.preferred_model:
-            set_request_model(request.preferred_model)
         
         challenge = await generate_slot_challenge(
             user_level=request.user_level,
             cert_code=request.cert_code,
-            api_key=request.openai_api_key,
-            model=request.preferred_model,
         )
         
         return {

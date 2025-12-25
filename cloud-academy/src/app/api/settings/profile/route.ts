@@ -12,17 +12,23 @@ import { prisma } from "@/lib/db";
 const SKILL_LEVELS = ["beginner", "intermediate", "advanced", "expert"];
 const DIFFICULTY_OPTIONS = ["easy", "medium", "hard"];
 const CERTIFICATION_OPTIONS = [
+  // Foundational
+  "CLF", // Cloud Practitioner
+  "AIF", // AI Practitioner (NEW 2024)
+  // Associate
   "SAA", // Solutions Architect Associate
-  "SAP", // Solutions Architect Professional
   "DVA", // Developer Associate
   "SOA", // SysOps Administrator Associate
+  "DEA", // Data Engineer Associate (NEW 2024)
+  "MLA", // Machine Learning Engineer Associate (NEW 2024)
+  // Professional
+  "SAP", // Solutions Architect Professional
   "DOP", // DevOps Engineer Professional
+  // Specialty
   "ANS", // Advanced Networking Specialty
   "SCS", // Security Specialty
-  "DBS", // Database Specialty
   "MLS", // Machine Learning Specialty
-  "PAS", // Data Analytics Specialty
-  "CLF", // Cloud Practitioner
+  "PAS", // SAP on AWS Specialty
 ];
 
 /**

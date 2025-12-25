@@ -1003,19 +1003,21 @@ export default function SettingsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        {(profile?.certificationOptions || ["SAA", "SAP", "DVA", "SOA", "DOP", "CLF"]).map((cert) => (
+                        {(profile?.certificationOptions || ["CLF", "AIF", "SAA", "DVA", "SOA", "DEA", "MLA", "SAP", "DOP", "ANS", "SCS", "MLS", "PAS"]).map((cert) => (
                           <SelectItem key={cert} value={cert}>
-                            {cert === "SAA" ? "Solutions Architect Associate" :
-                             cert === "SAP" ? "Solutions Architect Professional" :
+                            {cert === "CLF" ? "Cloud Practitioner" :
+                             cert === "AIF" ? "AI Practitioner" :
+                             cert === "SAA" ? "Solutions Architect Associate" :
                              cert === "DVA" ? "Developer Associate" :
                              cert === "SOA" ? "SysOps Administrator Associate" :
+                             cert === "DEA" ? "Data Engineer Associate" :
+                             cert === "MLA" ? "ML Engineer Associate" :
+                             cert === "SAP" ? "Solutions Architect Professional" :
                              cert === "DOP" ? "DevOps Engineer Professional" :
-                             cert === "CLF" ? "Cloud Practitioner" :
                              cert === "ANS" ? "Advanced Networking Specialty" :
                              cert === "SCS" ? "Security Specialty" :
-                             cert === "DBS" ? "Database Specialty" :
                              cert === "MLS" ? "Machine Learning Specialty" :
-                             cert === "PAS" ? "Data Analytics Specialty" : cert}
+                             cert === "PAS" ? "SAP on AWS Specialty" : cert}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1303,7 +1305,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* Cohort Section - Show for learners (can view) and tutors (can create/manage) */}
-          {settings?.subscriptionTier && ["learner", "tutor", "team", "pro", "enterprise"].includes(settings.subscriptionTier) && (
+          {settings?.subscriptionTier && ["learner", "tutor"].includes(settings.subscriptionTier) && (
             <Card className="bg-card/50 border-border/50 mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1327,7 +1329,7 @@ export default function SettingsPage() {
                         <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                         <p className="text-muted-foreground mb-4">You&apos;re not part of any cohort yet.</p>
                         {/* Only tutors can create cohorts */}
-                        {settings?.subscriptionTier && ["tutor", "team", "pro", "enterprise"].includes(settings.subscriptionTier) ? (
+                        {settings?.subscriptionTier === "tutor" ? (
                           <Button onClick={() => setShowCreateTeam(true)} className="gap-2">
                             <UserPlus className="w-4 h-4" />
                             Create a Cohort

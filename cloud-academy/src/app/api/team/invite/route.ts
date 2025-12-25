@@ -8,7 +8,7 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/academy/services/rate-limit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXTAUTH_URL || "https://cloudarchistry.com";
-const FROM_EMAIL = process.env.EMAIL_FROM || "CloudArchistry <noreply@cloudarchistry.com>";
+const FROM_EMAIL = process.env.EMAIL_FROM || "CloudArchistry <noreply@anais.solutions>";
 
 /**
  * POST /api/team/invite - Send team invite
@@ -172,8 +172,10 @@ export async function POST(req: NextRequest) {
     // Send invite email
     const inviteUrl = `${APP_URL}/invite/${code}`;
     
+    console.log('[INVITE] Attempting to send email to:', email, 'from:', FROM_EMAIL);
+    
     try {
-      await resend.emails.send({
+      const emailResult = await resend.emails.send({
         from: FROM_EMAIL,
         to: email,
         subject: `You're invited to join ${membership.team.name} on CloudArchistry`,
@@ -221,8 +223,9 @@ export async function POST(req: NextRequest) {
           </html>
         `,
       });
+      console.log('[INVITE] Email sent successfully:', emailResult);
     } catch (emailError) {
-      console.error("Failed to send invite email:", emailError);
+      console.error("[INVITE] Failed to send invite email:", emailError);
       // Don't fail the request, invite is still created
     }
 

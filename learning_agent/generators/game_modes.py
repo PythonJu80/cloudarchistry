@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from prompts import CERTIFICATION_PERSONAS
-from utils import get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError, DEFAULT_MODEL
 
 
 # Valid user levels
@@ -64,28 +64,39 @@ def validate_game_params(user_level: str, cert_code: str) -> None:
 
 # Map cert codes (e.g., "SAA-C03") to persona IDs
 CERT_CODE_TO_PERSONA = {
+    # Foundational
+    "CLF": "cloud-practitioner",
+    "CLF-C02": "cloud-practitioner",
+    "AIF": "ai-practitioner",
+    "AIF-C01": "ai-practitioner",
+    # Associate
     "SAA": "solutions-architect-associate",
     "SAA-C03": "solutions-architect-associate",
-    "SAP": "solutions-architect-professional",
-    "SAP-C02": "solutions-architect-professional",
     "DVA": "developer-associate",
     "DVA-C02": "developer-associate",
     "SOA": "sysops-associate",
     "SOA-C02": "sysops-associate",
+    "DEA": "data-engineer-associate",
+    "DEA-C01": "data-engineer-associate",
+    "MLA": "machine-learning-engineer-associate",
+    "MLA-C01": "machine-learning-engineer-associate",
+    # Professional
+    "SAP": "solutions-architect-professional",
+    "SAP-C02": "solutions-architect-professional",
     "DOP": "devops-professional",
     "DOP-C02": "devops-professional",
-    "ANS": "advanced-networking",
-    "ANS-C01": "advanced-networking",
+    # Specialty
+    "ANS": "networking-specialty",
+    "ANS-C01": "networking-specialty",
     "SCS": "security-specialty",
     "SCS-C02": "security-specialty",
+    "MLS": "machine-learning-specialty",
+    "MLS-C01": "machine-learning-specialty",
+    "PAS": "sap-specialty",
+    "PAS-C01": "sap-specialty",
+    # Legacy (retired but kept for backward compatibility)
     "DBS": "database-specialty",
     "DBS-C01": "database-specialty",
-    "MLS": "machine-learning",
-    "MLS-C01": "machine-learning",
-    "PAS": "data-analytics",
-    "DAS-C01": "data-analytics",
-    "CLF": "cloud-practitioner",
-    "CLF-C02": "cloud-practitioner",
 }
 
 
@@ -120,7 +131,7 @@ async def _chat_json(
             "OpenAI API key required. Set OPENAI_API_KEY in .env file."
         )
     
-    model = model or get_request_model() or "gpt-4o"
+    model = model or get_request_model() or DEFAULT_MODEL
     client = AsyncOpenAI(api_key=key)
     
     response = await client.chat.completions.create(

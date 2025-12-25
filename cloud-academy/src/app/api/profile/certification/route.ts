@@ -5,17 +5,23 @@ import { prisma } from "@/lib/db";
 
 // Mapping between short codes (settings) and long codes (world map)
 const CERT_CODE_MAP: Record<string, string> = {
+  // Foundational
+  "CLF": "cloud-practitioner",
+  "AIF": "ai-practitioner",
+  // Associate
   "SAA": "solutions-architect-associate",
-  "SAP": "solutions-architect-professional",
   "DVA": "developer-associate",
   "SOA": "sysops-associate",
+  "DEA": "data-engineer-associate",
+  "MLA": "machine-learning-engineer-associate",
+  // Professional
+  "SAP": "solutions-architect-professional",
   "DOP": "devops-professional",
+  // Specialty
   "ANS": "networking-specialty",
   "SCS": "security-specialty",
-  "DBS": "database-specialty",
   "MLS": "machine-learning-specialty",
-  "PAS": "data-analytics-specialty",
-  "CLF": "cloud-practitioner",
+  "PAS": "sap-specialty",
 };
 
 // Reverse mapping: long code -> short code

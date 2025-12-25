@@ -540,6 +540,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - DIAGRAM_API_URL=http://diagram-api:8002
       - LEARNING_AGENT_URL=http://learning-agent:1027
+      - DRAWING_AGENT_URL=http://aws-drawing-agent:6098
     depends_on:
       postgres:
         condition: service_healthy
@@ -565,6 +566,7 @@ services:
       - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - DIAGRAM_API_URL=http://diagram-api-dev:8002
+      - DRAWING_AGENT_URL=http://aws-drawing-agent:6098
     volumes:
       - ./cloud-academy:/app
       - cloud_academy_node_modules:/app/node_modules

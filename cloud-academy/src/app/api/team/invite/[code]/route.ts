@@ -88,10 +88,10 @@ export async function POST(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check subscription tier
-    if (!academyUser.profile || !["team", "enterprise"].includes(academyUser.profile.subscriptionTier)) {
+    // Check subscription tier - learners and tutors can join teams
+    if (!academyUser.profile || !["learner", "tutor"].includes(academyUser.profile.subscriptionTier)) {
       return NextResponse.json(
-        { error: "Team features require a Team or Enterprise subscription" },
+        { error: "You need a valid subscription to join teams" },
         { status: 403 }
       );
     }
@@ -115,12 +115,15 @@ export async function POST(
     }
 
     // Check if invite email matches (if specified)
+    console.log('[INVITE ACCEPT] Invite email:', invite.email, 'Session email:', session.user.email);
     if (invite.email && invite.email.toLowerCase() !== session.user.email?.toLowerCase()) {
+      console.log('[INVITE ACCEPT] Email mismatch - rejecting');
       return NextResponse.json(
         { error: "This invite was sent to a different email address" },
         { status: 403 }
       );
     }
+    console.log('[INVITE ACCEPT] Email validation passed');
 
     // Check if already a member
     const existingMember = await prisma.academyTeamMember.findFirst({

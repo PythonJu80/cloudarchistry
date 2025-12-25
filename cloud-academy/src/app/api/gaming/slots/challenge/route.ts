@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { prisma } from "@/lib/db";
 
 const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
@@ -28,9 +27,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User profile not found" }, { status: 404 });
     }
 
-    // Get API key and preferred model from user's settings (optional - will use .env if not provided)
-    const aiConfig = await getAiConfigForRequest(session.user.academyProfileId || session.user.id);
-
     // Call learning agent to generate a slot challenge
     const response = await fetch(`${LEARNING_AGENT_URL}/api/slots/challenge/generate`, {
       method: "POST",
@@ -39,8 +35,6 @@ export async function POST(request: NextRequest) {
         user_level: profile.skillLevel || "intermediate",
         cert_code: profile.targetCertification || "SAA-C03",
         difficulty: body.difficulty || null, // null = random
-        openai_api_key: aiConfig?.key,
-        preferred_model: aiConfig?.preferredModel,
       }),
     });
 

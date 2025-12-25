@@ -5,7 +5,7 @@ import crypto from "crypto";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const APP_URL = process.env.NEXTAUTH_URL || "https://cloudarchistry.com";
-const FROM_EMAIL = process.env.EMAIL_FROM || "CloudArchistry <noreply@cloudarchistry.com>";
+const FROM_EMAIL = process.env.EMAIL_FROM || "CloudArchistry <noreply@anais.solutions>";
 
 /**
  * Generate a verification token and store it

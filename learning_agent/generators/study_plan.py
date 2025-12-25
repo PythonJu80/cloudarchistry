@@ -20,9 +20,8 @@ from prompts import CERTIFICATION_PERSONAS
 from utils import (
     ApiKeyRequiredError,
     get_request_model,
+    DEFAULT_MODEL,
 )
-
-DEFAULT_MODEL = "gpt-4o-mini"
 
 
 # Valid user levels

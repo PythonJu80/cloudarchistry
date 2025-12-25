@@ -20,9 +20,8 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# Knowledge base integration via HTTP (learning agent API)
-import os
-LEARNING_AGENT_URL = os.getenv("LEARNING_AGENT_URL", "http://learning-agent:1027")
+# Knowledge base integration - direct database access
+import db
 
 async def fetch_knowledge_for_generation(
     cert_code: str,
@@ -31,7 +30,7 @@ async def fetch_knowledge_for_generation(
     api_key: Optional[str] = None
 ) -> str:
     """
-    Fetch AWS knowledge from learning agent's knowledge base via HTTP.
+    Fetch AWS knowledge from database directly.
     
     Args:
         cert_code: Certification code (e.g., 'solutions-architect-associate')
@@ -43,24 +42,44 @@ async def fetch_knowledge_for_generation(
         Formatted knowledge context string
     """
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{LEARNING_AGENT_URL}/api/knowledge/search",
-                json={
-                    "cert_code": cert_code,
-                    "topic": topic,
-                    "limit": limit,
-                    "openai_api_key": api_key
-                }
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("knowledge_context", "")
-            else:
-                logger.warning(f"Knowledge fetch failed: {response.status_code}")
-                return ""
+        if not api_key:
+            logger.warning("No API key provided for knowledge search")
+            return ""
+        
+        # Generate embedding for the search query
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        
+        # Create search query combining cert code and topic
+        search_query = f"{cert_code} {topic}"
+        
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=search_query
+        )
+        query_embedding = response.data[0].embedding
+        
+        # Search knowledge chunks in database
+        chunks = await db.search_knowledge_chunks(
+            query_embedding=query_embedding,
+            limit=limit
+        )
+        
+        if not chunks:
+            logger.info(f"No knowledge chunks found for: {search_query}")
+            return ""
+        
+        # Format chunks into context string
+        context_parts = []
+        for chunk in chunks:
+            context_parts.append(f"[{chunk['url']}]\n{chunk['content']}")
+        
+        knowledge_context = "\n\n".join(context_parts)
+        logger.info(f"Fetched {len(chunks)} knowledge chunks for {cert_code}")
+        return knowledge_context
+        
     except Exception as e:
-        logger.warning(f"Failed to fetch knowledge from learning agent: {e}")
+        logger.warning(f"Failed to fetch knowledge from database: {e}")
         return ""
 
 
@@ -144,7 +163,8 @@ class BugBountyChallenge(BaseModel):
     description: str
     aws_environment: AWSEnvironment
     hidden_bugs: List[BugDefinition]
-    difficulty: str
+    user_level: str  # beginner, intermediate, advanced, expert (from AcademyUserProfile.skillLevel)
+    target_cert: Optional[str] = None  # AWS certification goal (from AcademyUserProfile.targetCertification)
     bounty_value: int
     time_limit: int  # seconds
 
@@ -296,16 +316,16 @@ class BugBountyGenerator:
     
     async def generate_challenge(
         self,
-        difficulty: str = "intermediate",
-        certification_code: Optional[str] = None,
+        user_level: str = "intermediate",
+        target_cert: Optional[str] = None,
         scenario_type: Optional[str] = None,
     ) -> BugBountyChallenge:
         """
         Generate a complete Bug Bounty challenge using AI.
         
         Args:
-            difficulty: beginner, intermediate, advanced, expert
-            certification_code: Target AWS certification (e.g., SAA-C03, SAP-C02)
+            user_level: beginner, intermediate, advanced, expert (from AcademyUserProfile.skillLevel)
+            target_cert: Target AWS certification (from AcademyUserProfile.targetCertification)
             scenario_type: Optional specific scenario type
         
         Returns:
@@ -319,32 +339,32 @@ class BugBountyGenerator:
         # Select scenario template
         scenario = self._select_scenario(scenario_type)
         
-        # Determine bug count and time based on difficulty
-        difficulty_config = {
+        # Determine bug count and time based on user_level
+        level_config = {
             "beginner": {"bug_count": 3, "time_limit": 900, "complexity": "simple"},
             "intermediate": {"bug_count": 5, "time_limit": 720, "complexity": "moderate"},
             "advanced": {"bug_count": 7, "time_limit": 600, "complexity": "complex"},
             "expert": {"bug_count": 10, "time_limit": 480, "complexity": "enterprise-scale"},
         }
-        config = difficulty_config.get(difficulty, difficulty_config["intermediate"])
+        config = level_config.get(user_level, level_config["intermediate"])
         
-        logger.info(f"Generating challenge: {scenario['name']} ({difficulty})")
+        logger.info(f"Generating challenge: {scenario['name']} (user_level={user_level}, target_cert={target_cert})")
         
         # Fetch AWS knowledge from learning agent API
         knowledge_context = ""
-        if certification_code:
+        if target_cert:
             try:
                 topic = f"{scenario['name']} {' '.join(scenario['keywords'][:2])}"
                 knowledge_context = await fetch_knowledge_for_generation(
-                    cert_code=certification_code,
+                    cert_code=target_cert,
                     topic=topic,
                     limit=5,
                     api_key=self.openai_api_key
                 )
                 if knowledge_context:
-                    logger.info(f"Fetched AWS knowledge for {certification_code}: {len(knowledge_context)} chars")
+                    logger.info(f"Fetched AWS knowledge for {target_cert}: {len(knowledge_context)} chars")
                 else:
-                    logger.info(f"No AWS knowledge fetched for {certification_code}")
+                    logger.info(f"No AWS knowledge fetched for {target_cert}")
             except Exception as e:
                 logger.warning(f"Failed to fetch knowledge: {e}")
                 knowledge_context = ""
@@ -352,8 +372,8 @@ class BugBountyGenerator:
         # Step 1: Generate the use case description with requirements
         description = self._generate_description(
             scenario=scenario,
-            difficulty=difficulty,
-            certification_code=certification_code,
+            user_level=user_level,
+            target_cert=target_cert,
             complexity=config["complexity"],
             knowledge_context=knowledge_context,
         )
@@ -362,7 +382,7 @@ class BugBountyGenerator:
         diagram, bugs_in_diagram = self._generate_flawed_diagram(
             scenario=scenario,
             description=description,
-            difficulty=difficulty,
+            user_level=user_level,
             bug_count=config["bug_count"],
             knowledge_context=knowledge_context,
         )
@@ -394,7 +414,8 @@ class BugBountyGenerator:
             description=description,
             aws_environment=aws_environment,
             hidden_bugs=hidden_bugs,
-            difficulty=difficulty,
+            user_level=user_level,
+            target_cert=target_cert,
             bounty_value=bounty_value,
             time_limit=config["time_limit"],
         )
@@ -410,16 +431,16 @@ class BugBountyGenerator:
     def _generate_description(
         self,
         scenario: Dict,
-        difficulty: str,
-        certification_code: Optional[str],
+        user_level: str,
+        target_cert: Optional[str],
         complexity: str,
         knowledge_context: str = "",
     ) -> str:
         """Generate a detailed use case description using LLM with AWS knowledge."""
         
         cert_context = ""
-        if certification_code:
-            cert_context = f"\nTarget certification: {certification_code}. Include relevant AWS services and concepts for this certification."
+        if target_cert:
+            cert_context = f"\nTarget certification: {target_cert}. Include relevant AWS services and concepts for this certification."
         
         knowledge_section = ""
         if knowledge_context:
@@ -429,7 +450,7 @@ class BugBountyGenerator:
 
 SCENARIO: {scenario['name']}
 TYPE: {scenario['type']}
-DIFFICULTY: {difficulty} ({complexity})
+USER LEVEL: {user_level} ({complexity})
 KEYWORDS: {', '.join(scenario['keywords'])}
 {cert_context}{knowledge_section}
 
@@ -469,7 +490,7 @@ Output ONLY the description text, no JSON or markdown code blocks."""
         self,
         scenario: Dict,
         description: str,
-        difficulty: str,
+        user_level: str,
         bug_count: int,
         knowledge_context: str = "",
     ) -> tuple[Dict, List[Dict]]:
@@ -482,7 +503,7 @@ Output ONLY the description text, no JSON or markdown code blocks."""
         prompt = f"""Generate an AWS architecture diagram with INTENTIONAL FLAWS for a Bug Bounty game.
 
 SCENARIO: {scenario['name']}
-DIFFICULTY: {difficulty}
+USER LEVEL: {user_level}
 NUMBER OF BUGS TO EMBED: {bug_count}
 
 USE CASE DESCRIPTION:
@@ -519,6 +540,14 @@ TIER VALUES:
 - "data": Private subnet data (RDS, DynamoDB, ElastiCache, S3)
 - "security": Security services (WAF, Shield, Cognito, IAM)
 - "integration": Integration (SQS, SNS, EventBridge, Step Functions)
+
+CRITICAL RULE FOR service_id:
+- service_id MUST be the base AWS service name ONLY
+- NEVER add suffixes like -web, -payment, -catalog, -inventory, -orders, -cart
+- Use the label field for descriptive names
+- CORRECT: {{"id": "svc1", "service_id": "ec2", "label": "EC2 Web Servers"}}
+- WRONG: {{"id": "svc1", "service_id": "ec2-web", "label": "Web Servers"}}
+- Valid service_ids: ec2, lambda, dynamodb, rds, s3, apigateway, cloudfront, elb, ecs, eks, sqs, sns, kinesis, elasticache, cloudwatch, cognito, waf, route53, vpc, iam, stepfunctions, eventbridge, appsync, athena, glue, emr, redshift, neptune, documentdb, aurora, elasticbeanstalk, amplify, apprunner
 
 FLAW TYPES TO EMBED:
 - security: publicly accessible resources, overly permissive IAM, missing encryption

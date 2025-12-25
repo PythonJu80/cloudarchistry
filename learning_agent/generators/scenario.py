@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from prompts import SCENARIO_GENERATOR_PROMPT, PERSONA_SCENARIO_PROMPT, AWS_PERSONAS
-from utils import get_request_model, ApiKeyRequiredError
+from utils import get_request_model, ApiKeyRequiredError, DEFAULT_MODEL
 
 
 class Challenge(BaseModel):
@@ -115,7 +115,7 @@ async def _chat_json(
             "OpenAI API key required. Set OPENAI_API_KEY in .env file."
         )
     
-    model = model or get_request_model() or "gpt-4o"
+    model = model or get_request_model() or DEFAULT_MODEL
     client = AsyncOpenAI(api_key=key)
     
     response = await client.chat.completions.create(
