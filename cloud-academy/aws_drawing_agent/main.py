@@ -466,6 +466,120 @@ async def delete_challenge(challenge_id: str):
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
 
 
+# ============================================
+# PORTFOLIO DIAGRAM ENHANCEMENT
+# ============================================
+
+class PortfolioDiagramRequest(BaseModel):
+    """Request to enhance a diagram for portfolio display."""
+    diagram: Dict  # {nodes: [], edges: []} from ChallengeProgress.solution
+    scenario_context: Optional[Dict] = None  # Business context for better enhancement
+    location_context: Optional[Dict] = None  # Company/industry info
+    openai_api_key: Optional[str] = None
+
+
+@app.post("/portfolio/enhance-diagram")
+async def enhance_portfolio_diagram(request: PortfolioDiagramRequest):
+    """
+    Enhance a user's architecture diagram for portfolio display.
+    
+    Takes the raw diagram from challenge completion and:
+    1. Validates against AWS best practices
+    2. Improves layout and structure
+    3. Adds missing best-practice components
+    4. Generates a clean SVG representation
+    5. Returns enhanced diagram + explanation
+    
+    Called by client app when generating portfolio PDF.
+    """
+    try:
+        api_key = request.openai_api_key or OPENAI_API_KEY
+        if not api_key:
+            raise HTTPException(status_code=400, detail="OpenAI API key required")
+        
+        diagram = request.diagram
+        if not diagram or not diagram.get("nodes"):
+            raise HTTPException(status_code=400, detail="Diagram with nodes required")
+        
+        # Step 1: Validate the diagram
+        validation = agent.validate_diagram(diagram)
+        
+        # Step 2: Build context for enhancement
+        context_parts = []
+        if request.scenario_context:
+            if request.scenario_context.get("scenarioTitle"):
+                context_parts.append(f"Scenario: {request.scenario_context['scenarioTitle']}")
+            if request.scenario_context.get("businessContext"):
+                context_parts.append(f"Business: {request.scenario_context['businessContext']}")
+            if request.scenario_context.get("complianceRequirements"):
+                context_parts.append(f"Compliance: {', '.join(request.scenario_context['complianceRequirements'])}")
+        
+        if request.location_context:
+            if request.location_context.get("company"):
+                context_parts.append(f"Company: {request.location_context['company']}")
+            if request.location_context.get("industry"):
+                context_parts.append(f"Industry: {request.location_context['industry']}")
+        
+        context_str = "\n".join(context_parts) if context_parts else ""
+        
+        # Step 3: Enhance diagram using LLM
+        from llm_generator import LLMDiagramGenerator
+        llm_gen = LLMDiagramGenerator(api_key=api_key)
+        
+        # Build enhancement prompt
+        enhancement_prompt = f"""Enhance this AWS architecture diagram for a professional portfolio.
+
+Current diagram:
+- Nodes: {len(diagram.get('nodes', []))}
+- Edges: {len(diagram.get('edges', []))}
+- Services: {[n.get('data', {}).get('label', n.get('type')) for n in diagram.get('nodes', []) if n.get('type') != 'vpc' and n.get('type') != 'subnet']}
+
+{f"Context: {context_str}" if context_str else ""}
+
+Validation feedback:
+- Warnings: {validation.get('warnings', [])}
+- Suggestions: {validation.get('suggestions', [])}
+
+Requirements:
+1. Keep all existing services the user placed
+2. Ensure proper VPC/subnet structure if missing
+3. Add any critical missing components (load balancers, security groups conceptually)
+4. Optimize node positions for clean visual layout
+5. Ensure edges connect logically
+
+Return the enhanced React Flow diagram JSON with improved structure."""
+
+        # Generate enhanced diagram
+        result = llm_gen.generate_diagram_with_explanation(enhancement_prompt)
+        enhanced_diagram = result.get("diagram", diagram)
+        explanation = result.get("explanation", "")
+        
+        # Step 4: Extract services list for portfolio
+        services_used = []
+        for node in enhanced_diagram.get("nodes", []):
+            label = node.get("data", {}).get("label")
+            if label and node.get("type") not in ["vpc", "subnet"]:
+                if label not in services_used:
+                    services_used.append(label)
+        
+        return {
+            "success": True,
+            "original_diagram": diagram,
+            "enhanced_diagram": enhanced_diagram,
+            "explanation": explanation,
+            "validation": validation,
+            "services_used": services_used,
+            "node_count": len(enhanced_diagram.get("nodes", [])),
+            "edge_count": len(enhanced_diagram.get("edges", []))
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Portfolio diagram enhancement failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
