@@ -2841,6 +2841,72 @@ async def get_journey_data_endpoint(profile_id: str):
 
 
 # ============================================
+# PORTFOLIO GENERATION ENDPOINT
+# ============================================
+
+from models.portfolio import GeneratePortfolioRequest, GeneratePortfolioResponse
+from generators.portfolio import generate_portfolio_content
+
+
+@app.post("/api/learning/generate-portfolio", response_model=GeneratePortfolioResponse)
+async def generate_portfolio_endpoint(request: GeneratePortfolioRequest):
+    """
+    Generate AI-powered portfolio content from a completed challenge.
+    
+    Takes diagram data, CLI progress, and scenario context to generate:
+    - Professional title
+    - Solution summary
+    - Key architectural decisions
+    - Compliance achievements
+    - AWS services used
+    
+    The generated content can be saved to AcademyPortfolio table by the caller.
+    """
+    from utils import set_request_api_key, set_request_model
+    
+    try:
+        # Set request-scoped API key and model
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        # Get OpenAI client (uses request context API key set above)
+        client = get_async_openai(request.openai_api_key)
+        
+        # Determine model to use
+        model = request.preferred_model or DEFAULT_MODEL
+        
+        # Generate portfolio content
+        content = await generate_portfolio_content(
+            request=request,
+            openai_client=client,
+            model=model
+        )
+        
+        logger.info(f"Generated portfolio content for profile {request.profileId}")
+        
+        return GeneratePortfolioResponse(
+            success=True,
+            portfolioId=None,  # Caller saves to DB and gets ID
+            content=content,
+            error=None
+        )
+        
+    except Exception as e:
+        logger.error(f"Portfolio generation failed: {e}")
+        return GeneratePortfolioResponse(
+            success=False,
+            portfolioId=None,
+            content=None,
+            error=str(e)
+        )
+    finally:
+        set_request_api_key(None)
+        set_request_model(None)
+
+
+# ============================================
 # AI CONFIG ENDPOINTS
 # ============================================
 

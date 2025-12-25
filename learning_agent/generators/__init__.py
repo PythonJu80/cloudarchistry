@@ -36,3 +36,4 @@ from .architect_arena import (
     PuzzleObjective,
     PuzzlePenalty,
 )
+from .portfolio import generate_portfolio_content

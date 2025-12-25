@@ -39,3 +39,11 @@ from .config import (
     SetPersonaRequest,
 )
 from .chat import ChatRequest
+from .portfolio import (
+    GeneratePortfolioRequest,
+    GeneratePortfolioResponse,
+    PortfolioContent,
+    CLIProgressData,
+    ScenarioContext,
+    LocationContext,
+)
