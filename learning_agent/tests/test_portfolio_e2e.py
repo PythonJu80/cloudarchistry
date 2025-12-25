@@ -14,8 +14,8 @@ import asyncio
 import json
 from typing import Dict, Any
 
-# Learning Agent URL (Docker container)
-LEARNING_AGENT_URL = "http://localhost:1027"
+# Learning Agent URL - Production
+LEARNING_AGENT_URL = "https://cloudarchistry.com"
 
 
 # ============================================
