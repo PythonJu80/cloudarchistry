@@ -73,6 +73,15 @@ function getIconPath(serviceId: string): string {
     "nat-gateway": "vpc",
     "igw": "vpc",
     "sg": "vpc",
+    // Subnets and scaling
+    "subnet-public": "group-public-subnet",
+    "subnet-private": "group-private-subnet",
+    "public-subnet": "group-public-subnet",
+    "private-subnet": "group-private-subnet",
+    "auto-scaling": "group-auto-scaling",
+    "autoscaling": "group-auto-scaling",
+    // Backup
+    "backup": "s3",
     // Generic/custom - fallback to generic icons
     "dev-env": "cloud9",
     "third-party-payment": "api-gateway",
@@ -236,35 +245,45 @@ interface DiagramMessageProps {
 function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
   // Check if nodes need positioning (new tier-based format)
   const diagramData = useMemo(() => {
-    // Check if nodes lack positions but have tier data - need to apply template
-    const needsLayout = diagram.nodes.some(n => !n.position && n.data?.tier);
-    
-    if (needsLayout) {
-      // Convert nodes with tiers to services format for template engine
-      const services = diagram.nodes
-        .filter(n => n.type === "awsService" || !n.type)
-        .map(n => ({
-          id: n.id,
-          service_id: String(n.data?.service_id || ""),
-          label: String(n.data?.label || ""),
-          tier: (n.data?.tier as "edge" | "public" | "compute" | "data" | "security" | "integration") || "compute",
+    try {
+      // Check if nodes lack positions but have tier data - need to apply template
+      const needsLayout = diagram.nodes.some(n => !n.position && n.data?.tier);
+      
+      console.log("[DiagramCanvas] needsLayout:", needsLayout, "nodes:", diagram.nodes.length);
+      
+      if (needsLayout) {
+        // Convert nodes with tiers to services format for template engine
+        const services = diagram.nodes
+          .filter(n => n.type === "awsService" || !n.type)
+          .map(n => ({
+            id: n.id,
+            service_id: String(n.data?.service_id || ""),
+            label: String(n.data?.label || ""),
+            tier: (n.data?.tier as "edge" | "public" | "compute" | "data" | "security" | "integration") || "compute",
+          }));
+        
+        const connections = diagram.edges.map(e => ({
+          from: e.source,
+          to: e.target,
         }));
+        
+        console.log("[DiagramCanvas] Building diagram with", services.length, "services");
+        const result = buildAWSDiagram({ services, connections });
+        console.log("[DiagramCanvas] Built diagram with", result.nodes.length, "nodes");
+        return result;
+      }
       
-      const connections = diagram.edges.map(e => ({
-        from: e.source,
-        to: e.target,
-      }));
+      // If payload has "services" array directly, use template engine
+      if (isNewPayloadFormat(diagram)) {
+        return buildAWSDiagram(diagram);
+      }
       
-      return buildAWSDiagram({ services, connections });
+      // Otherwise use existing nodes/edges directly (old format with positions)
+      return { nodes: diagram.nodes, edges: diagram.edges };
+    } catch (error) {
+      console.error("[DiagramCanvas] Error building diagram:", error);
+      return { nodes: diagram.nodes, edges: diagram.edges };
     }
-    
-    // If payload has "services" array directly, use template engine
-    if (isNewPayloadFormat(diagram)) {
-      return buildAWSDiagram(diagram);
-    }
-    
-    // Otherwise use existing nodes/edges directly (old format with positions)
-    return { nodes: diagram.nodes, edges: diagram.edges };
   }, [diagram]);
 
   // Transform nodes with proper styling
