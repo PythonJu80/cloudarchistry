@@ -182,7 +182,15 @@ Use markdown formatting with headers and bullet points."""
 
 Return JSON with "services" array and "connections" array.
 
-Each service object needs: id (svc1, svc2...), service_id (the AWS service), label (descriptive name), tier (for layout).
+Each service object needs: id (svc1, svc2...), service_id (the AWS service), label (descriptive name), tier (string for layout).
+
+VALID tier values (MUST be one of these strings):
+- "edge" = External/CDN services (CloudFront, Route53, WAF)
+- "public" = Public-facing services in public subnet (ALB, NLB, API Gateway, NAT Gateway)
+- "compute" = Application/compute tier in private subnet (EC2, Lambda, ECS, EKS, Fargate)
+- "data" = Data/storage tier in private subnet (RDS, DynamoDB, S3, ElastiCache, Aurora)
+- "security" = Security services (IAM, Cognito, KMS, Secrets Manager, GuardDuty)
+- "integration" = Integration/messaging services (SQS, SNS, EventBridge, Step Functions)
 
 VALID service_id: ec2, lambda, dynamodb, rds, s3, api-gateway, cloudfront, alb, nlb, ecs, eks, sqs, sns, kinesis-streams, kinesis-firehose, elasticache, cloudwatch, cognito, waf, route53, vpc, iam, step-functions, eventbridge, appsync, athena, glue, emr, redshift, neptune, documentdb, aurora, fargate, ecr, secrets-manager, kms, guardduty, shield, nat-gateway, internet-gateway, auto-scaling, batch, opensearch, msk, acm, ses, backup, xray, cloudtrail, config
 
