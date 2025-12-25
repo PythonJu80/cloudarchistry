@@ -299,13 +299,14 @@ class PPTXToReactFlowConverter:
         
         text_lower = text.lower().strip()
         
-        # Common AWS service name mappings
+        # Common AWS service name mappings (must match frontend aws-services.ts IDs)
         service_mappings = {
             "ec2": "ec2",
             "elastic compute cloud": "ec2",
             "s3": "s3",
             "simple storage service": "s3",
             "lambda": "lambda",
+            "aws lambda": "lambda",
             "rds": "rds",
             "relational database service": "rds",
             "dynamodb": "dynamodb",
@@ -320,6 +321,8 @@ class PPTXToReactFlowConverter:
             "ecs": "ecs",
             "elastic container service": "ecs",
             "api gateway": "api-gateway",
+            "apigateway": "api-gateway",
+            "amazon api gateway": "api-gateway",
             "cognito": "cognito",
             "sns": "sns",
             "sqs": "sqs",
@@ -334,8 +337,12 @@ class PPTXToReactFlowConverter:
             "athena": "athena",
             "glue": "glue",
             "emr": "emr",
-            "kinesis": "kinesis",
+            "kinesis": "kinesis-streams",
+            "kinesis data streams": "kinesis-streams",
+            "kinesis firehose": "kinesis-firehose",
             "step functions": "step-functions",
+            "stepfunctions": "step-functions",
+            "aws step functions": "step-functions",
             "eventbridge": "eventbridge",
             "fargate": "fargate",
             "ecr": "ecr",
@@ -343,8 +350,19 @@ class PPTXToReactFlowConverter:
             "application load balancer": "alb",
             "nlb": "nlb",
             "network load balancer": "nlb",
+            "elb": "alb",
+            "elastic load balancer": "alb",
             "nat gateway": "nat-gateway",
             "internet gateway": "internet-gateway",
+            "auto scaling": "auto-scaling",
+            "auto scaling group": "auto-scaling",
+            "waf": "waf",
+            "shield": "shield",
+            "guardduty": "guardduty",
+            "opensearch": "opensearch",
+            "elasticsearch": "opensearch",
+            "msk": "msk",
+            "kafka": "msk",
         }
         
         # Check for exact or partial matches

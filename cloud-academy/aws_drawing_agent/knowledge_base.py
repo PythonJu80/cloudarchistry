@@ -67,8 +67,10 @@ class AWSKnowledgeBase:
     
     def load_architectures(self, architectures_dir: str):
         """
-        Load reference architectures from PowerPoint files.
+        Load reference architectures from converted JSON files (with full diagram structure).
+        Falls back to PPTX file paths if JSON not available.
         """
+        import json
         logger.info(f"Loading architectures from {architectures_dir}")
         
         arch_path = Path(architectures_dir)
@@ -76,19 +78,50 @@ class AWSKnowledgeBase:
             logger.warning(f"Architecture directory not found: {architectures_dir}")
             return
         
-        # Find all PPTX files
+        # First, try to load from converted JSON files (these have positions and structure)
+        converted_dir = arch_path / "converted"
+        json_loaded = 0
+        
+        if converted_dir.exists():
+            json_files = list(converted_dir.glob("*.json"))
+            for json_file in json_files:
+                # Skip macOS metadata files
+                if json_file.name.startswith("._"):
+                    continue
+                arch_id = json_file.stem
+                try:
+                    with open(json_file, 'r') as f:
+                        diagram_data = json.load(f)
+                    
+                    self.architectures[arch_id] = {
+                        "id": arch_id,
+                        "name": self._format_architecture_name(arch_id),
+                        "file_path": str(json_file),
+                        "diagram": diagram_data,  # Full diagram with nodes, edges, positions
+                        "loaded": True,
+                    }
+                    json_loaded += 1
+                except Exception as e:
+                    logger.warning(f"Failed to load {json_file}: {e}")
+            
+            logger.info(f"Loaded {json_loaded} reference architectures from JSON")
+        
+        # Also find PPTX files that don't have JSON conversions yet
         pptx_files = list(arch_path.glob("*.pptx"))
-        
         for pptx_file in pptx_files:
+            # Skip macOS metadata files
+            if pptx_file.name.startswith("._"):
+                continue
             arch_id = pptx_file.stem
-            self.architectures[arch_id] = {
-                "id": arch_id,
-                "name": self._format_architecture_name(arch_id),
-                "file_path": str(pptx_file),
-                "loaded": False,  # Will be parsed on-demand
-            }
+            if arch_id not in self.architectures:
+                self.architectures[arch_id] = {
+                    "id": arch_id,
+                    "name": self._format_architecture_name(arch_id),
+                    "file_path": str(pptx_file),
+                    "loaded": False,  # Will be parsed on-demand
+                }
         
-        logger.info(f"Found {len(self.architectures)} reference architectures")
+        logger.info(f"Total reference architectures: {len(self.architectures)} ({json_loaded} with full diagrams)")
     
     def get_service(self, service_id: str) -> Optional[Dict]:
         """Get service metadata by ID."""

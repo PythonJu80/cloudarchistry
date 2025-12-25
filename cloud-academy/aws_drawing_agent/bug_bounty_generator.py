@@ -542,12 +542,16 @@ TIER VALUES:
 - "integration": Integration (SQS, SNS, EventBridge, Step Functions)
 
 CRITICAL RULE FOR service_id:
-- service_id MUST be the base AWS service name ONLY
+- service_id MUST be EXACTLY one of the values from this list - NO EXCEPTIONS:
+  ec2, lambda, dynamodb, rds, s3, api-gateway, cloudfront, alb, nlb, ecs, eks, sqs, sns, kinesis-streams, kinesis-firehose, elasticache, cloudwatch, cognito, waf, route53, vpc, iam, step-functions, eventbridge, appsync, athena, glue, emr, redshift, neptune, documentdb, aurora, fargate, ecr, secrets-manager, kms, guardduty, shield, nat-gateway, internet-gateway, auto-scaling, batch, opensearch, msk, acm, ses, backup, xray, cloudtrail, config
+- NEVER invent new service_ids like "personalize", "thirdparty", "payment", "external", etc.
+- If you need a service not in the list, use the closest match (e.g., use "lambda" for any serverless function)
 - NEVER add suffixes like -web, -payment, -catalog, -inventory, -orders, -cart
 - Use the label field for descriptive names
 - CORRECT: {{"id": "svc1", "service_id": "ec2", "label": "EC2 Web Servers"}}
 - WRONG: {{"id": "svc1", "service_id": "ec2-web", "label": "Web Servers"}}
-- Valid service_ids: ec2, lambda, dynamodb, rds, s3, apigateway, cloudfront, elb, ecs, eks, sqs, sns, kinesis, elasticache, cloudwatch, cognito, waf, route53, vpc, iam, stepfunctions, eventbridge, appsync, athena, glue, emr, redshift, neptune, documentdb, aurora, elasticbeanstalk, amplify, apprunner
+- WRONG: {{"id": "svc1", "service_id": "personalize", "label": "Recommendations"}}
+- WRONG: {{"id": "svc1", "service_id": "thirdparty", "label": "Payment Gateway"}}
 
 FLAW TYPES TO EMBED:
 - security: publicly accessible resources, overly permissive IAM, missing encryption

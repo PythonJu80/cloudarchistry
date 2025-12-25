@@ -35,32 +35,22 @@ class LLMDiagramGenerator:
         self.model = model
         self.max_retries = 3
     
-    def generate_diagram_with_explanation(self, description: str, services_list: list = None, reference_example: dict = None) -> Dict:
+    def generate_diagram_with_explanation(self, description: str, services_list: list = None) -> Dict:
         """
         Generate a React Flow diagram AND an explanation from text description.
-        Uses reference architecture examples from PPTX files when available.
+        Creates original diagrams dynamically based on the description.
         
         Args:
             description: Natural language description of architecture
             services_list: List of available AWS services (optional)
-            reference_example: Similar reference architecture from PPTX data (optional)
             
         Returns:
             Dict with 'diagram' (nodes/edges) and 'explanation' (markdown text)
         """
         logger.info(f"Generating diagram with explanation: {description[:100]}...")
         
-        # Enhance description with reference example if available
-        enhanced_description = description
-        if reference_example:
-            ref_services = reference_example.get("services", [])
-            if ref_services:
-                service_list = ", ".join([s.get("label", s.get("service_id", "")) for s in ref_services])
-                enhanced_description = f"{description}\n\nReference architecture '{reference_example.get('name')}' uses these AWS services: {service_list}"
-                logger.info(f"Using reference architecture: {reference_example.get('name')}")
-        
         # First generate the diagram
-        diagram = self.generate_diagram(enhanced_description, services_list)
+        diagram = self.generate_diagram(description, services_list)
         
         if diagram.get("error"):
             return {
@@ -111,8 +101,8 @@ Use markdown formatting with headers and bullet points."""
                 messages=[
                     {"role": "user", "content": explanation_prompt}
                 ],
-                temperature=0.7,
-                max_tokens=800
+                temperature=0.8,
+                max_tokens=1000
             )
             
             return response.choices[0].message.content
@@ -155,7 +145,8 @@ Use markdown formatting with headers and bullet points."""
                         {"role": "user", "content": user_prompt}
                     ],
                     temperature=0.7,
-                    max_tokens=2000
+                    max_tokens=10000,
+                    response_format={"type": "json_object"}
                 )
                 
                 # Extract JSON from response
@@ -187,34 +178,17 @@ Use markdown formatting with headers and bullet points."""
     
     def _build_system_prompt(self, services_list: list = None) -> str:
         """Build system prompt with AWS architecture knowledge."""
-        prompt = """Return ONLY the AWS services and connections as JSON. Frontend handles layout.
+        prompt = """You are an expert AWS Solutions Architect. Design complete, production-grade AWS architectures.
 
-OUTPUT FORMAT (no positions, no containers):
-{
-  "services": [
-    {"id": "svc1", "service_id": "apigateway", "label": "API Gateway", "tier": "edge"},
-    {"id": "svc2", "service_id": "lambda", "label": "Lambda", "tier": "compute"},
-    {"id": "svc3", "service_id": "dynamodb", "label": "DynamoDB", "tier": "data"}
-  ],
-  "connections": [
-    {"from": "svc1", "to": "svc2"},
-    {"from": "svc2", "to": "svc3"}
-  ]
-}
+Return JSON with "services" array and "connections" array.
 
-TIER VALUES (determines placement):
-- "edge": Internet-facing (CloudFront, Route53, API Gateway, ALB)
-- "public": Public subnet (NAT Gateway, Bastion)
-- "compute": Private subnet compute (Lambda, ECS, EC2, EKS)
-- "data": Private subnet data (RDS, DynamoDB, ElastiCache, S3)
-- "security": Security services (WAF, Shield, Cognito, IAM)
-- "integration": Integration (SQS, SNS, EventBridge, Step Functions)
+Each service object needs: id (svc1, svc2...), service_id (the AWS service), label (descriptive name), tier (for layout).
 
-RULES:
-- Return ONLY services array and connections array
-- Every service needs: id, service_id, label, tier
-- Connections show data flow direction (from -> to)
-- NO positions, NO containers, NO groups - frontend handles that
+VALID service_id: ec2, lambda, dynamodb, rds, s3, api-gateway, cloudfront, alb, nlb, ecs, eks, sqs, sns, kinesis-streams, kinesis-firehose, elasticache, cloudwatch, cognito, waf, route53, vpc, iam, step-functions, eventbridge, appsync, athena, glue, emr, redshift, neptune, documentdb, aurora, fargate, ecr, secrets-manager, kms, guardduty, shield, nat-gateway, internet-gateway, auto-scaling, batch, opensearch, msk, acm, ses, backup, xray, cloudtrail, config
+
+Connections: {"from": "svc1", "to": "svc2"}
+
+Design the architecture YOU would build as a Solutions Architect. Include everything needed for production: networking, compute, databases, caching, queues, security, monitoring, DR, backups. Be thorough.
 
 """
         

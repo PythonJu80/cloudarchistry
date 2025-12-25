@@ -5,31 +5,42 @@ Test script to verify Bug Bounty challenge generation and validation.
 """
 
 import sys
+import asyncio
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
+
 sys.path.insert(0, str(Path(__file__).parent))
 
 from bug_bounty_generator import BugBountyGenerator
 import json
+import os
 
 
-def test_challenge_generation():
+async def test_challenge_generation():
     """Test challenge generation."""
     print("=" * 60)
     print("Testing Bug Bounty Challenge Generation")
     print("=" * 60)
     
-    generator = BugBountyGenerator()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY not found in environment")
+    
+    generator = BugBountyGenerator(openai_api_key=api_key)
     
     # Generate challenge
     print("\n1. Generating intermediate difficulty challenge...")
-    challenge = generator.generate_challenge(
-        difficulty="intermediate",
-        certification_code="SAA",
+    challenge = await generator.generate_challenge(
+        user_level="intermediate",
+        target_cert="SAA",
         scenario_type="ecommerce"
     )
     
     print(f"✓ Challenge ID: {challenge.challenge_id}")
-    print(f"✓ Difficulty: {challenge.difficulty}")
+    print(f"✓ User Level: {challenge.user_level}")
     print(f"✓ Bounty Value: ${challenge.bounty_value}")
     print(f"✓ Time Limit: {challenge.time_limit}s")
     print(f"✓ Bug Count: {len(challenge.hidden_bugs)}")
@@ -133,15 +144,15 @@ def test_json_serialization(challenge):
             "diagram": challenge.diagram,
             "description": challenge.description,
             "aws_environment": {
-                "cloudwatch_logs": [log.dict() for log in challenge.aws_environment.cloudwatch_logs],
-                "cloudwatch_metrics": {k: v.dict() for k, v in challenge.aws_environment.cloudwatch_metrics.items()},
+                "cloudwatch_logs": [log.model_dump() for log in challenge.aws_environment.cloudwatch_logs],
+                "cloudwatch_metrics": {k: v.model_dump() for k, v in challenge.aws_environment.cloudwatch_metrics.items()},
                 "vpc_flow_logs": challenge.aws_environment.vpc_flow_logs,
                 "iam_policies": challenge.aws_environment.iam_policies,
                 "cost_data": challenge.aws_environment.cost_data,
-                "xray_traces": [trace.dict() for trace in challenge.aws_environment.xray_traces],
-                "config_compliance": [rule.dict() for rule in challenge.aws_environment.config_compliance],
+                "xray_traces": [trace.model_dump() for trace in challenge.aws_environment.xray_traces],
+                "config_compliance": [rule.model_dump() for rule in challenge.aws_environment.config_compliance],
             },
-            "difficulty": challenge.difficulty,
+            "user_level": challenge.user_level,
             "bounty_value": challenge.bounty_value,
             "time_limit": challenge.time_limit,
             "bug_count": len(challenge.hidden_bugs),
@@ -156,13 +167,13 @@ def test_json_serialization(challenge):
         print(f"✗ Serialization failed: {e}")
 
 
-def main():
+async def main():
     """Run all tests."""
     print("\n🐛 Bug Bounty Generator Test Suite\n")
     
     try:
         # Test 1: Generate challenge
-        challenge = test_challenge_generation()
+        challenge = await test_challenge_generation()
         
         # Test 2: Validate claims
         test_claim_validation(challenge)
@@ -181,4 +192,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

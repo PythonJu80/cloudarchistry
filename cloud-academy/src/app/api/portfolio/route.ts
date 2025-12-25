@@ -27,21 +27,14 @@ interface Portfolio {
  * GET /api/portfolio
  * 
  * Fetches user's portfolios + the example portfolio that all users see
- * Using raw SQL since Prisma client needs regeneration for new model
  */
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Build WHERE clause
-    let whereClause = '"isExample" = true';
-    
-    // If logged in, also include user's own portfolios
-    if (session?.user?.academyProfileId) {
-      whereClause = `("isExample" = true OR "profileId" = '${session.user.academyProfileId}')`;
-    }
+    const profileId = session?.user?.academyProfileId || null;
 
-    const portfolios = await prisma.$queryRawUnsafe<Portfolio[]>(`
+    // Use parameterized query to prevent SQL injection
+    const portfolios = await prisma.$queryRaw<Portfolio[]>`
       SELECT 
         id,
         title,
@@ -67,9 +60,10 @@ export async function GET() {
         "complianceAchieved",
         "architectureDiagram"
       FROM "AcademyPortfolio"
-      WHERE ${whereClause}
+      WHERE "isExample" = true 
+         OR (${profileId}::text IS NOT NULL AND "profileId" = ${profileId})
       ORDER BY "isExample" DESC, "createdAt" DESC
-    `);
+    `;
 
     return NextResponse.json({
       portfolios,

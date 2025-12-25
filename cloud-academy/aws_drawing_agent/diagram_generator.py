@@ -177,7 +177,7 @@ class DiagramGenerator:
             }
         
         try:
-            # Get RAG context from pgvector
+            # Get RAG context from pgvector (AWS documentation knowledge)
             rag_context = ""
             if use_rag and self.openai_api_key:
                 try:
@@ -187,16 +187,12 @@ class DiagramGenerator:
                 except Exception as e:
                     logger.warning(f"RAG failed, continuing without: {e}")
             
-            # Find similar reference architectures to use as examples
-            reference_example = self._find_similar_architecture(description)
-            
             # Combine description with RAG context
             enhanced_description = description + rag_context
             
             result = self.llm_generator.generate_diagram_with_explanation(
                 description=enhanced_description,
-                services_list=self.services_list,
-                reference_example=reference_example
+                services_list=self.services_list
             )
             
             diagram = result.get("diagram", {})
@@ -208,7 +204,6 @@ class DiagramGenerator:
                 "status": "success",
                 "nodes_count": len(diagram.get("nodes", [])),
                 "edges_count": len(diagram.get("edges", [])),
-                "reference_used": reference_example.get("name") if reference_example else None,
                 "rag_used": bool(rag_context),
                 "rag_context_length": len(rag_context) if rag_context else 0
             }
@@ -229,8 +224,8 @@ class DiagramGenerator:
     
     def _find_similar_architecture(self, description: str) -> Optional[Dict]:
         """
-        Find a similar reference architecture from PPTX data to use as example.
-        Extracts AWS service nodes from the reference to guide generation.
+        Find a similar reference architecture from converted JSON data.
+        Returns the full diagram structure (nodes with positions, edges) to use as template.
         """
         if not self.reference_architectures:
             return None
@@ -239,13 +234,18 @@ class DiagramGenerator:
         
         # Keywords to match against architecture names
         keywords = {
-            "serverless": ["serverless", "lambda", "api-gateway"],
-            "api": ["api", "gateway", "rest"],
-            "data": ["data", "pipeline", "kinesis", "stream"],
-            "web": ["web", "application", "tier"],
-            "microservices": ["microservice", "ecs", "container"],
-            "ml": ["machine", "learning", "sagemaker", "ml"],
-            "iot": ["iot", "sensor", "device"],
+            "serverless": ["serverless", "lambda", "api-gateway", "function"],
+            "api": ["api", "gateway", "rest", "graphql"],
+            "data": ["data", "pipeline", "kinesis", "stream", "analytics", "lake"],
+            "web": ["web", "application", "tier", "frontend", "hosting"],
+            "microservices": ["microservice", "ecs", "container", "docker", "kubernetes"],
+            "ml": ["machine", "learning", "sagemaker", "ml", "ai", "model"],
+            "iot": ["iot", "sensor", "device", "edge", "connected"],
+            "ecommerce": ["ecommerce", "commerce", "shop", "retail", "payment", "cart"],
+            "mobile": ["mobile", "app", "ios", "android"],
+            "gaming": ["game", "gaming", "multiplayer", "session"],
+            "healthcare": ["health", "medical", "patient", "clinical"],
+            "financial": ["financial", "banking", "payment", "fraud"],
         }
         
         # Find matching architectures
@@ -253,6 +253,10 @@ class DiagramGenerator:
         best_score = 0
         
         for arch_id, arch_data in self.reference_architectures.items():
+            # Only consider architectures with loaded diagrams
+            if not arch_data.get("loaded") or not arch_data.get("diagram"):
+                continue
+                
             score = 0
             arch_name = arch_data.get("name", "").lower()
             
@@ -260,7 +264,7 @@ class DiagramGenerator:
             for keyword_group, terms in keywords.items():
                 if any(term in description_lower for term in terms):
                     if any(term in arch_name for term in terms):
-                        score += 2
+                        score += 3
             
             # Check direct word matches
             for word in description_lower.split():
@@ -272,19 +276,50 @@ class DiagramGenerator:
                 best_match = arch_data
         
         if best_match and best_score > 0:
-            # Extract AWS service nodes from the reference
             diagram = best_match.get("diagram", {})
-            aws_services = []
-            for node in diagram.get("nodes", []):
-                if node.get("data", {}).get("service_id"):
-                    aws_services.append({
-                        "service_id": node["data"]["service_id"],
-                        "label": node["data"].get("label", ""),
+            nodes = diagram.get("nodes", [])
+            edges = diagram.get("edges", [])
+            
+            # Extract nodes with service_id and their positions
+            service_nodes = []
+            for node in nodes:
+                data = node.get("data", {})
+                if data.get("service_id"):
+                    service_nodes.append({
+                        "id": node.get("id"),
+                        "service_id": data["service_id"],
+                        "label": data.get("label", ""),
+                        "position": node.get("position", {}),
+                        "type": node.get("type", "awsService"),
                     })
+            
+            # Extract all positions to understand the layout pattern
+            all_positions = []
+            for node in nodes:
+                pos = node.get("position", {})
+                if pos.get("x") is not None and pos.get("y") is not None:
+                    all_positions.append(pos)
+            
+            # Calculate layout bounds
+            if all_positions:
+                min_x = min(p["x"] for p in all_positions)
+                max_x = max(p["x"] for p in all_positions)
+                min_y = min(p["y"] for p in all_positions)
+                max_y = max(p["y"] for p in all_positions)
+            else:
+                min_x, max_x, min_y, max_y = 0, 1200, 0, 800
+            
+            logger.info(f"Found reference architecture: {best_match.get('name')} with {len(service_nodes)} service nodes")
             
             return {
                 "name": best_match.get("name"),
-                "services": aws_services[:10],  # Limit to 10 services
+                "services": service_nodes[:15],  # Service nodes with positions
+                "edges": edges[:20],  # Connection patterns
+                "layout_bounds": {
+                    "min_x": min_x, "max_x": max_x,
+                    "min_y": min_y, "max_y": max_y,
+                },
+                "total_nodes": len(nodes),
             }
         
         return None

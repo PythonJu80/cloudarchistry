@@ -60,8 +60,8 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Fetch portfolio from database
-    const portfolios = await prisma.$queryRawUnsafe<Portfolio[]>(`
+    // Fetch portfolio from database using parameterized query
+    const portfolios = await prisma.$queryRaw<Portfolio[]>`
       SELECT 
         id,
         title,
@@ -82,9 +82,9 @@ export async function GET(
         "profileId",
         "architectureDiagram"
       FROM "AcademyPortfolio"
-      WHERE id = '${id}'
+      WHERE id = ${id}
       LIMIT 1
-    `);
+    `;
 
     if (portfolios.length === 0) {
       return NextResponse.json(
