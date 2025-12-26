@@ -32,58 +32,101 @@ import { buildAWSDiagram, isNewPayloadFormat } from "@/lib/aws-diagram-template"
  * - lowercase with hyphens (e.g., api-gateway.svg, step-functions.svg)
  * - Some have "group-" prefix for container types (e.g., group-vpc.svg)
  */
+// Available icons in /public/aws-icons/ (64 icons)
+const AVAILABLE_ICONS = new Set([
+  "acm", "api-gateway", "app-runner", "appsync", "athena", "aurora", "aws-logo",
+  "batch", "bedrock", "cloudformation", "cloudfront", "cloudtrail", "cloudwatch",
+  "cognito", "comprehend", "direct-connect", "dms", "documentdb", "dynamodb",
+  "ebs", "ec2", "ecr", "ecs", "eks", "elasticache", "elastic-beanstalk", "elb",
+  "emr", "eventbridge", "fargate", "fsx", "glue", "group-auto-scaling",
+  "group-aws-cloud", "group-private-subnet", "group-public-subnet", "group-region",
+  "group-vpc", "guardduty", "iam", "kendra", "kinesis", "kms", "lambda", "lex",
+  "neptune", "opensearch", "personalize", "polly", "quicksight", "rds",
+  "rekognition", "route53", "s3", "secrets-manager", "shield", "sns", "sqs",
+  "step-functions", "systems-manager", "transcribe", "translate", "vpc", "waf"
+]);
+
 function getIconPath(serviceId: string): string {
   if (!serviceId) return "";
   
   // Normalize: lowercase, replace underscores with hyphens
-  let normalized = serviceId.toLowerCase().replace(/_/g, "-");
+  const normalized = serviceId.toLowerCase().replace(/_/g, "-");
   
-  // Common aliases - map variations to canonical icon names
+  // If the icon exists directly, use it
+  if (AVAILABLE_ICONS.has(normalized)) {
+    return `/aws-icons/${normalized}.svg`;
+  }
+  
+  // Common aliases - map variations to available icons
   const aliases: Record<string, string> = {
+    // API Gateway variants
     "apigateway": "api-gateway",
     "api_gateway": "api-gateway",
+    // Step Functions variants
     "stepfunctions": "step-functions",
     "step_functions": "step-functions",
+    // Secrets Manager variants
     "secretsmanager": "secrets-manager",
     "secrets_manager": "secrets-manager",
+    // Load Balancers -> elb
     "alb": "elb",
     "nlb": "elb",
     "application-load-balancer": "elb",
     "network-load-balancer": "elb",
     "elastic-load-balancer": "elb",
+    // IoT -> kinesis (similar streaming icon)
     "iot-core": "kinesis",
     "iot": "kinesis",
     "iot_core": "kinesis",
-    "elastic-beanstalk": "elastic-beanstalk",
+    // Elastic Beanstalk variants
     "elasticbeanstalk": "elastic-beanstalk",
-    "systems-manager": "systems-manager",
+    // Systems Manager variants
     "ssm": "systems-manager",
-    "direct-connect": "direct-connect",
+    // Direct Connect variants
     "directconnect": "direct-connect",
-    // Database variants
+    // Database variants -> rds
     "rds-mysql": "rds",
     "rds-postgres": "rds",
-    "rds-aurora": "rds",
+    "rds-aurora": "aurora",
+    "rds-replica": "rds",
     "mysql": "rds",
     "postgres": "rds",
-    "aurora": "rds",
-    // Networking
+    "read-replica": "rds",
+    // Networking -> vpc
     "security-group": "vpc",
     "internet-gateway": "vpc",
     "nat-gateway": "vpc",
     "igw": "vpc",
     "sg": "vpc",
-    // Subnets and scaling
+    "vpc-endpoint": "vpc",
+    // Subnets
     "subnet-public": "group-public-subnet",
     "subnet-private": "group-private-subnet",
     "public-subnet": "group-public-subnet",
     "private-subnet": "group-private-subnet",
+    // Auto Scaling
     "auto-scaling": "group-auto-scaling",
     "autoscaling": "group-auto-scaling",
-    // Backup
+    "asg": "group-auto-scaling",
+    // Backup -> s3 (storage icon)
     "backup": "s3",
-    // Generic/custom - fallback to generic icons
-    "dev-env": "cloud9",
+    "aws-backup": "s3",
+    // Config -> cloudwatch (monitoring)
+    "config": "cloudwatch",
+    "aws-config": "cloudwatch",
+    // X-Ray -> cloudwatch
+    "xray": "cloudwatch",
+    "x-ray": "cloudwatch",
+    // SES -> sns (messaging)
+    "ses": "sns",
+    // MSK -> kinesis (streaming)
+    "msk": "kinesis",
+    // Redshift -> rds (database)
+    "redshift": "rds",
+    // MemoryDB -> elasticache
+    "memorydb": "elasticache",
+    // Generic/custom fallbacks
+    "dev-env": "ec2",
     "third-party-payment": "api-gateway",
     "payment-gateway": "api-gateway",
     "external-service": "api-gateway",
@@ -94,11 +137,18 @@ function getIconPath(serviceId: string): string {
   
   // Apply alias if exists
   if (aliases[normalized]) {
-    normalized = aliases[normalized];
+    return `/aws-icons/${aliases[normalized]}.svg`;
   }
   
-  // Return the icon path - the file should exist at /aws-icons/{normalized}.svg
-  return `/aws-icons/${normalized}.svg`;
+  // Try to find a partial match in available icons
+  for (const icon of AVAILABLE_ICONS) {
+    if (normalized.includes(icon) || icon.includes(normalized)) {
+      return `/aws-icons/${icon}.svg`;
+    }
+  }
+  
+  // Default fallback - return empty to trigger fallback UI
+  return "";
 }
 
 // AWS Service Node - Professional PowerPoint style with larger icons and proper spacing
