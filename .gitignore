@@ -57,3 +57,6 @@ nginx/ssl/*.crt
 venv/
 __pycache__/
 *.pyc
+
+# LibreOffice lock files
+.~lock.*#
