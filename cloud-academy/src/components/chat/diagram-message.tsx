@@ -296,6 +296,10 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
   // Check if nodes need positioning (new tier-based format)
   const diagramData = useMemo(() => {
     try {
+      // Debug: Log incoming diagram data
+      console.log("[DiagramCanvas] Input diagram:", JSON.stringify(diagram, null, 2).slice(0, 500));
+      console.log("[DiagramCanvas] First node:", diagram.nodes[0]);
+      
       // Check if nodes lack positions but have tier data - need to apply template
       const needsLayout = diagram.nodes.some(n => !n.position && n.data?.tier);
       
@@ -318,8 +322,10 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
         }));
         
         console.log("[DiagramCanvas] Building diagram with", services.length, "services");
+        console.log("[DiagramCanvas] Sample services:", services.slice(0, 3));
         const result = buildAWSDiagram({ services, connections });
-        console.log("[DiagramCanvas] Built diagram with", result.nodes.length, "nodes");
+        console.log("[DiagramCanvas] Built", result.nodes.length, "nodes");
+        console.log("[DiagramCanvas] Sample node positions:", result.nodes.slice(0, 5).map(n => ({ id: n.id, type: n.type, pos: n.position })));
         return result;
       }
       
@@ -338,7 +344,7 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
 
   // Transform nodes with proper styling
   const nodes = useMemo(() => {
-    return diagramData.nodes.map((node) => {
+    const transformedNodes = diagramData.nodes.map((node) => {
       const isGroup = node.type === "group";
       const isLabel = node.type === "label";
       return {
@@ -356,6 +362,8 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
         },
       };
     });
+    console.log("[DiagramCanvas] Final nodes for ReactFlow:", transformedNodes.length, transformedNodes.slice(0, 2));
+    return transformedNodes;
   }, [diagramData.nodes]);
   
   // Calculate canvas size from nodes
@@ -399,7 +407,8 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
 
   return (
     <div 
-      className="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden border border-border/50 bg-gradient-to-br from-white to-slate-50"
+      className="relative w-full rounded-xl overflow-hidden border border-border/50 bg-gradient-to-br from-white to-slate-50"
+      style={{ height: '450px' }}
     >
       {/* Header bar */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-slate-100 to-transparent">
@@ -461,6 +470,13 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
         </div>
       </div>
 
+      {/* Debug info */}
+      {nodes.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+          No nodes to display
+        </div>
+      )}
+      
       {/* React Flow Canvas */}
       <ReactFlow
         nodes={nodes}
@@ -476,6 +492,7 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
         elementsSelectable={false}
         panOnDrag={true}
         zoomOnScroll={true}
+        onInit={() => console.log("[DiagramCanvas] ReactFlow initialized with", nodes.length, "nodes")}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
         <Controls showInteractive={false} className="!bottom-2 !left-2" />

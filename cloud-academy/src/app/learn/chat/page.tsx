@@ -613,7 +613,7 @@ function ChatContent() {
                           
                           {/* Render diagram if present */}
                           {message.diagram && message.diagram.nodes.length > 0 && (
-                            <div className="mt-4">
+                            <div className="mt-4 h-[500px] bg-gray-950 rounded-lg border border-white/5 overflow-hidden">
                               <DiagramMessage 
                                 diagram={message.diagram}
                               />

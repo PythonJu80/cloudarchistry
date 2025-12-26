@@ -14,8 +14,9 @@ import asyncio
 import json
 from typing import Dict, Any
 
-# Learning Agent URL - Production
+# URLs - Same pattern as production client app
 LEARNING_AGENT_URL = "https://cloudarchistry.com"
+DRAWING_AGENT_URL = "https://cloudarchistry.com"  # Same as process.env.DRAWING_AGENT_URL || "https://cloudarchistry.com"
 
 
 # ============================================
