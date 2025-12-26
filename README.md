@@ -52,7 +52,7 @@ Cloudarchistry is a comprehensive learning platform designed to help cloud engin
 | **Bug Bounty** | Find and fix architecture anti-patterns |
 | **Architect Arena** | Head-to-head architecture battles |
 | **Cloud Tycoon** | Build and manage your cloud empire |
-| **Quiz Battle** | Be fast on the buzzer and asnwer correctly to win games over your apponent |
+| **Quiz Battle** | Be fast on the buzzer and answer correctly to win games over your apponent |
 
 ### Learning Tools
 
