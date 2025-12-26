@@ -13,7 +13,6 @@ import {
   PlayCircle,
   Lock,
   ChevronRight,
-  Settings,
   Zap,
   BookOpen,
   Brain,
@@ -24,7 +23,6 @@ import {
   Users,
   XCircle,
   Loader2,
-  Globe,
   FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -710,33 +708,6 @@ export default function DashboardPage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              {/* Quick Actions */}
-              <Card className="bg-card/50 border-border/50">
-                <CardHeader>
-                  <CardTitle className="text-lg">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Link href="/world" className="block">
-                    <Button variant="outline" className="w-full justify-start gap-2">
-                      <Globe className="w-4 h-4 text-cyan-400" />
-                      Explore World Map
-                    </Button>
-                  </Link>
-                  <Link href="/leaderboard" className="block">
-                    <Button variant="outline" className="w-full justify-start gap-2">
-                      <Trophy className="w-4 h-4 text-purple-400" />
-                      View Leaderboard
-                    </Button>
-                  </Link>
-                  <Link href="/dashboard/settings" className="block">
-                    <Button variant="outline" className="w-full justify-start gap-2">
-                      <Settings className="w-4 h-4 text-muted-foreground" />
-                      Settings
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
               {/* AI Access Status */}
               <Card className="bg-card/50 border-border/50">
                 <CardHeader>

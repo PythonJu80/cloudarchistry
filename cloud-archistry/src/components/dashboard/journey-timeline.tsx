@@ -459,7 +459,7 @@ const JourneyCard = memo(function JourneyCard({
   preferredModel?: string;
   onRefresh?: () => void;
 }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [selectedChallengeIndex, setSelectedChallengeIndex] = useState<number | null>(null);
   const hasTimeline = journey.challenges && journey.challenges.length > 0;
   
