@@ -348,7 +348,6 @@ export default function Globe3D({
               pointer-events: auto;
             ">
               <div style="color: white; font-weight: 700; font-size: 12px; pointer-events: none;">${d.name}</div>
-              <div style="color: #9ca3af; font-size: 10px; pointer-events: none;">${d.businesses} businesses</div>
             </div>
           `;
           // Prevent event bubbling to globe

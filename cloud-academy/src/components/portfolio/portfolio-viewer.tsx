@@ -19,9 +19,9 @@ import {
   Sparkles,
 } from "lucide-react";
 
-const DiagramPreview = dynamic(
-  () => import("./diagram-preview").then((mod) => mod.DiagramPreview),
-  { ssr: false, loading: () => <div className="h-[400px] bg-slate-200 rounded-lg animate-pulse" /> }
+const DiagramMessage = dynamic(
+  () => import("@/components/chat/diagram-message").then((mod) => mod.DiagramMessage),
+  { ssr: false, loading: () => <div className="h-[450px] bg-slate-800 rounded-xl animate-pulse" /> }
 );
 
 interface DiagramNode {
@@ -186,16 +186,30 @@ export function PortfolioViewer({ portfolio, open, onClose }: PortfolioViewerPro
               {hasDiagram && (
                 <section>
                   <h2 className="text-lg font-semibold mb-3">Architecture Diagram</h2>
-                  <div className="rounded-lg overflow-hidden border border-border/30">
-                    <DiagramPreview
-                      nodes={portfolio.architectureDiagram!.nodes}
-                      edges={portfolio.architectureDiagram!.edges}
-                      className="h-[500px]"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
-                    {portfolio.architectureDiagram!.nodes.length} services • {portfolio.architectureDiagram!.edges.length} connections
-                  </p>
+                  <DiagramMessage
+                    diagram={{
+                      nodes: portfolio.architectureDiagram!.nodes.map(node => {
+                        const isContainer = node.type === "vpc" || node.type === "subnet";
+                        return {
+                          id: node.id,
+                          type: isContainer ? "group" : "awsService",
+                          position: node.position,
+                          data: {
+                            label: node.data.label,
+                            service_id: node.data.serviceId,
+                            description: node.data.sublabel,
+                            // Pass width/height for container nodes
+                            width: isContainer ? node.width : undefined,
+                            height: isContainer ? node.height : undefined,
+                          },
+                        };
+                      }),
+                      edges: portfolio.architectureDiagram!.edges,
+                      metadata: {
+                        nodes_count: portfolio.architectureDiagram!.nodes.length,
+                      },
+                    }}
+                  />
                 </section>
               )}
 
