@@ -20,6 +20,10 @@ COPY . .
 RUN uv pip install --system -e . && \
     crawl4ai-setup
 
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE ${PORT}
 
 # Command to run the agent with gunicorn for production

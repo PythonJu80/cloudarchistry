@@ -32,10 +32,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware
+# Security: Restrict CORS to trusted origins only
+ALLOWED_ORIGINS = [
+    "https://cloudarchistry.com",
+    "https://www.cloudarchistry.com",
+    "http://localhost:6060",  # Development only
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

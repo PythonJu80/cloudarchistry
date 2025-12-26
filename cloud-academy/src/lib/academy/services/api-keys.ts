@@ -7,16 +7,24 @@ import prisma from "@/lib/db";
 import crypto from "crypto";
 
 // Encryption config - use NEXTAUTH_SECRET for consistency with settings route
-const ENCRYPTION_KEY = process.env.NEXTAUTH_SECRET || "cloudarchistry-secret-change-in-production";
+function getEncryptionKey(): string {
+  const key = process.env.NEXTAUTH_SECRET;
+  if (!key || key.length < 32) {
+    throw new Error("NEXTAUTH_SECRET must be set and at least 32 characters");
+  }
+  return key;
+}
+const ENCRYPTION_KEY = getEncryptionKey();
 const ALGORITHM = "aes-256-gcm";
 
 /**
  * Encrypt a string value
- * Returns: iv:authTag:encryptedData (all hex) - matches settings route
+ * Returns: salt:iv:authTag:encryptedData (all hex)
  */
 function encrypt(text: string): string {
+  const salt = crypto.randomBytes(16);
   const iv = crypto.randomBytes(16);
-  const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
+  const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   
   let encrypted = cipher.update(text, "utf8", "hex");
@@ -24,32 +32,46 @@ function encrypt(text: string): string {
   
   const authTag = cipher.getAuthTag();
   
-  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
+  return `${salt.toString("hex")}:${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
 }
 
 /**
  * Decrypt a string value
- * Expects: iv:authTag:encryptedData (all hex) - matches settings route
+ * Expects: salt:iv:authTag:encryptedData (all hex) OR legacy iv:authTag:encryptedData
  */
 function decrypt(encryptedText: string): string {
   const parts = encryptedText.split(":");
-  if (parts.length !== 3) {
+  
+  // Support both new format (4 parts with salt) and legacy format (3 parts without salt)
+  if (parts.length === 4) {
+    const [saltHex, ivHex, authTagHex, encrypted] = parts;
+    const salt = Buffer.from(saltHex, "hex");
+    const iv = Buffer.from(ivHex, "hex");
+    const authTag = Buffer.from(authTagHex, "hex");
+    const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
+    
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } else if (parts.length === 3) {
+    // Legacy format without salt
+    const [ivHex, authTagHex, encrypted] = parts;
+    const iv = Buffer.from(ivHex, "hex");
+    const authTag = Buffer.from(authTagHex, "hex");
+    const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
+    
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } else {
     throw new Error("Invalid encrypted format");
   }
-  
-  const [ivHex, authTagHex, encrypted] = parts;
-  
-  const iv = Buffer.from(ivHex, "hex");
-  const authTag = Buffer.from(authTagHex, "hex");
-  const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
-  
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-  
-  let decrypted = decipher.update(encrypted, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-  
-  return decrypted;
 }
 
 /**

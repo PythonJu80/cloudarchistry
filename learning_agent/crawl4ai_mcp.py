@@ -249,7 +249,15 @@ def _resolve_persona_id(persona_id: Optional[str], certification_code: Optional[
 # ============================================
 
 app = FastAPI(title="CloudArchistry Learning Agent", description="AI-powered learning agent for AWS cloud architecture")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+# Security: Restrict CORS to trusted origins only
+ALLOWED_ORIGINS = [
+    "https://cloudarchistry.com",
+    "https://www.cloudarchistry.com",
+    "http://localhost:6060",  # Development only
+    "http://10.121.19.210:6060",  # Local network access
+]
+app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 
 @app.exception_handler(ApiKeyRequiredError)

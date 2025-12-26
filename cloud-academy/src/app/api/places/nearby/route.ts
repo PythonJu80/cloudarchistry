@@ -4,7 +4,7 @@ import { Redis } from "ioredis";
 const GOOGLE_PLACES_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 // Redis for persistent caching
-const redis = new Redis("redis://10.121.15.210:4379");
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
 interface Business {
   id: string;

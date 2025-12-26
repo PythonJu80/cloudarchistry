@@ -2,33 +2,27 @@
 Diagram-related Pydantic models.
 """
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class DiagramNode(BaseModel):
     """A node in the architecture diagram"""
+    model_config = ConfigDict(populate_by_name=True)
+    
     id: str
     type: str  # 'vpc', 'subnet', 'securityGroup', 'autoScaling', 'awsResource'
     label: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
     parent_id: Optional[str] = None  # For hierarchy analysis
     position: Optional[Dict[str, float]] = None  # {x, y}
-    
-    class Config:
-        populate_by_name = True
 
 
 class DiagramConnection(BaseModel):
     """A connection between nodes"""
-    from_node: str  # 'from' is reserved in Python
-    to_node: str    # 'to' for consistency
+    model_config = ConfigDict(populate_by_name=True)
     
-    class Config:
-        populate_by_name = True
-        fields = {
-            'from_node': {'alias': 'from'},
-            'to_node': {'alias': 'to'}
-        }
+    from_node: str = Field(alias='from')  # 'from' is reserved in Python
+    to_node: str = Field(alias='to')      # 'to' for consistency
 
 
 class AuditDiagramRequest(BaseModel):

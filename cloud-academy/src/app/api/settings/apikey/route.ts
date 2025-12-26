@@ -5,23 +5,49 @@ import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
 // Decryption helper - must match encryption in settings/route.ts
-const ENCRYPTION_KEY = process.env.NEXTAUTH_SECRET || "cloudarchistry-secret-change-in-production";
+function getEncryptionKey(): string {
+  const key = process.env.NEXTAUTH_SECRET;
+  if (!key || key.length < 32) {
+    throw new Error("NEXTAUTH_SECRET must be set and at least 32 characters");
+  }
+  return key;
+}
+const ENCRYPTION_KEY = getEncryptionKey();
 const ALGORITHM = "aes-256-gcm";
 
 function decrypt(encryptedData: string): string {
-  const [ivHex, authTagHex, encrypted] = encryptedData.split(":");
+  const parts = encryptedData.split(":");
   
-  const iv = Buffer.from(ivHex, "hex");
-  const authTag = Buffer.from(authTagHex, "hex");
-  const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
-  
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-  
-  let decrypted = decipher.update(encrypted, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-  
-  return decrypted;
+  // Support both new format (4 parts with salt) and legacy format (3 parts without salt)
+  if (parts.length === 4) {
+    const [saltHex, ivHex, authTagHex, encrypted] = parts;
+    const salt = Buffer.from(saltHex, "hex");
+    const iv = Buffer.from(ivHex, "hex");
+    const authTag = Buffer.from(authTagHex, "hex");
+    const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
+    
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } else if (parts.length === 3) {
+    // Legacy format without salt
+    const [ivHex, authTagHex, encrypted] = parts;
+    const iv = Buffer.from(ivHex, "hex");
+    const authTag = Buffer.from(authTagHex, "hex");
+    const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
+    
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } else {
+    throw new Error("Invalid encrypted format");
+  }
 }
 
 // GET - return decrypted API key for use in generation

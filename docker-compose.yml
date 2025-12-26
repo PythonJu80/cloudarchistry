@@ -5,8 +5,8 @@ services:
     ports:
       - "6070:5432"
     environment:
-      - POSTGRES_USER=cloudmigrate
-      - POSTGRES_PASSWORD=cloudmigrate2025
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=cloudmigrate
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -88,7 +88,7 @@ services:
       - "6085:7474"  # Browser UI
       - "6086:7687"  # Bolt protocol
     environment:
-      - NEO4J_AUTH=neo4j/cloudmigrate2025
+      - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=["apoc", "graph-data-science"]
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*,gds.*
       - NEO4J_dbms_security_procedures_allowlist=apoc.*,gds.*
@@ -249,8 +249,8 @@ services:
       - "6093:9000"  # API
       - "6094:9001"  # Console
     environment:
-      - MINIO_ROOT_USER=cloudmigrate
-      - MINIO_ROOT_PASSWORD=cloudmigrate2025
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -313,7 +313,7 @@ services:
       - ARCHITECTURES_DIR=/app/aws_architecture_diagrams
       - PORT=6098
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/cloudmigrate
     volumes:
       - ./cloud-academy/aws_drawing_agent/aws_architecture_diagrams:/app/aws_architecture_diagrams:ro
     depends_on:
@@ -324,204 +324,204 @@ services:
       - prod
       - dev
 
-  # Diagram Ingestion Service - Handles XML/VSDX uploads and validation (Production)
-  diagram-ingestion:
-    build:
-      context: ./diagram-community
-      dockerfile: ingestion/Dockerfile
-    restart: unless-stopped
-    ports:
-      - "6095:8000"
-    environment:
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=cloudmigrate
-      - MINIO_SECRET_KEY=cloudmigrate2025
-      - MINIO_BUCKET=architecture-diagrams
-      - REDIS_URL=redis://redis:6379
-      - MAX_FILE_SIZE_MB=50
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    profiles:
-      - prod
+  # # Diagram Ingestion Service - Handles XML/VSDX uploads and validation (Production) (DISABLED)
+  # diagram-ingestion:
+  #   build:
+  #     context: ./diagram-community
+  #     dockerfile: ingestion/Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6095:8000"
+  #   environment:
+  #     - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+  #     - MINIO_ENDPOINT=minio:9000
+  #     - MINIO_ACCESS_KEY=cloudmigrate
+  #     - MINIO_SECRET_KEY=cloudmigrate2025
+  #     - MINIO_BUCKET=architecture-diagrams
+  #     - REDIS_URL=redis://redis:6379
+  #     - MAX_FILE_SIZE_MB=50
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   profiles:
+  #     - prod
 
-  # Diagram Ingestion Service - Development with Hot Reload
-  diagram-ingestion-dev:
-    image: python:3.11-slim
-    restart: unless-stopped
-    working_dir: /app
-    ports:
-      - "6095:8000"
-    environment:
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=cloudmigrate
-      - MINIO_SECRET_KEY=cloudmigrate2025
-      - MINIO_BUCKET=architecture-diagrams
-      - REDIS_URL=redis://redis:6379
-      - MAX_FILE_SIZE_MB=50
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./diagram-community/ingestion:/app
-      - ./diagram-community/shared:/app/shared
-    command: bash -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    profiles:
-      - dev
+  # # Diagram Ingestion Service - Development with Hot Reload (DISABLED)
+  # diagram-ingestion-dev:
+  #   image: python:3.11-slim
+  #   restart: unless-stopped
+  #   working_dir: /app
+  #   ports:
+  #     - "6095:8000"
+  #   environment:
+  #     - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+  #     - MINIO_ENDPOINT=minio:9000
+  #     - MINIO_ACCESS_KEY=cloudmigrate
+  #     - MINIO_SECRET_KEY=cloudmigrate2025
+  #     - MINIO_BUCKET=architecture-diagrams
+  #     - REDIS_URL=redis://redis:6379
+  #     - MAX_FILE_SIZE_MB=50
+  #     - PYTHONUNBUFFERED=1
+  #   volumes:
+  #     - ./diagram-community/ingestion:/app
+  #     - ./diagram-community/shared:/app/shared
+  #   command: bash -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #   profiles:
+  #     - dev
 
-  # Diagram Parser Service - Extracts AWS services and categorizes (Production)
-  diagram-parser:
-    build:
-      context: ./diagram-community
-      dockerfile: parser/Dockerfile
-    restart: unless-stopped
-    ports:
-      - "6096:8001"
-    environment:
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=cloudmigrate
-      - MINIO_SECRET_KEY=cloudmigrate2025
-      - MINIO_BUCKET=architecture-diagrams
-      - REDIS_URL=redis://redis:6379
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=cloudmigrate2025
-      - LEARNING_AGENT_URL=http://learning-agent:1027
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      neo4j:
-        condition: service_started
-      learning-agent:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    profiles:
-      - prod
+  # # Diagram Parser Service - Extracts AWS services and categorizes (Production) (DISABLED)
+  # diagram-parser:
+  #   build:
+  #     context: ./diagram-community
+  #     dockerfile: parser/Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6096:8001"
+  #   environment:
+  #     - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+  #     - MINIO_ENDPOINT=minio:9000
+  #     - MINIO_ACCESS_KEY=cloudmigrate
+  #     - MINIO_SECRET_KEY=cloudmigrate2025
+  #     - MINIO_BUCKET=architecture-diagrams
+  #     - REDIS_URL=redis://redis:6379
+  #     - NEO4J_URI=bolt://neo4j:7687
+  #     - NEO4J_USER=neo4j
+  #     - NEO4J_PASSWORD=cloudmigrate2025
+  #     - LEARNING_AGENT_URL=http://learning-agent:1027
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #     neo4j:
+  #       condition: service_started
+  #     learning-agent:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   profiles:
+  #     - prod
 
-  # Diagram Parser Service - Development with Hot Reload
-  diagram-parser-dev:
-    image: python:3.11-slim
-    restart: unless-stopped
-    working_dir: /app
-    ports:
-      - "6096:8001"
-    environment:
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=cloudmigrate
-      - MINIO_SECRET_KEY=cloudmigrate2025
-      - MINIO_BUCKET=architecture-diagrams
-      - REDIS_URL=redis://redis:6379
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=cloudmigrate2025
-      - LEARNING_AGENT_URL=http://learning-agent:1027
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./diagram-community/parser:/app
-      - ./diagram-community/shared:/app/shared
-    command: bash -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8001 --reload"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      neo4j:
-        condition: service_started
-      learning-agent:
-        condition: service_healthy
-    profiles:
-      - dev
+  # # Diagram Parser Service - Development with Hot Reload (DISABLED)
+  # diagram-parser-dev:
+  #   image: python:3.11-slim
+  #   restart: unless-stopped
+  #   working_dir: /app
+  #   ports:
+  #     - "6096:8001"
+  #   environment:
+  #     - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+  #     - MINIO_ENDPOINT=minio:9000
+  #     - MINIO_ACCESS_KEY=cloudmigrate
+  #     - MINIO_SECRET_KEY=cloudmigrate2025
+  #     - MINIO_BUCKET=architecture-diagrams
+  #     - REDIS_URL=redis://redis:6379
+  #     - NEO4J_URI=bolt://neo4j:7687
+  #     - NEO4J_USER=neo4j
+  #     - NEO4J_PASSWORD=cloudmigrate2025
+  #     - LEARNING_AGENT_URL=http://learning-agent:1027
+  #     - PYTHONUNBUFFERED=1
+  #   volumes:
+  #     - ./diagram-community/parser:/app
+  #     - ./diagram-community/shared:/app/shared
+  #   command: bash -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8001 --reload"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #     neo4j:
+  #       condition: service_started
+  #     learning-agent:
+  #       condition: service_healthy
+  #   profiles:
+  #     - dev
 
-  # Diagram API Gateway - REST API for cloud-academy integration (Production)
-  diagram-api:
-    build:
-      context: ./diagram-community
-      dockerfile: api/Dockerfile
-    restart: unless-stopped
-    ports:
-      - "6097:8002"
-    environment:
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=cloudmigrate
-      - MINIO_SECRET_KEY=cloudmigrate2025
-      - MINIO_BUCKET=architecture-diagrams
-      - REDIS_URL=redis://redis:6379
-      - INGESTION_SERVICE_URL=http://diagram-ingestion:8000
-      - PARSER_SERVICE_URL=http://diagram-parser:8001
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    profiles:
-      - prod
+  # # Diagram API Gateway - REST API for cloud-academy integration (Production) (DISABLED)
+  # diagram-api:
+  #   build:
+  #     context: ./diagram-community
+  #     dockerfile: api/Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6097:8002"
+  #   environment:
+  #     - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+  #     - MINIO_ENDPOINT=minio:9000
+  #     - MINIO_ACCESS_KEY=cloudmigrate
+  #     - MINIO_SECRET_KEY=cloudmigrate2025
+  #     - MINIO_BUCKET=architecture-diagrams
+  #     - REDIS_URL=redis://redis:6379
+  #     - INGESTION_SERVICE_URL=http://diagram-ingestion:8000
+  #     - PARSER_SERVICE_URL=http://diagram-parser:8001
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   profiles:
+  #     - prod
 
-  # Diagram API Gateway - Development with Hot Reload
-  diagram-api-dev:
-    image: python:3.11-slim
-    restart: unless-stopped
-    working_dir: /app
-    ports:
-      - "6097:8002"
-    environment:
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=cloudmigrate
-      - MINIO_SECRET_KEY=cloudmigrate2025
-      - MINIO_BUCKET=architecture-diagrams
-      - REDIS_URL=redis://redis:6379
-      - INGESTION_SERVICE_URL=http://diagram-ingestion-dev:8000
-      - PARSER_SERVICE_URL=http://diagram-parser-dev:8001
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./diagram-community/api:/app
-      - ./diagram-community/shared:/app/shared
-    command: bash -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8002 --reload"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    profiles:
-      - dev
+  # # Diagram API Gateway - Development with Hot Reload (DISABLED)
+  # diagram-api-dev:
+  #   image: python:3.11-slim
+  #   restart: unless-stopped
+  #   working_dir: /app
+  #   ports:
+  #     - "6097:8002"
+  #   environment:
+  #     - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+  #     - MINIO_ENDPOINT=minio:9000
+  #     - MINIO_ACCESS_KEY=cloudmigrate
+  #     - MINIO_SECRET_KEY=cloudmigrate2025
+  #     - MINIO_BUCKET=architecture-diagrams
+  #     - REDIS_URL=redis://redis:6379
+  #     - INGESTION_SERVICE_URL=http://diagram-ingestion-dev:8000
+  #     - PARSER_SERVICE_URL=http://diagram-parser-dev:8001
+  #     - PYTHONUNBUFFERED=1
+  #   volumes:
+  #     - ./diagram-community/api:/app
+  #     - ./diagram-community/shared:/app/shared
+  #   command: bash -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8002 --reload"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #   profiles:
+  #     - dev
 
   # CloudAcademy - Production Build
   cloud-academy:
@@ -536,9 +536,9 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=6060
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/cloudmigrate
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - DIAGRAM_API_URL=http://diagram-api:8002
+      # - DIAGRAM_API_URL=http://diagram-api:8002
       - LEARNING_AGENT_URL=http://learning-agent:1027
       - DRAWING_AGENT_URL=http://aws-drawing-agent:6098
     depends_on:
@@ -546,8 +546,6 @@ services:
         condition: service_healthy
       learning-agent:
         condition: service_started
-      diagram-api:
-        condition: service_healthy
     profiles:
       - prod
 
@@ -563,9 +561,9 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=6060
-      - DATABASE_URL=postgresql://cloudmigrate:cloudmigrate2025@postgres:5432/cloudmigrate
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/cloudmigrate
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - DIAGRAM_API_URL=http://diagram-api-dev:8002
+      # - DIAGRAM_API_URL=http://diagram-api-dev:8002
       - DRAWING_AGENT_URL=http://aws-drawing-agent:6098
     volumes:
       - ./cloud-academy:/app

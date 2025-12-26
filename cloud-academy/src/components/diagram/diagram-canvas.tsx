@@ -1416,17 +1416,22 @@ function DiagramCanvasInner({
         hasSelection={!!selectedNode}
         showGrid={showGrid}
         zoomLevel={zoomLevel}
-        // Text style controls
+        // Text style controls - use live node data from nodes array, not stale selectedNode
         onUpdateTextStyle={handleUpdateTextStyle}
         isTextNodeSelected={selectedNode?.type === "textNode"}
-        selectedTextStyle={selectedNode?.type === "textNode" ? {
-          fontSize: selectedNode.data?.fontSize as number | undefined,
-          fontFamily: selectedNode.data?.fontFamily as "sans" | "serif" | "mono" | undefined,
-          fontWeight: selectedNode.data?.fontWeight as "normal" | "bold" | undefined,
-          fontStyle: selectedNode.data?.fontStyle as "normal" | "italic" | undefined,
-          textDecoration: selectedNode.data?.textDecoration as "none" | "underline" | "line-through" | undefined,
-          textColor: selectedNode.data?.textColor as string | undefined,
-        } : undefined}
+        selectedTextStyle={(() => {
+          if (selectedNode?.type !== "textNode") return undefined;
+          const liveNode = nodes.find(n => n.id === selectedNode.id);
+          if (!liveNode) return undefined;
+          return {
+            fontSize: liveNode.data?.fontSize as number | undefined,
+            fontFamily: liveNode.data?.fontFamily as "sans" | "serif" | "mono" | undefined,
+            fontWeight: liveNode.data?.fontWeight as "normal" | "bold" | undefined,
+            fontStyle: liveNode.data?.fontStyle as "normal" | "italic" | undefined,
+            textDecoration: liveNode.data?.textDecoration as "none" | "underline" | "line-through" | undefined,
+            textColor: liveNode.data?.textColor as string | undefined,
+          };
+        })()}
         // Node style controls
         selectedNode={getSelectedNodeInfo()}
         onUpdateNodeStyle={handleUpdateNodeStyle}

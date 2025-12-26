@@ -3,6 +3,8 @@ import { hash } from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { sendVerificationEmail } from "@/lib/email";
 import { z } from "zod";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/academy/services/rate-limit";
+import { validateCsrf } from "@/lib/csrf";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -15,8 +17,23 @@ const registerSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // CSRF protection - validate Origin header
+    const csrfError = validateCsrf(req);
+    if (csrfError) return csrfError;
+
+    // Rate limit by IP address
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || req.headers.get("x-real-ip") || "unknown";
+    const rateLimit = checkRateLimit(`register:${ip}`, RATE_LIMITS.REGISTRATION);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many registration attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
-    console.log("Registration attempt with body:", JSON.stringify(body, null, 2));
+    // Security: Only log non-sensitive data
+    console.log("Registration attempt for:", body.email);
     const { email, password, name, username, organizationName, userType } = registerSchema.parse(body);
     
     // Set subscription tier based on user type (beta)

@@ -798,13 +798,15 @@ export const TextNode = memo(({ data, selected, id }: { data: TextNodeData; sele
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { setNodes } = useReactFlow();
 
-  // When editing starts/stops, update the node's draggable property
+  // When editing STARTS, disable dragging (blur handles re-enabling + saving)
   useEffect(() => {
-    setNodes(nodes => nodes.map(node => 
-      node.id === id 
-        ? { ...node, draggable: !isEditing }
-        : node
-    ));
+    if (isEditing) {
+      setNodes(nodes => nodes.map(node => 
+        node.id === id 
+          ? { ...node, draggable: false }
+          : node
+      ));
+    }
   }, [isEditing, id, setNodes]);
 
   // Focus textarea when editing starts - put cursor at end, don't select all
@@ -834,14 +836,13 @@ export const TextNode = memo(({ data, selected, id }: { data: TextNodeData; sele
 
   const handleBlur = () => {
     setIsEditing(false);
-    // Save the text to the node data
-    if (localText !== data.label) {
-      setNodes(nodes => nodes.map(node => 
-        node.id === id 
-          ? { ...node, data: { ...node.data, label: localText } }
-          : node
-      ));
-    }
+    // Save the text AND restore draggable in a single setNodes call
+    // This prevents race conditions with the useEffect that also updates draggable
+    setNodes(nodes => nodes.map(node => 
+      node.id === id 
+        ? { ...node, draggable: true, data: { ...node.data, label: localText } }
+        : node
+    ));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
