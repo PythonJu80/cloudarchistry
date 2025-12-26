@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const requestBody = body;
     
-    const response = await fetch(`${LEARNING_AGENT_URL}/research`, {
+    const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/research`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

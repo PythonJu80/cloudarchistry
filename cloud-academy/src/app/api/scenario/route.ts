@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const requestBody = body;
     
-    const response = await fetch(`${LEARNING_AGENT_URL}/generate-scenario`, {
+    // Use the streaming endpoint for SSE progress updates
+    const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/generate-scenario-stream`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -34,8 +35,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    // Stream the SSE response through to the client
+    return new Response(response.body, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
   } catch (error) {
     console.error("Scenario generation error:", error);
     return NextResponse.json(

@@ -19,7 +19,7 @@ class CompanyInfo(BaseModel):
     business_challenges: List[str] = []
     data_types: List[str] = []
     traffic_patterns: Optional[str] = None
-    global_presence: Optional[str] = None
+    global_presence: Optional[str | List[str]] = None
 
 
 class ScenarioChallenge(BaseModel):

@@ -39,6 +39,42 @@ interface LogEntry {
   sources?: string[];
 }
 
+interface ChallengeStartData {
+  challengeIndex: number;
+  challenge: {
+    id: string;
+    title: string;
+    description: string;
+    difficulty: string;
+    points: number;
+    hints: string[];
+    success_criteria: string[];
+    aws_services_relevant: string[];
+    estimated_time_minutes: number;
+  };
+  scenario: {
+    scenario_title: string;
+    scenario_description: string;
+    business_context: string;
+    company_name: string;
+  };
+  companyInfo: Record<string, unknown>;
+  totalChallenges: number;
+  allChallenges: Array<{
+    id: string;
+    title: string;
+    description: string;
+    difficulty: string;
+    points: number;
+    hints: string[];
+    success_criteria: string[];
+    aws_services_relevant: string[];
+    estimated_time_minutes: number;
+  }>;
+  scenarioId: string;
+  attemptId: string;
+}
+
 interface ScenarioGenerationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,6 +92,7 @@ interface ScenarioGenerationModalProps {
   onNotes?: (scenario: Record<string, unknown>, companyInfo: Record<string, unknown>) => void;
   onFlashcards?: (scenario: Record<string, unknown>, companyInfo: Record<string, unknown>) => void;
   onCoach?: (scenario: Record<string, unknown>, companyInfo: Record<string, unknown>) => void;
+  onChallengeStart?: (data: ChallengeStartData) => void;
 }
 
 export function ScenarioGenerationModal({
@@ -75,6 +112,7 @@ export function ScenarioGenerationModal({
   onNotes,
   onFlashcards,
   onCoach,
+  onChallengeStart,
 }: ScenarioGenerationModalProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -395,9 +433,32 @@ export function ScenarioGenerationModal({
                   <button
                     key={i}
                     onClick={() => {
-                      if (!isAccepted) return;
-                      setSelectedChallengeIndex(i);
-                      setShowWorkspace(true);
+                      if (!isAccepted || !acceptedData) return;
+                      const challenges = result.scenario.challenges as Array<{id: string; title: string; difficulty: string; points: number; description: string; hints: string[]; success_criteria: string[]; aws_services_relevant: string[]; estimated_time_minutes: number}>;
+                      if (onChallengeStart) {
+                        // Call parent callback to open workspace at page level
+                        onChallengeStart({
+                          challengeIndex: i,
+                          challenge: challenges[i],
+                          scenario: {
+                            scenario_title: result.scenario.scenario_title as string,
+                            scenario_description: result.scenario.scenario_description as string,
+                            business_context: result.scenario.business_context as string || result.scenario.scenario_description as string,
+                            company_name: result.companyInfo.name as string,
+                          },
+                          companyInfo: result.companyInfo,
+                          totalChallenges: challenges.length,
+                          allChallenges: challenges,
+                          scenarioId: acceptedData.scenarioId,
+                          attemptId: acceptedData.attemptId,
+                        });
+                        // Close this modal - parent will open ChallengeWorkspaceModal
+                        onClose();
+                      } else {
+                        // Fallback to old behavior if no callback provided
+                        setSelectedChallengeIndex(i);
+                        setShowWorkspace(true);
+                      }
                     }}
                     disabled={!isAccepted}
                     className={cn(

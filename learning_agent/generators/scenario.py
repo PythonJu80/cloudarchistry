@@ -14,35 +14,8 @@ from openai import AsyncOpenAI
 from prompts import SCENARIO_GENERATOR_PROMPT, PERSONA_SCENARIO_PROMPT, AWS_PERSONAS
 from utils import get_request_model, ApiKeyRequiredError, DEFAULT_MODEL
 
-
-class Challenge(BaseModel):
-    """Single challenge within a scenario"""
-    id: str
-    title: str
-    description: str
-    difficulty: str  # beginner, intermediate, advanced, expert
-    points: int
-    hints: List[str] = []
-    success_criteria: List[str] = []
-    aws_services_relevant: List[str] = []
-    estimated_time_minutes: int = 30
-
-
-class CloudScenario(BaseModel):
-    """Complete training scenario"""
-    id: str
-    company_name: str
-    scenario_title: str
-    scenario_description: str
-    business_context: str
-    technical_requirements: List[str] = []
-    compliance_requirements: List[str] = []
-    constraints: List[str] = []
-    challenges: List[Challenge] = []
-    learning_objectives: List[str] = []
-    difficulty: str = "intermediate"
-    estimated_total_time_minutes: int = 120
-    tags: List[str] = []
+# Import shared models from models/learning.py to ensure type consistency
+from models.learning import CloudScenario, ScenarioChallenge as Challenge
 
 
 class CompanyInfo(BaseModel):

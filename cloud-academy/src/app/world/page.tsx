@@ -513,6 +513,43 @@ export default function WorldPage() {
   const [resumeChallenge, setResumeChallenge] = useState<SavedChallenge | null>(null);
   const [resumeChallengeIndex, setResumeChallengeIndex] = useState(0);
   
+  // State for newly started challenge (from ScenarioGenerationModal)
+  const [newChallengeData, setNewChallengeData] = useState<{
+    challengeIndex: number;
+    challenge: {
+      id: string;
+      title: string;
+      description: string;
+      difficulty: string;
+      points: number;
+      hints: string[];
+      success_criteria: string[];
+      aws_services_relevant: string[];
+      estimated_time_minutes: number;
+    };
+    scenario: {
+      scenario_title: string;
+      scenario_description: string;
+      business_context: string;
+      company_name: string;
+    };
+    companyInfo: Record<string, unknown>;
+    totalChallenges: number;
+    allChallenges: Array<{
+      id: string;
+      title: string;
+      description: string;
+      difficulty: string;
+      points: number;
+      hints: string[];
+      success_criteria: string[];
+      aws_services_relevant: string[];
+      estimated_time_minutes: number;
+    }>;
+    scenarioId: string;
+    attemptId: string;
+  } | null>(null);
+  
   // State for deleting challenges
   const [deletingChallengeId, setDeletingChallengeId] = useState<string | null>(null);
   
@@ -1825,6 +1862,15 @@ export default function WorldPage() {
               console.log("Start coaching for:", scenario, companyInfo);
               // TODO: Navigate to AI coach
             }}
+            onChallengeStart={(data) => {
+              // Close generation modal and open challenge workspace at page level
+              setShowGenerationModal(false);
+              setGenerationTarget(null);
+              setNewChallengeData(data);
+              // Also reset map state so Back to Globe doesn't show
+              setSelectedLocation(null);
+              setMapView("globe");
+            }}
           />
         )}
 
@@ -1878,6 +1924,63 @@ export default function WorldPage() {
             industry={resumeChallenge.location.industry}
             scenarioId={resumeChallenge.scenarioId}
             attemptId={resumeChallenge.id}
+          />
+        )}
+
+        {/* New Challenge Modal (from ScenarioGenerationModal) */}
+        {newChallengeData && (
+          <ChallengeWorkspaceModal
+            isOpen={!!newChallengeData}
+            onClose={() => {
+              setNewChallengeData(null);
+              // Refresh user challenges to get the new challenge in the list
+              fetch("/api/user/challenges")
+                .then(res => res.json())
+                .then(data => setUserChallenges(data.challenges || []))
+                .catch(console.error);
+            }}
+            challenge={{
+              id: newChallengeData.challenge.id,
+              title: newChallengeData.challenge.title,
+              description: newChallengeData.challenge.description,
+              difficulty: newChallengeData.challenge.difficulty,
+              points: newChallengeData.challenge.points,
+              hints: newChallengeData.challenge.hints,
+              success_criteria: newChallengeData.challenge.success_criteria,
+              aws_services_relevant: newChallengeData.challenge.aws_services_relevant,
+              estimated_time_minutes: newChallengeData.challenge.estimated_time_minutes,
+            }}
+            scenario={newChallengeData.scenario}
+            companyInfo={newChallengeData.companyInfo}
+            challengeIndex={newChallengeData.challengeIndex}
+            totalChallenges={newChallengeData.totalChallenges}
+            onNextChallenge={() => {
+              if (newChallengeData.challengeIndex < newChallengeData.totalChallenges - 1) {
+                const nextIndex = newChallengeData.challengeIndex + 1;
+                setNewChallengeData({
+                  ...newChallengeData,
+                  challengeIndex: nextIndex,
+                  challenge: newChallengeData.allChallenges[nextIndex],
+                });
+              }
+            }}
+            onPrevChallenge={() => {
+              if (newChallengeData.challengeIndex > 0) {
+                const prevIndex = newChallengeData.challengeIndex - 1;
+                setNewChallengeData({
+                  ...newChallengeData,
+                  challengeIndex: prevIndex,
+                  challenge: newChallengeData.allChallenges[prevIndex],
+                });
+              }
+            }}
+            apiKey={userApiKey}
+            preferredModel={preferredModel}
+            certCode={selectedCert}
+            userLevel={generationTarget?.skillLevel || "intermediate"}
+            industry={generationTarget?.industry}
+            scenarioId={newChallengeData.scenarioId}
+            attemptId={newChallengeData.attemptId}
           />
         )}
       </div>
