@@ -33,6 +33,7 @@ import { JourneyTimeline } from "@/components/dashboard/journey-timeline";
 import { Navbar } from "@/components/navbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardSocket } from "@/hooks/use-dashboard-socket";
+import { BadgesWidget } from "@/components/badges";
 
 interface DashboardData {
   profile: {
@@ -790,6 +791,9 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Badges Widget */}
+              <BadgesWidget />
 
               {/* Skill Level */}
               <Card className="bg-card/50 border-border/50">
