@@ -52,3 +52,8 @@ mcp-crawl4ai-rag/uv.lock
 nginx/ssl/*.pem
 nginx/ssl/*.key
 nginx/ssl/*.crt
+
+# Python
+venv/
+__pycache__/
+*.pyc
