@@ -1,4 +1,4 @@
-# ☁️ Cloudarchistry
+# Cloudarchistry
 
 **Interactive AWS Architecture Learning Platform**
 
@@ -12,34 +12,37 @@ Master cloud architecture through hands-on practice, interactive challenges, and
 
 ---
 
-## 🎯 What is Cloudarchistry?
+## What is Cloudarchistry?
 
 Cloudarchistry is a comprehensive learning platform designed to help cloud engineers, architects, and students master AWS services and architecture patterns through:
 
-- **🎨 Interactive Diagram Builder** - Draw AWS architecture diagrams with a professional canvas, 200+ AWS service icons, and real-time collaboration features
-- **🏆 Architecture Challenges** - Solve real-world cloud architecture problems with AI-powered feedback and scoring
-- **🎮 Educational Games** - Learn AWS services through engaging game modes like Speed Deploy, Ticking Bomb, and Service Sniper
-- **📚 Study Tools** - Flashcards, practice exams, and an AI-powered study assistant
-- **👥 Team Learning** - Cohort management for bootcamps, classrooms, and study groups
+- **Interactive Diagram Builder** - Draw AWS architecture diagrams with a professional canvas, 200+ AWS service icons, and real-time collaboration features
+- **Architecture Challenges** - Solve real-world cloud architecture problems with AI-powered feedback and scoring
+- **Educational Games** - Learn AWS services through engaging game modes like Speed Deploy, Ticking Bomb, and Service Sniper
+- **Study Tools** - Flashcards, practice exams, and an AI-powered study assistant
+- **Team Learning** - Cohort management for bootcamps, classrooms, and study groups
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🎨 Architecture Diagram Canvas
+### Architecture Diagram Canvas
+
 - **200+ AWS Service Icons** - All major AWS services with official iconography
 - **Drag & Drop Interface** - Intuitive React Flow-based canvas
 - **Grouping & Containers** - VPCs, subnets, availability zones, and custom groups
 - **Text Annotations** - Add labels, notes, and documentation
 - **Export & Share** - Save diagrams and share with your team
 
-### 🏆 Challenge System
+### Challenge System
+
 - **Scenario-Based Challenges** - Real-world architecture problems
 - **AI-Powered Auditing** - Get instant feedback on your designs
 - **Scoring & Leaderboards** - Compete with other learners
 - **Progressive Difficulty** - From beginner to expert level
 
-### 🎮 Game Modes
+### Game Modes
+
 | Game | Description |
 |------|-------------|
 | **Speed Deploy** | Race against time to answer AWS questions |
@@ -49,15 +52,18 @@ Cloudarchistry is a comprehensive learning platform designed to help cloud engin
 | **Bug Bounty** | Find and fix architecture anti-patterns |
 | **Architect Arena** | Head-to-head architecture battles |
 | **Cloud Tycoon** | Build and manage your cloud empire |
+| **Quiz Battle** | Be fast on the buzzer and asnwer correctly to win games over your apponent |
 
-### 📚 Learning Tools
+### Learning Tools
+
 - **AI Study Chat** - Ask questions about AWS services and best practices
 - **Flashcard Decks** - Spaced repetition for certification prep
 - **Practice Exams** - Simulate AWS certification exams
 - **Study Notes** - Personal note-taking with markdown support
 - **Learning Sources** - Curated resources and documentation
 
-### 👥 Team & Cohort Features
+### Team & Cohort Features
+
 - **Team Management** - Create and manage learning cohorts
 - **Progress Tracking** - Monitor team member advancement
 - **Invite System** - Easy onboarding with invite codes
@@ -65,7 +71,7 @@ Cloudarchistry is a comprehensive learning platform designed to help cloud engin
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 cloudmigrate-saas/
@@ -110,7 +116,7 @@ cloudmigrate-saas/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Docker & Docker Compose
@@ -150,7 +156,7 @@ python crawl4ai_mcp.py
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -170,7 +176,7 @@ LEARNING_AGENT_URL=http://localhost:8000
 
 ---
 
-## 📖 Documentation
+## Documentation
 
 - [Adding New Games](./cloud-academy/GAMES.md) - Guide for creating new game modes
 - [Challenge System](./cloud-academy/docs/challenges.md) - How challenges work
@@ -178,7 +184,7 @@ LEARNING_AGENT_URL=http://localhost:8000
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read our contributing guidelines before submitting PRs.
 
@@ -190,13 +196,13 @@ Contributions are welcome! Please read our contributing guidelines before submit
 
 ---
 
-## 📄 License
+## License
 
 This project is proprietary software. All rights reserved.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - AWS for the official service icons
 - The React Flow team for the excellent diagram library
@@ -205,6 +211,4 @@ This project is proprietary software. All rights reserved.
 
 ---
 
-<p align="center">
-  <strong>Built with ❤️ for cloud learners everywhere</strong>
-</p>
+**Built for cloud learners everywhere**
