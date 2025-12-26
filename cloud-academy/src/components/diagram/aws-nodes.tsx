@@ -577,12 +577,22 @@ export const SecurityGroupNode = memo(({ data, selected }: { data: SecurityGroup
       )}
       style={{ 
         backgroundColor: "rgba(221, 52, 76, 0.05)",
-        width: data.width || 180,
-        height: data.height || 120,
+        width: "100%",
+        height: "100%",
+        minWidth: 150,
+        minHeight: 100,
       }}
     >
+      <NodeResizer
+        isVisible={selected}
+        minWidth={150}
+        minHeight={100}
+        lineClassName="!border-cyan-500"
+        handleClassName="!w-3 !h-3 !bg-cyan-500 !border-2 !border-white"
+      />
+      
       {/* SG Label */}
-      <div className="absolute -top-3 left-4 flex items-center gap-1 bg-white px-2 py-0.5 border border-[#DD344C] rounded">
+      <div className="absolute -top-3 left-4 flex items-center gap-1 bg-white px-2 py-0.5 border border-[#DD344C] rounded z-10">
         <Shield className="w-3 h-3 text-[#DD344C]" />
         <span className="text-[#DD344C] text-[10px] font-medium">{data.label || "Security Group"}</span>
       </div>

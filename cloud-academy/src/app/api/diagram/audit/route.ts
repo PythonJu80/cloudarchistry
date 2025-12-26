@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Learning Agent audit error:", errorText);
+      console.error("Learning Agent audit error:", response.status, errorText);
       return NextResponse.json(
-        { error: "Failed to audit diagram" },
+        { error: "Failed to audit diagram", status: response.status, details: errorText },
         { status: 500 }
       );
     }
