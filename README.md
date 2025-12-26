@@ -102,7 +102,7 @@ cloudmigrate-saas/
 - Tailwind CSS
 - React Flow (diagram canvas)
 - Zustand (state management)
-- Supabase (auth & database)
+- Prisma (ORM)
 
 **Backend:**
 - Python FastAPI
@@ -112,7 +112,6 @@ cloudmigrate-saas/
 **Infrastructure:**
 - Docker Compose
 - PostgreSQL
-- Supabase
 
 ---
 
@@ -161,26 +160,31 @@ python crawl4ai_mcp.py
 ### Environment Variables
 
 ```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# Database (PostgreSQL)
+DATABASE_URL=postgresql://user:password@localhost:5432/cloudarchistry
 
-# AI Providers (optional - users can provide their own)
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-nextauth-secret-min-32-chars
+
+# AI Providers (optional - users can provide their own keys)
+OPENAI_API_KEY=your-openai-api-key
+ANTHROPIC_API_KEY=your-anthropic-api-key
 
 # Learning Agent
 LEARNING_AGENT_URL=http://localhost:8000
+NEXT_PUBLIC_LEARNING_AGENT_URL=http://localhost:8000
 ```
 
 ---
 
 ## Documentation
 
-- [Adding New Games](./cloud-academy/GAMES.md) - Guide for creating new game modes
-- [Challenge System](./cloud-academy/docs/challenges.md) - How challenges work
-- [API Reference](./learning_agent/README.md) - Backend API documentation
+- [Adding New Games](./cloud-archistry/GAMES.md) - Guide for creating new game modes
+- [Database Schema](./cloud-archistry/DATABASE.md) - Database structure and models
+- [ArchHub](./cloud-archistry/ARCHUB.md) - Architecture sharing hub
+- [Bug Bounty Game](./cloud-archistry/BUG_BOUNTY_README.md) - Bug Bounty game mode
+- [Learning Agent API](./learning_agent/README.md) - Backend API documentation
 
 ---
 
