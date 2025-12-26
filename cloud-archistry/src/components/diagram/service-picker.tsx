@@ -295,7 +295,6 @@ interface ServicePickerProps {
   selectedTextStyle?: TextStyleUpdate;
   // Node style controls
   selectedNode?: SelectedNodeInfo | null;
-  onUpdateNodeStyle?: (nodeId: string, style: NodeStyleUpdate) => void;
 }
 
 export function ServicePicker({ 
@@ -326,7 +325,6 @@ export function ServicePicker({
   isTextNodeSelected = false,
   selectedTextStyle,
   selectedNode,
-  onUpdateNodeStyle,
 }: ServicePickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<AWSCategory>>(
@@ -356,13 +354,6 @@ export function ServicePicker({
     iconPath: "" as string,
   });
 
-  // Local opacity state for smooth slider updates
-  const [localOpacity, setLocalOpacity] = useState(100);
-  
-  // Sync local opacity when selected node changes
-  useEffect(() => {
-    setLocalOpacity(selectedNode?.currentStyle?.opacity ?? 100);
-  }, [selectedNode?.id, selectedNode?.currentStyle?.opacity]);
 
   // Load custom services from localStorage on mount
   useEffect(() => {
@@ -855,9 +846,6 @@ export function ServicePicker({
   // ========================================
   const renderStylePanel = () => {
     const hasNodeSelected = !!selectedNode;
-    const currentBg = selectedNode?.currentStyle?.backgroundColor;
-    const currentBorder = selectedNode?.currentStyle?.borderColor;
-    const currentBorderStyle = selectedNode?.currentStyle?.borderStyle || "solid";
     
     return (
     <div className="flex-1 flex flex-col h-full bg-slate-900">
@@ -879,163 +867,6 @@ export function ServicePicker({
         </div>
       )}
       <div className={cn("flex-1 overflow-y-auto p-3 space-y-4", !hasNodeSelected && "opacity-50 pointer-events-none")}>
-        {/* Background Colors - AWS Category Colors */}
-        <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Background (AWS Colors)</p>
-          <div className="grid grid-cols-6 gap-1.5">
-            {[
-              // Row 1: AWS Category colors (light versions for backgrounds)
-              "#ED710020", "#3B48CC20", "#3F862420", "#8C4FFF20", "#DD344C20", "#E7157B20",
-              // Row 2: AWS Category colors (medium)
-              "#ED710040", "#3B48CC40", "#3F862440", "#8C4FFF40", "#DD344C40", "#E7157B40",
-              // Row 3: Neutrals
-              "#ffffff", "#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8",
-              // Row 4: AWS Dark theme compatible
-              "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#232F3E",
-            ].map((color) => (
-              <button
-                key={color}
-                onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { backgroundColor: color })}
-                className={cn(
-                  "aspect-square rounded-md border hover:scale-110 transition-transform",
-                  currentBg === color ? "ring-2 ring-cyan-400 border-cyan-400" : "border-slate-700"
-                )}
-                style={{ backgroundColor: color }}
-                title={color}
-              />
-            ))}
-          </div>
-        </div>
-        
-        {/* Border Colors - Official AWS Category Colors */}
-        <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Border (AWS Official)</p>
-          <div className="grid grid-cols-6 gap-1.5">
-            {[
-              // Row 1: AWS Official Category Colors
-              { color: "#ED7100", name: "Compute (Orange)" },
-              { color: "#3B48CC", name: "Database (Blue)" },
-              { color: "#3F8624", name: "Storage (Green)" },
-              { color: "#8C4FFF", name: "Networking (Purple)" },
-              { color: "#DD344C", name: "Security (Red)" },
-              { color: "#E7157B", name: "Integration (Pink)" },
-              // Row 2: More AWS Colors
-              { color: "#C925D1", name: "ML/AI (Magenta)" },
-              { color: "#01A88D", name: "IoT (Teal)" },
-              { color: "#7D8998", name: "Management (Gray)" },
-              { color: "#FF9900", name: "AWS Orange" },
-              { color: "#232F3E", name: "AWS Squid Ink" },
-              { color: "#146EB4", name: "AWS Blue" },
-              // Row 3: Subnet/VPC colors
-              { color: "#7AA116", name: "Public Subnet" },
-              { color: "#527FFF", name: "Private Subnet" },
-              { color: "#6B7280", name: "Neutral Gray" },
-              { color: "#22d3ee", name: "Cyan (Selection)" },
-              { color: "#ffffff", name: "White" },
-              { color: "#000000", name: "Black" },
-            ].map(({ color, name }) => (
-              <button
-                key={color}
-                onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { borderColor: color })}
-                className={cn(
-                  "aspect-square rounded-md border-2 hover:scale-110 transition-transform",
-                  currentBorder === color ? "ring-2 ring-cyan-400" : ""
-                )}
-                style={{ borderColor: color, backgroundColor: "transparent" }}
-                title={name}
-              />
-            ))}
-          </div>
-        </div>
-        
-        {/* Border Style */}
-        <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Border Style</p>
-          <div className="grid grid-cols-3 gap-2">
-            <button 
-              onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { borderStyle: "solid" })}
-              className={cn(
-                "h-10 rounded-lg flex items-center justify-center transition-colors",
-                currentBorderStyle === "solid" 
-                  ? "bg-cyan-500/20 ring-1 ring-cyan-500 text-cyan-400" 
-                  : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
-              )}
-            >
-              <div className="w-8 h-0 border-t-2 border-current" />
-            </button>
-            <button 
-              onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { borderStyle: "dashed" })}
-              className={cn(
-                "h-10 rounded-lg flex items-center justify-center transition-colors",
-                currentBorderStyle === "dashed" 
-                  ? "bg-cyan-500/20 ring-1 ring-cyan-500 text-cyan-400" 
-                  : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
-              )}
-            >
-              <div className="w-8 h-0 border-t-2 border-dashed border-current" />
-            </button>
-            <button 
-              onClick={() => selectedNode && onUpdateNodeStyle?.(selectedNode.id, { borderStyle: "dotted" })}
-              className={cn(
-                "h-10 rounded-lg flex items-center justify-center transition-colors",
-                currentBorderStyle === "dotted" 
-                  ? "bg-cyan-500/20 ring-1 ring-cyan-500 text-cyan-400" 
-                  : "bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
-              )}
-            >
-              <div className="w-8 h-0 border-t-2 border-dotted border-current" />
-            </button>
-          </div>
-        </div>
-        
-        {/* Opacity - Custom Slider */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Opacity</p>
-            <span className="text-[10px] text-slate-400">{localOpacity}%</span>
-          </div>
-          {/* Custom clickable slider */}
-          <div 
-            className="relative h-6 flex items-center cursor-pointer group"
-            onClick={(e) => {
-              if (!selectedNode) return;
-              const rect = e.currentTarget.getBoundingClientRect();
-              const percent = Math.max(10, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 90 + 10)));
-              setLocalOpacity(percent); // Update local state immediately
-              onUpdateNodeStyle?.(selectedNode.id, { opacity: percent });
-            }}
-            onMouseDown={(e) => {
-              if (!selectedNode) return;
-              const slider = e.currentTarget;
-              const handleMove = (moveEvent: MouseEvent) => {
-                const rect = slider.getBoundingClientRect();
-                const percent = Math.max(10, Math.min(100, Math.round(((moveEvent.clientX - rect.left) / rect.width) * 90 + 10)));
-                setLocalOpacity(percent); // Update local state immediately
-                onUpdateNodeStyle?.(selectedNode.id, { opacity: percent });
-              };
-              const handleUp = () => {
-                document.removeEventListener('mousemove', handleMove);
-                document.removeEventListener('mouseup', handleUp);
-              };
-              document.addEventListener('mousemove', handleMove);
-              document.addEventListener('mouseup', handleUp);
-            }}
-          >
-            {/* Track background */}
-            <div className="absolute inset-y-2 left-0 right-0 bg-slate-700 rounded-full" />
-            {/* Filled track */}
-            <div 
-              className="absolute inset-y-2 left-0 bg-cyan-500 rounded-full"
-              style={{ width: `${(localOpacity - 10) / 90 * 100}%` }}
-            />
-            {/* Thumb */}
-            <div 
-              className="absolute w-4 h-4 bg-cyan-400 rounded-full border-2 border-white shadow-lg transform -translate-x-1/2 group-hover:scale-110 transition-transform"
-              style={{ left: `${(localOpacity - 10) / 90 * 100}%` }}
-            />
-          </div>
-        </div>
-        
         {/* Text Styling (for Text Box elements) */}
         <div className={cn("space-y-2", !isTextNodeSelected && "opacity-50")}>
           <p className="text-[10px] text-slate-500 uppercase tracking-wider">Text Style</p>

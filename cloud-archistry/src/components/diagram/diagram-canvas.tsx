@@ -1152,39 +1152,24 @@ function DiagramCanvasInner({
     ));
   }, [selectedNode, setNodes]);
 
-  // 🎨 NODE STYLE FUNCTIONS
-  const handleUpdateNodeStyle = useCallback((nodeId: string, styleUpdate: NodeStyleUpdate) => {
-    setNodes(nds => nds.map(n => {
-      if (n.id !== nodeId) return n;
-      
-      // Merge style update into node data
-      const currentStyle = (n.data as Record<string, unknown>)?.nodeStyle as NodeStyleUpdate || {};
-      const newStyle = { ...currentStyle, ...styleUpdate };
-      
-      return {
-        ...n,
-        data: { 
-          ...n.data, 
-          nodeStyle: newStyle,
-        },
-      } as DiagramNode;
-    }));
-  }, [setNodes]);
-
-  // Helper to get selected node info for style panel
+  // Helper to get selected node info for style panel - use live node data
   const getSelectedNodeInfo = useCallback((): SelectedNodeInfo | null => {
     if (!selectedNode) return null;
     
-    const nodeStyle = (selectedNode.data as Record<string, unknown>)?.nodeStyle as NodeStyleUpdate | undefined;
+    // Get live node data from nodes array, not stale selectedNode
+    const liveNode = nodes.find(n => n.id === selectedNode.id);
+    if (!liveNode) return null;
+    
+    const nodeStyle = (liveNode.data as Record<string, unknown>)?.nodeStyle as NodeStyleUpdate | undefined;
     
     return {
-      id: selectedNode.id,
-      type: selectedNode.type,
-      serviceId: selectedNode.data?.serviceId as string | undefined,
-      label: selectedNode.data?.label as string | undefined,
+      id: liveNode.id,
+      type: liveNode.type,
+      serviceId: liveNode.data?.serviceId as string | undefined,
+      label: liveNode.data?.label as string | undefined,
       currentStyle: nodeStyle,
     };
-  }, [selectedNode]);
+  }, [selectedNode, nodes]);
 
   // 📋 COPY/PASTE FUNCTIONS
   const handleCopy = useCallback(() => {
@@ -1434,7 +1419,6 @@ function DiagramCanvasInner({
         })()}
         // Node style controls
         selectedNode={getSelectedNodeInfo()}
-        onUpdateNodeStyle={handleUpdateNodeStyle}
       />
 
       {/* Main Canvas Area */}
