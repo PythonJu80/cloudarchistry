@@ -1686,10 +1686,45 @@ Title: {challenge_title}
 Brief: {challenge_brief}
 Expected AWS Services: {expected_services}
 
+**IMPORTANT**: Your audit MUST be based on the challenge brief above. Judge the diagram against what the brief is asking for, not against a generic "perfect" architecture.
+
 ## User's Architecture Diagram
 ```json
 {diagram_json}
 ```
+
+## ⚠️ CRITICAL: SYSTEM SERVICE REGISTRY ⚠️
+The learner can ONLY use these services. This is the COMPLETE list of what exists in the system:
+{available_services_list}
+
+## ⚠️ CRITICAL: CONNECTION & PLACEMENT RULES ⚠️
+These are the VALID connection and placement rules. You MUST validate the user's diagram against these:
+{service_rules}
+
+### Validation Requirements:
+1. **Placement Validation**: If a service has "must_be_inside", verify it is placed inside one of those container types
+2. **Connection Validation**: If a service has "can_connect_to", only those connections are architecturally valid
+3. **Container Validation**: Only services with "is_container: true" can contain other services
+
+### Audit Behavior:
+- **You MUST NOT suggest any service that is not in the system registry above**
+- **Flag placement errors**: e.g., "EC2 should be inside a subnet, not floating freely"
+- **Flag invalid connections**: e.g., "This connection between X and Y isn't architecturally valid"
+- **Only suggest services the user CAN actually add**
+- If an ideal service isn't available in the registry, do NOT mention it
+
+## ⚠️ COMPLETION CRITERIA (75% = PASS) ⚠️
+**A diagram is COMPLETE when it meets the challenge brief requirements.**
+
+Scoring guide:
+- **75-100%**: PASSING - The diagram meets the challenge brief. Congratulate them!
+  - If score >= 75: Set "is_complete": true and celebrate their success
+  - Only mention minor optional improvements, don't invent new requirements
+- **50-74%**: CLOSE - Core components present but missing key elements for the brief
+- **0-49%**: NEEDS WORK - Significant gaps relative to the challenge brief
+
+**DO NOT keep finding issues once the challenge brief is satisfied.**
+If the diagram fulfills what the brief asked for with valid placements/connections, give 75%+ and mark complete.
 
 ## ⚠️ ABSOLUTE RULE: NEVER GIVE AWAY THE ANSWER ⚠️
 You are a COACH helping someone LEARN, not a cheat sheet giving answers.
@@ -1698,10 +1733,18 @@ You are a COACH helping someone LEARN, not a cheat sheet giving answers.
 - ✅ Ask "What happens if...?" questions
 - ✅ Describe the PROBLEM or RISK, never the solution
 - ✅ Hint at concepts: "Think about high availability..." not "Add redundancy"
+- ✅ Point out placement/connection issues as learning opportunities
 
 ## Response Format
 Return ONLY valid JSON:
-{{"score": <0-100>, "correct": ["what they got right"], "missing": ["describe RISK not solution"], "suggestions": ["discovery questions"], "feedback": "encouraging message"}}"""
+{{
+  "score": <0-100>,
+  "is_complete": <true if score >= 75 and challenge brief is satisfied>,
+  "correct": ["what they got right - valid placements, good connections, etc."],
+  "missing": ["describe RISK not solution - include placement/connection issues"],
+  "suggestions": ["discovery questions about architecture decisions"],
+  "feedback": "encouraging message - if complete, congratulate them!"
+}}"""
 
 
 @app.post("/api/learning/audit-diagram", response_model=AuditDiagramResponse)
@@ -1743,11 +1786,39 @@ async def audit_diagram_endpoint(request: AuditDiagramRequest):
             "connections": [{"from": c.from_node, "to": c.to_node} for c in request.connections]
         }
         
+        # Build available services list for the prompt (compact format)
+        available_services_text = "Not specified - use your best judgment"
+        service_rules_text = "No rules specified"
+        
+        if request.available_services:
+            # Compact list of available service IDs and names
+            available_services_text = ", ".join([
+                f"{s.id} ({s.name})"
+                for s in request.available_services
+            ])
+            
+            # Detailed rules for services that have constraints
+            rules_list = []
+            for s in request.available_services:
+                rules = []
+                if s.can_connect_to:
+                    rules.append(f"can_connect_to: [{', '.join(s.can_connect_to)}]")
+                if s.must_be_inside:
+                    rules.append(f"must_be_inside: [{', '.join(s.must_be_inside)}]")
+                if s.is_container:
+                    rules.append("is_container: true")
+                if rules:
+                    rules_list.append(f"- {s.id}: {'; '.join(rules)}")
+            
+            service_rules_text = "\n".join(rules_list) if rules_list else "No placement/connection constraints defined"
+        
         system_prompt = DIAGRAM_AUDIT_PROMPT.format(
             challenge_title=request.challenge_title or "AWS Architecture Challenge",
             challenge_brief=request.challenge_brief or "Design a secure, scalable AWS architecture.",
             expected_services=", ".join(request.expected_services) if request.expected_services else "Not specified",
             diagram_json=json.dumps(diagram_data, indent=2),
+            available_services_list=available_services_text,
+            service_rules=service_rules_text,
         )
         
         # Use get_async_openai() which checks: request context -> .env -> error
@@ -1759,10 +1830,15 @@ async def audit_diagram_endpoint(request: AuditDiagramRequest):
         )
         
         result = json.loads(response.choices[0].message.content)
+        score = result.get("score", 50)
         return AuditDiagramResponse(
-            score=result.get("score", 50), correct=result.get("correct", []),
-            missing=result.get("missing", []), suggestions=result.get("suggestions", []),
-            feedback=result.get("feedback", ""), session_id=request.session_id,
+            score=score, 
+            is_complete=result.get("is_complete", score >= 75),
+            correct=result.get("correct", []),
+            missing=result.get("missing", []), 
+            suggestions=result.get("suggestions", []),
+            feedback=result.get("feedback", ""), 
+            session_id=request.session_id,
         )
     except Exception as e:
         logger.error(f"Diagram audit error: {e}")

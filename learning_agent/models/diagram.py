@@ -25,6 +25,16 @@ class DiagramConnection(BaseModel):
     to_node: str = Field(alias='to')      # 'to' for consistency
 
 
+class AvailableService(BaseModel):
+    """A service available in the system for diagram building"""
+    id: str
+    name: str
+    category: str
+    can_connect_to: Optional[List[str]] = None
+    must_be_inside: Optional[List[str]] = None
+    is_container: Optional[bool] = False
+
+
 class AuditDiagramRequest(BaseModel):
     """Request to audit an architecture diagram"""
     nodes: List[DiagramNode]
@@ -33,6 +43,7 @@ class AuditDiagramRequest(BaseModel):
     challenge_title: Optional[str] = None
     challenge_brief: Optional[str] = None
     expected_services: Optional[List[str]] = None
+    available_services: Optional[List[AvailableService]] = None  # System's available services
     session_id: Optional[str] = None
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
@@ -41,6 +52,7 @@ class AuditDiagramRequest(BaseModel):
 class AuditDiagramResponse(BaseModel):
     """Structured response from diagram audit"""
     score: int
+    is_complete: bool = False  # True if score >= 75 and challenge brief is satisfied
     correct: List[str] = []
     missing: List[str] = []
     suggestions: List[str] = []

@@ -17,7 +17,11 @@ export type AWSCategory =
   | "management"
   | "devops"
   | "governance"
-  | "policies";
+  | "policies"
+  | "boundaries"
+  | "icons"
+  | "text"
+  | "annotations";
 
 export interface AWSService {
   id: string;
@@ -1220,6 +1224,232 @@ export const AWS_SERVICES: AWSService[] = [
     category: "compute",
     color: "#ED7100",
     description: "Custom compute service",
+  },
+
+  // ============ AWS BOUNDARIES (3) ============
+  // Container elements for organizing architecture
+  {
+    id: "aws-cloud",
+    name: "AWS Cloud",
+    shortName: "AWS Cloud",
+    category: "boundaries",
+    color: "#232F3E",
+    description: "AWS Cloud boundary - top-level container for all AWS resources",
+    isContainer: true,
+  },
+  {
+    id: "region",
+    name: "Region",
+    shortName: "Region",
+    category: "boundaries",
+    color: "#147EBA",
+    description: "AWS Region boundary - contains availability zones and resources",
+    isContainer: true,
+    mustBeInside: ["aws-cloud"],
+  },
+  {
+    id: "availability-zone",
+    name: "Availability Zone",
+    shortName: "AZ",
+    category: "boundaries",
+    color: "#147EBA",
+    description: "Availability Zone boundary - isolated location within a region",
+    isContainer: true,
+    mustBeInside: ["region"],
+  },
+
+  // ============ GENERAL ICONS (12) ============
+  // Visual elements representing users, devices, and external systems
+  {
+    id: "icon-user",
+    name: "User",
+    shortName: "User",
+    category: "icons",
+    color: "#6B7280",
+    description: "Single user/client accessing the system",
+    canConnectTo: ["cloudfront", "route53", "alb", "nlb", "api-gateway", "cognito"],
+  },
+  {
+    id: "icon-users",
+    name: "Users",
+    shortName: "Users",
+    category: "icons",
+    color: "#6B7280",
+    description: "Multiple users/clients accessing the system",
+    canConnectTo: ["cloudfront", "route53", "alb", "nlb", "api-gateway", "cognito"],
+  },
+  {
+    id: "icon-mobile",
+    name: "Mobile",
+    shortName: "Mobile",
+    category: "icons",
+    color: "#6B7280",
+    description: "Mobile device client",
+    canConnectTo: ["cloudfront", "route53", "alb", "api-gateway", "cognito", "appsync"],
+  },
+  {
+    id: "icon-laptop",
+    name: "Laptop",
+    shortName: "Laptop",
+    category: "icons",
+    color: "#6B7280",
+    description: "Laptop/computer client",
+    canConnectTo: ["cloudfront", "route53", "alb", "api-gateway", "cognito"],
+  },
+  {
+    id: "icon-desktop",
+    name: "Desktop",
+    shortName: "Desktop",
+    category: "icons",
+    color: "#6B7280",
+    description: "Desktop computer client",
+    canConnectTo: ["cloudfront", "route53", "alb", "api-gateway", "cognito"],
+  },
+  {
+    id: "icon-internet",
+    name: "Internet",
+    shortName: "Internet",
+    category: "icons",
+    color: "#6B7280",
+    description: "Public internet/external network",
+    canConnectTo: ["cloudfront", "route53", "internet-gateway", "alb", "nlb", "api-gateway"],
+  },
+  {
+    id: "icon-cloud",
+    name: "Cloud",
+    shortName: "Cloud",
+    category: "icons",
+    color: "#6B7280",
+    description: "External cloud service or third-party cloud",
+    canConnectTo: ["vpc", "direct-connect", "vpn-gateway", "transit-gateway"],
+  },
+  {
+    id: "icon-corporate",
+    name: "Corporate",
+    shortName: "Corporate",
+    category: "icons",
+    color: "#6B7280",
+    description: "Corporate network/data center",
+    canConnectTo: ["direct-connect", "vpn-gateway", "transit-gateway"],
+  },
+  {
+    id: "icon-on-prem",
+    name: "On-Premises",
+    shortName: "On-Prem",
+    category: "icons",
+    color: "#6B7280",
+    description: "On-premises data center or infrastructure",
+    canConnectTo: ["direct-connect", "vpn-gateway", "storage-gateway", "datasync"],
+  },
+  {
+    id: "icon-server",
+    name: "Server",
+    shortName: "Server",
+    category: "icons",
+    color: "#6B7280",
+    description: "Generic server or external system",
+    canConnectTo: ["direct-connect", "vpn-gateway", "transit-gateway"],
+  },
+  {
+    id: "icon-database",
+    name: "Database",
+    shortName: "Database",
+    category: "icons",
+    color: "#6B7280",
+    description: "External database or data source",
+    canConnectTo: ["direct-connect", "vpn-gateway", "datasync"],
+  },
+  {
+    id: "icon-security",
+    name: "Security",
+    shortName: "Security",
+    category: "icons",
+    color: "#6B7280",
+    description: "Security element or external security service",
+    canConnectTo: ["waf", "shield", "guardduty", "cognito"],
+  },
+
+  // ============ TEXT ELEMENTS (2) ============
+  // Documentation and notes within diagrams
+  {
+    id: "textbox",
+    name: "Text Box",
+    shortName: "Text",
+    category: "text",
+    color: "#9CA3AF",
+    description: "Text box for labels and descriptions",
+  },
+  {
+    id: "note",
+    name: "Note",
+    shortName: "Note",
+    category: "text",
+    color: "#FCD34D",
+    description: "Sticky note for annotations and comments",
+  },
+
+  // ============ ARCHITECTURE ANNOTATIONS (7) ============
+  // Documentation elements for policies, flows, and metadata
+  {
+    id: "legend",
+    name: "Legend",
+    shortName: "Legend",
+    category: "annotations",
+    color: "#9CA3AF",
+    description: "Color key and ownership legend for the diagram",
+  },
+  {
+    id: "lifecycle-annotation",
+    name: "Lifecycle Policy",
+    shortName: "Lifecycle",
+    category: "annotations",
+    color: "#9CA3AF",
+    description: "S3/backup lifecycle rules annotation",
+    canConnectTo: ["s3", "glacier", "backup"],
+  },
+  {
+    id: "pipeline-annotation",
+    name: "CI/CD Pipeline",
+    shortName: "Pipeline",
+    category: "annotations",
+    color: "#9CA3AF",
+    description: "CI/CD pipeline stages annotation",
+    canConnectTo: ["codepipeline", "codebuild", "codedeploy", "codecommit"],
+  },
+  {
+    id: "scaling-annotation",
+    name: "Scaling Policy",
+    shortName: "Scaling",
+    category: "annotations",
+    color: "#9CA3AF",
+    description: "Auto scaling configuration annotation",
+    canConnectTo: ["auto-scaling", "ecs", "eks", "dynamodb"],
+  },
+  {
+    id: "backup-annotation",
+    name: "Backup Plan",
+    shortName: "Backup",
+    category: "annotations",
+    color: "#9CA3AF",
+    description: "Backup schedule and retention annotation",
+    canConnectTo: ["backup", "rds", "dynamodb", "efs", "ebs"],
+  },
+  {
+    id: "dataflow-annotation",
+    name: "Data Flow",
+    shortName: "Data Flow",
+    category: "annotations",
+    color: "#9CA3AF",
+    description: "Traffic and data flow annotation",
+  },
+  {
+    id: "iam-policy-annotation",
+    name: "IAM Policy Document",
+    shortName: "IAM Doc",
+    category: "annotations",
+    color: "#9CA3AF",
+    description: "IAM policy document annotation",
+    canConnectTo: ["iam", "iam-role", "iam-policy", "iam-user", "iam-group"],
   },
 ];
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { AWS_SERVICES } from "@/lib/aws-services";
 
 const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 
@@ -75,6 +76,14 @@ export async function POST(request: NextRequest) {
         challenge_title: challengeTitle,
         challenge_brief: challengeBrief,
         expected_services: [],
+        available_services: AWS_SERVICES.map((s) => ({
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          can_connect_to: s.canConnectTo || null,
+          must_be_inside: s.mustBeInside || null,
+          is_container: s.isContainer || false,
+        })),
         session_id: sessionId,
       }),
     });
@@ -95,6 +104,7 @@ export async function POST(request: NextRequest) {
       success: true,
       audit: {
         score: result.score,
+        isComplete: result.is_complete,
         correct: result.correct,
         missing: result.missing,
         suggestions: result.suggestions,
