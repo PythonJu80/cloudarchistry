@@ -165,3 +165,59 @@ class GenerateFlashcardsFromCertRequest(BaseModel):
     scenario_id: Optional[str] = None  # Optional: still support scenario-based if provided
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
+
+
+class DiagnosticsRequest(BaseModel):
+    """Request to generate comprehensive learner diagnostics"""
+    profile_id: str
+    
+    # User profile
+    display_name: Optional[str] = None
+    skill_level: str = "intermediate"
+    target_certification: Optional[str] = None
+    subscription_tier: str = "free"
+    
+    # Gamification stats
+    total_points: int = 0
+    level: int = 1
+    xp: int = 0
+    current_streak: int = 0
+    longest_streak: int = 0
+    achievements_count: int = 0
+    
+    # Challenge analytics
+    challenges_total: int = 0
+    challenges_completed: int = 0
+    challenges_completion_rate: int = 0
+    challenges_avg_score: int = 0
+    challenges_hints_used: int = 0
+    challenges_avg_hints: float = 0.0
+    difficulty_breakdown: Dict[str, Any] = {}
+    
+    # Scenario analytics
+    scenarios_total: int = 0
+    scenarios_completed: int = 0
+    scenarios_completion_rate: int = 0
+    
+    # Skills
+    top_services: List[Dict[str, Any]] = []
+    industry_breakdown: List[Dict[str, Any]] = []
+    
+    # Learning insights
+    chat_sessions: int = 0
+    questions_asked: int = 0
+    top_keywords: List[Dict[str, Any]] = []
+    
+    # Time analytics
+    total_time_minutes: int = 0
+    avg_time_per_scenario: int = 0
+    
+    # Activity timeline
+    activity_timeline: List[Dict[str, Any]] = []
+    
+    # Recent activities
+    recent_scenarios: List[Dict[str, Any]] = []
+    
+    # API keys
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None

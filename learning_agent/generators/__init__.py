@@ -37,3 +37,11 @@ from .architect_arena import (
     PuzzlePenalty,
 )
 from .portfolio import generate_portfolio_content
+from .diagnostics import (
+    generate_diagnostics,
+    DiagnosticsContext,
+    DiagnosticsResult,
+    StrengthWeakness,
+    Recommendation,
+    LearningPattern,
+)

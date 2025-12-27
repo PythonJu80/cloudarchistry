@@ -20,6 +20,7 @@ from models.learning import (
     StudyGuideRequest,
     FormatStudyGuideRequest,
     GenerateFlashcardsFromCertRequest,
+    DiagnosticsRequest,
 )
 from models.diagram import AuditDiagramRequest, AuditDiagramResponse
 from models.challenge import ChallengeQuestionsRequest, GradeChallengeAnswerRequest
@@ -679,3 +680,75 @@ async def detect_skill_endpoint(message: str):
     """Detect user skill level"""
     from crawl4ai_mcp import detect_skill_endpoint as original_endpoint
     return await original_endpoint(message)
+
+
+@router.post("/generate-diagnostics")
+async def generate_diagnostics_endpoint(request: DiagnosticsRequest):
+    """
+    Generate comprehensive learner diagnostics based on their platform activity.
+    
+    Analyzes all user data to identify:
+    - Strengths and weaknesses
+    - Exam readiness score
+    - Domain-specific scores
+    - Learning patterns
+    - Personalized recommendations
+    """
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.diagnostics import generate_diagnostics, DiagnosticsContext
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        # Build context from request
+        context = DiagnosticsContext(
+            profile_id=request.profile_id,
+            display_name=request.display_name,
+            skill_level=request.skill_level,
+            target_certification=request.target_certification,
+            subscription_tier=request.subscription_tier,
+            total_points=request.total_points,
+            level=request.level,
+            xp=request.xp,
+            current_streak=request.current_streak,
+            longest_streak=request.longest_streak,
+            achievements_count=request.achievements_count,
+            challenges_total=request.challenges_total,
+            challenges_completed=request.challenges_completed,
+            challenges_completion_rate=request.challenges_completion_rate,
+            challenges_avg_score=request.challenges_avg_score,
+            challenges_hints_used=request.challenges_hints_used,
+            challenges_avg_hints=request.challenges_avg_hints,
+            difficulty_breakdown=request.difficulty_breakdown,
+            scenarios_total=request.scenarios_total,
+            scenarios_completed=request.scenarios_completed,
+            scenarios_completion_rate=request.scenarios_completion_rate,
+            top_services=request.top_services,
+            industry_breakdown=request.industry_breakdown,
+            chat_sessions=request.chat_sessions,
+            questions_asked=request.questions_asked,
+            top_keywords=request.top_keywords,
+            total_time_minutes=request.total_time_minutes,
+            avg_time_per_scenario=request.avg_time_per_scenario,
+            activity_timeline=request.activity_timeline,
+            recent_scenarios=request.recent_scenarios,
+        )
+        
+        result = await generate_diagnostics(context)
+        
+        return {
+            "success": True,
+            "diagnostics": result.model_dump(),
+        }
+    except ApiKeyRequiredError as key_err:
+        raise HTTPException(status_code=402, detail=str(key_err)) from key_err
+    except Exception as exc:
+        logger.error("Diagnostics generation failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Diagnostics generation failed: {str(exc)}") from exc
+    finally:
+        from utils import set_request_api_key, set_request_model
+        set_request_api_key(None)
+        set_request_model(None)

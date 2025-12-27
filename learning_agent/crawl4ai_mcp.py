@@ -2765,6 +2765,91 @@ async def detect_skill_endpoint(message: str):
     return {"skill_level": level}
 
 
+@app.post("/api/learning/generate-diagnostics")
+async def generate_diagnostics_endpoint(request: dict):
+    """
+    Generate comprehensive learner diagnostics based on their platform activity.
+    
+    Analyzes all user data to identify:
+    - Strengths and weaknesses
+    - Exam readiness score
+    - Domain-specific scores
+    - Learning patterns
+    - Personalized recommendations
+    """
+    from utils import set_request_api_key, set_request_model
+    from generators.diagnostics import generate_diagnostics, DiagnosticsContext
+    
+    try:
+        if request.get("openai_api_key"):
+            set_request_api_key(request["openai_api_key"])
+        if request.get("preferred_model"):
+            set_request_model(request["preferred_model"])
+        
+        # Build context from request
+        context = DiagnosticsContext(
+            profile_id=request.get("profile_id", ""),
+            display_name=request.get("display_name"),
+            skill_level=request.get("skill_level", "intermediate"),
+            target_certification=request.get("target_certification"),
+            subscription_tier=request.get("subscription_tier", "free"),
+            total_points=request.get("total_points", 0),
+            level=request.get("level", 1),
+            xp=request.get("xp", 0),
+            current_streak=request.get("current_streak", 0),
+            longest_streak=request.get("longest_streak", 0),
+            achievements_count=request.get("achievements_count", 0),
+            challenges_total=request.get("challenges_total", 0),
+            challenges_completed=request.get("challenges_completed", 0),
+            challenges_completion_rate=request.get("challenges_completion_rate", 0),
+            challenges_avg_score=request.get("challenges_avg_score", 0),
+            challenges_hints_used=request.get("challenges_hints_used", 0),
+            challenges_avg_hints=request.get("challenges_avg_hints", 0.0),
+            difficulty_breakdown=request.get("difficulty_breakdown", {}),
+            scenarios_total=request.get("scenarios_total", 0),
+            scenarios_completed=request.get("scenarios_completed", 0),
+            scenarios_completion_rate=request.get("scenarios_completion_rate", 0),
+            top_services=request.get("top_services", []),
+            industry_breakdown=request.get("industry_breakdown", []),
+            chat_sessions=request.get("chat_sessions", 0),
+            questions_asked=request.get("questions_asked", 0),
+            top_keywords=request.get("top_keywords", []),
+            total_time_minutes=request.get("total_time_minutes", 0),
+            avg_time_per_scenario=request.get("avg_time_per_scenario", 0),
+            activity_timeline=request.get("activity_timeline", []),
+            recent_scenarios=request.get("recent_scenarios", []),
+            previous_diagnostics=request.get("previous_diagnostics", []),
+            # Flashcard stats
+            flashcards_studied=request.get("flashcards_studied", 0),
+            flashcards_mastered=request.get("flashcards_mastered", 0),
+            flashcard_reviews=request.get("flashcard_reviews", 0),
+            flashcard_time_minutes=request.get("flashcard_time_minutes", 0),
+            flashcard_mastery_rate=request.get("flashcard_mastery_rate", 0),
+            # Quiz stats
+            quizzes_attempted=request.get("quizzes_attempted", 0),
+            quizzes_completed=request.get("quizzes_completed", 0),
+            quizzes_passed=request.get("quizzes_passed", 0),
+            quiz_pass_rate=request.get("quiz_pass_rate", 0),
+            quiz_avg_score=request.get("quiz_avg_score", 0),
+            quiz_accuracy=request.get("quiz_accuracy", 0),
+        )
+        
+        result = await generate_diagnostics(context)
+        
+        return {
+            "success": True,
+            "diagnostics": result.model_dump(),
+        }
+    except ApiKeyRequiredError as key_err:
+        raise HTTPException(status_code=402, detail=str(key_err))
+    except Exception as exc:
+        logger.error(f"Diagnostics generation failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"Diagnostics generation failed: {str(exc)}")
+    finally:
+        set_request_api_key(None)
+        set_request_model(None)
+
+
 @app.post("/api/learning/format-study-guide")
 async def format_study_guide_endpoint(request: dict):
     """FORMAT a study guide from pre-selected content.

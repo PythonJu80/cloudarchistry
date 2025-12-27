@@ -11,6 +11,7 @@ import {
   GraduationCap,
   Trophy,
   Lightbulb,
+  BarChart3,
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 
@@ -27,6 +28,7 @@ const tabs = [
   { href: "/learn/exams", label: "Practice Exams", icon: Trophy },
   { href: "/learn/quiz", label: "Quizzes", icon: ListTodo },
   { href: "/learn/notes", label: "Notes", icon: FileText },
+  { href: "/learn/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 export default function LearnLayout({ children }: LearnLayoutProps) {

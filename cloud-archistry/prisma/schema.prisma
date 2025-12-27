@@ -1346,10 +1346,47 @@ model AcademyUserProfile {
   // Bug Bounty Challenges
   bugBountyChallenges BugBountyChallenge[]
   
+  // AI Diagnostics history
+  diagnostics      LearnerDiagnostics[]
+  
   @@index([academyUserId])
   @@index([academyTenantId])
   @@index([totalPoints])
   @@index([level])
+}
+
+// AI Diagnostics - Stored analysis of learner progress
+model LearnerDiagnostics {
+  id          String   @id @default(cuid())
+  
+  profileId   String   @map("profile_id")
+  profile     AcademyUserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // Readiness metrics
+  overallReadiness   Int      @default(0) @map("overall_readiness")
+  readinessLabel     String   @default("Not Ready") @map("readiness_label")
+  targetCertification String? @map("target_certification")
+  
+  // Full diagnostics data as JSON
+  summary            String?  @db.Text
+  strengths          Json     @default("[]")
+  weaknesses         Json     @default("[]")
+  domainScores       Json     @default("{}") @map("domain_scores")
+  patterns           Json     @default("[]")
+  recommendations    Json     @default("[]")
+  encouragement      String?  @db.Text
+  nextMilestone      String?  @map("next_milestone")
+  daysToMilestone    Int?     @map("days_to_milestone")
+  
+  // Snapshot of user stats at time of diagnosis
+  statsSnapshot      Json     @default("{}") @map("stats_snapshot")
+  
+  createdAt          DateTime @default(now()) @map("created_at")
+  
+  @@index([profileId])
+  @@index([createdAt(sort: Desc)])
+  @@index([overallReadiness])
+  @@map("LearnerDiagnostics")
 }
 
 // Learning Centre Chat - Persistent chat history for AI tutor
