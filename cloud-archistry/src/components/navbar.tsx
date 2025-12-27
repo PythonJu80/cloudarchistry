@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { Swords, Brain } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Swords, Brain, Users } from "lucide-react";
 import { UserNav } from "@/components/user-nav";
 
 interface NavbarProps {
@@ -15,6 +16,22 @@ interface NavbarProps {
 
 export function Navbar({ showNav = true, activePath, variant = "default", children }: NavbarProps) {
   const { data: session } = useSession();
+  const [userTeam, setUserTeam] = useState<{ id: string; name: string } | null>(null);
+
+  // Fetch user's team membership
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetch("/api/team")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.teams && data.teams.length > 0) {
+            // Use the first team the user is a member of
+            setUserTeam({ id: data.teams[0].id, name: data.teams[0].name });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [session?.user?.email]);
 
   const isTransparent = variant === "transparent";
   const navClass = isTransparent
@@ -73,6 +90,12 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
               <Swords className="w-4 h-4" />
               Game Zone
             </Link>
+            {userTeam && (
+              <Link href={`/dashboard/cohort/${userTeam.id}`} className="text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1.5 font-medium">
+                <Users className="w-4 h-4" />
+                My Cohort
+              </Link>
+            )}
             <Link href="/pricing" className={linkClass("/pricing")}>
               Pricing
             </Link>

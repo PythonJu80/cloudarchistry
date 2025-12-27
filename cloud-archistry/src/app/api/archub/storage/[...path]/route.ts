@@ -9,6 +9,11 @@ export async function GET(
   try {
     const filePath = params.path.join("/");
     
+    // Security: Prevent path traversal attacks
+    if (filePath.includes('..') || filePath.startsWith('/') || filePath.includes('\0')) {
+      return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+    }
+    
     // Use the diagram API's storage endpoint which has proper MinIO auth
     const apiUrl = `${DIAGRAM_API_URL}/storage/${filePath}`;
     

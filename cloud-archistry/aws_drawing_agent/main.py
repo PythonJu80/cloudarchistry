@@ -184,11 +184,22 @@ async def validate_diagram(request: DiagramValidationRequest):
 @app.post("/diagrams/convert")
 async def convert_pptx(file_path: str):
     """Convert a PowerPoint file to React Flow format."""
-    if not Path(file_path).exists():
-        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+    # Security: Validate path to prevent directory traversal
+    ALLOWED_DIRS = ["/app/diagrams", "/app/aws_architecture_diagrams", ARCHITECTURES_DIR]
+    try:
+        resolved_path = Path(file_path).resolve()
+        if not any(str(resolved_path).startswith(str(Path(d).resolve())) for d in ALLOWED_DIRS):
+            raise HTTPException(status_code=403, detail="Access to this path is not allowed")
+        if '..' in file_path or file_path.startswith('/etc') or file_path.startswith('/root'):
+            raise HTTPException(status_code=403, detail="Invalid path")
+    except (ValueError, OSError):
+        raise HTTPException(status_code=400, detail="Invalid file path")
+    
+    if not resolved_path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found")
     
     try:
-        diagram = agent.convert_architecture(file_path)
+        diagram = agent.convert_architecture(str(resolved_path))
         return diagram
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
