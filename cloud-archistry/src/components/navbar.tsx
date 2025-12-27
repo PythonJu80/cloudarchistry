@@ -4,8 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Swords, Brain, Users } from "lucide-react";
+import { Swords, Brain, Users, Globe, CreditCard } from "lucide-react";
 import { UserNav } from "@/components/user-nav";
+import { InviteModal } from "@/components/invite-modal";
 
 interface NavbarProps {
   showNav?: boolean;
@@ -79,7 +80,8 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
         
         {showNav && (
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/world" className={linkClass("/world")}>
+            <Link href="/world" className={`${linkClass("/world")} flex items-center gap-1.5`}>
+              <Globe className="w-4 h-4" />
               World Map
             </Link>
             <Link href="/learn" className={specialLinkClass("amber")}>
@@ -96,7 +98,8 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
                 My Cohort
               </Link>
             )}
-            <Link href="/pricing" className={linkClass("/pricing")}>
+            <Link href="/pricing" className={`${linkClass("/pricing")} flex items-center gap-1.5`}>
+              <CreditCard className="w-4 h-4" />
               Pricing
             </Link>
           </div>
@@ -104,6 +107,9 @@ export function Navbar({ showNav = true, activePath, variant = "default", childr
 
         <div className="flex items-center gap-4">
           {children}
+          {session?.user && (
+            <InviteModal variant={variant} />
+          )}
           <div className="h-6 w-px bg-border/50 hidden md:block" />
           <UserNav user={session?.user ? { username: session.user.username, subscriptionTier: session.user.subscriptionTier } : null} />
         </div>
