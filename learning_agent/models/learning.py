@@ -167,6 +167,23 @@ class GenerateFlashcardsFromCertRequest(BaseModel):
     preferred_model: Optional[str] = None
 
 
+class CohortProgramRequest(BaseModel):
+    """Request to generate a cohort learning program for tutors"""
+    team_id: str
+    team_name: str
+    outcome: str
+    duration_weeks: int = 6
+    sessions_per_week: int = 2
+    weekly_hours: int = 4
+    focus_areas: Optional[str] = None
+    # From tutor's profile settings
+    skill_level: str = "intermediate"
+    target_certification: Optional[str] = None
+    # AI config
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
 class DiagnosticsRequest(BaseModel):
     """Request to generate comprehensive learner diagnostics"""
     profile_id: str

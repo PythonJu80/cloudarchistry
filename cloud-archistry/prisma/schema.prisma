@@ -917,6 +917,7 @@ model AcademyTeam {
   attempts    TeamChallengeAttempt[]
   invites     AcademyTeamInvite[]
   activities  TeamActivity[]
+  programs    CohortProgram[]
   
   @@unique([academyTenantId, slug])
   @@index([academyTenantId])
@@ -1011,6 +1012,41 @@ model TeamActivity {
   @@index([activityType])
   @@index([createdAt])
   @@index([teamId, createdAt])  // Composite index for pagination
+}
+
+// Cohort Program - AI-generated learning curriculum for teams
+model CohortProgram {
+  id              String   @id @default(cuid())
+  teamId          String
+  team            AcademyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  // Program metadata
+  title           String
+  outcome         String
+  durationWeeks   Int      @default(6)
+  sessionsPerWeek Int      @default(2)
+  weeklyHours     Int      @default(4)
+  skillLevel      String   @default("intermediate")
+  targetCertification String?
+  focusAreas      String?
+  
+  // Program content (JSON with weeks, actions, milestones)
+  programData     Json     // { weeks: [...], milestones: [...], capstone: {...} }
+  
+  // Progress tracking (JSON with completed action IDs)
+  progressData    Json     @default("{}")  // { completedActions: [], completedMilestones: [] }
+  
+  // Status
+  status          String   @default("active")  // draft, active, completed, archived
+  
+  // Timestamps
+  createdBy       String   // AcademyUser ID who created
+  generatedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([teamId])
+  @@index([status])
+  @@index([createdBy])
 }
 
 // Versus Match - Head-to-head battles

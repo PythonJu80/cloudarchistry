@@ -22,6 +22,12 @@ import {
   X,
   Copy,
   Check,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -37,6 +43,7 @@ import type {
   TeamRole,
   TeamInviteResponse,
 } from "@/lib/academy/types/team";
+import { CohortProgramBuilder } from "@/components/cohort/cohort-program-builder";
 
 // Role icon mapping
 const ROLE_ICONS: Record<TeamRole, typeof Crown> = {
@@ -81,6 +88,64 @@ export default function CohortDashboardPage() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
   const [revokingInvite, setRevokingInvite] = useState<string | null>(null);
+
+  // Team diagnostics state
+  interface MemberDiagnostics {
+    memberId: string;
+    academyUserId: string;
+    role: string;
+    pointsContributed: number;
+    challengesCompleted: number;
+    joinedAt: string;
+    user: { name: string; email?: string };
+    profile: {
+      displayName?: string;
+      skillLevel?: string;
+      targetCertification?: string;
+      level?: number;
+      xp?: number;
+      totalPoints?: number;
+      currentStreak?: number;
+    } | null;
+    latestDiagnostics: {
+      id: string;
+      overallReadiness: number;
+      readinessLabel: string;
+      summary?: string;
+      strengths?: string[];
+      weaknesses?: string[];
+      recommendations?: string[];
+      encouragement?: string;
+      nextMilestone?: string;
+      daysToMilestone?: number;
+      createdAt: string;
+    } | null;
+    diagnosticsHistory: Array<{
+      id: string;
+      overallReadiness: number;
+      readinessLabel: string;
+      createdAt: string;
+    }>;
+  }
+  interface TeamDiagnosticsData {
+    teamStats: {
+      totalMembers: number;
+      membersWithDiagnostics: number;
+      avgReadiness: number;
+      readinessDistribution: {
+        examReady: number;
+        almostReady: number;
+        gettingThere: number;
+        notReady: number;
+      };
+      totalPoints: number;
+      totalChallengesCompleted: number;
+    };
+    members: MemberDiagnostics[];
+  }
+  const [teamDiagnostics, setTeamDiagnostics] = useState<TeamDiagnosticsData | null>(null);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [expandedMember, setExpandedMember] = useState<string | null>(null);
 
   const fetchTeamData = useCallback(async () => {
     if (!teamId) return;
@@ -202,6 +267,25 @@ export default function CohortDashboardPage() {
   // Check if current user can manage invites
   const canManageInvites = team?.myRole === "owner" || team?.myRole === "admin";
 
+  // Fetch team diagnostics
+  const fetchTeamDiagnostics = useCallback(async () => {
+    if (!teamId) return;
+    setDiagnosticsLoading(true);
+    try {
+      const res = await fetch(`/api/team/${teamId}/diagnostics`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setTeamDiagnostics(data);
+        }
+      }
+    } catch {
+      // Ignore - diagnostics are optional
+    } finally {
+      setDiagnosticsLoading(false);
+    }
+  }, [teamId]);
+
   useEffect(() => {
     if (authStatus === "unauthenticated") {
       router.push("/login");
@@ -210,8 +294,10 @@ export default function CohortDashboardPage() {
 
     if (authStatus === "authenticated" && teamId) {
       fetchTeamData();
+      // Fetch team diagnostics for tutors
+      fetchTeamDiagnostics();
     }
-  }, [authStatus, teamId, router, fetchTeamData]);
+  }, [authStatus, teamId, router, fetchTeamData, fetchTeamDiagnostics]);
 
   if (authStatus === "loading" || loading) {
     return (
@@ -338,6 +424,230 @@ export default function CohortDashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Cohort Program Builder - Only for owners/admins */}
+        {canManageInvites && (
+          <CohortProgramBuilder 
+            teamId={teamId} 
+            teamName={team.name}
+          />
+        )}
+
+        {/* Team Member Diagnostics - Only for tutors (owner/admin) */}
+        {canManageInvites && teamDiagnostics && (
+          <Card className="border-violet-500/20 bg-gradient-to-br from-violet-950/20 to-slate-950/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Sparkles className="w-5 h-5 text-violet-400" />
+                Learner Diagnostics
+              </CardTitle>
+              <CardDescription>
+                AI-powered readiness assessment for each team member
+              </CardDescription>
+              {/* Team-wide readiness summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                <div className="p-3 rounded-lg bg-white/5 text-center">
+                  <p className="text-2xl font-bold text-violet-400">{teamDiagnostics.teamStats.avgReadiness}%</p>
+                  <p className="text-xs text-muted-foreground">Avg Readiness</p>
+                </div>
+                <div className="p-3 rounded-lg bg-emerald-500/10 text-center">
+                  <p className="text-2xl font-bold text-emerald-400">{teamDiagnostics.teamStats.readinessDistribution.examReady}</p>
+                  <p className="text-xs text-muted-foreground">Exam Ready</p>
+                </div>
+                <div className="p-3 rounded-lg bg-cyan-500/10 text-center">
+                  <p className="text-2xl font-bold text-cyan-400">{teamDiagnostics.teamStats.readinessDistribution.almostReady}</p>
+                  <p className="text-xs text-muted-foreground">Almost Ready</p>
+                </div>
+                <div className="p-3 rounded-lg bg-amber-500/10 text-center">
+                  <p className="text-2xl font-bold text-amber-400">{teamDiagnostics.teamStats.readinessDistribution.gettingThere + teamDiagnostics.teamStats.readinessDistribution.notReady}</p>
+                  <p className="text-xs text-muted-foreground">Needs Work</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {diagnosticsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
+                </div>
+              ) : teamDiagnostics.members.length > 0 ? (
+                teamDiagnostics.members.map((member) => (
+                  <div
+                    key={member.memberId}
+                    className="p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {/* Readiness circle */}
+                        <div className="relative w-12 h-12">
+                          <svg className="w-12 h-12 transform -rotate-90">
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="20"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                              className="text-white/10"
+                            />
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="20"
+                              stroke={
+                                member.latestDiagnostics
+                                  ? member.latestDiagnostics.overallReadiness >= 80
+                                    ? "#10b981"
+                                    : member.latestDiagnostics.overallReadiness >= 60
+                                    ? "#06b6d4"
+                                    : member.latestDiagnostics.overallReadiness >= 40
+                                    ? "#f59e0b"
+                                    : "#ef4444"
+                                  : "#6b7280"
+                              }
+                              strokeWidth="4"
+                              fill="none"
+                              strokeLinecap="round"
+                              strokeDasharray={`${((member.latestDiagnostics?.overallReadiness || 0) / 100) * 126} 126`}
+                            />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                            {member.latestDiagnostics?.overallReadiness || 0}%
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{member.user.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {member.latestDiagnostics ? (
+                              <Badge
+                                className={cn(
+                                  "text-xs",
+                                  member.latestDiagnostics.readinessLabel === "Exam Ready"
+                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                                    : member.latestDiagnostics.readinessLabel === "Almost Ready"
+                                    ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+                                    : member.latestDiagnostics.readinessLabel === "Getting There"
+                                    ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                                    : "bg-red-500/20 text-red-300 border-red-500/30"
+                                )}
+                              >
+                                {member.latestDiagnostics.readinessLabel}
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-xs">
+                                No diagnostics yet
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground capitalize">
+                              {member.role}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-right">
+                        <div>
+                          <p className="text-sm font-medium text-purple-400">{member.pointsContributed}</p>
+                          <p className="text-xs text-muted-foreground">Team pts</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-400">{member.challengesCompleted}</p>
+                          <p className="text-xs text-muted-foreground">Challenges</p>
+                        </div>
+                        {member.diagnosticsHistory.length > 1 && (
+                          <div className="flex items-center gap-1">
+                            {member.diagnosticsHistory[0].overallReadiness > member.diagnosticsHistory[1].overallReadiness ? (
+                              <>
+                                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                                <span className="text-xs text-emerald-400">
+                                  +{member.diagnosticsHistory[0].overallReadiness - member.diagnosticsHistory[1].overallReadiness}%
+                                </span>
+                              </>
+                            ) : member.diagnosticsHistory[0].overallReadiness < member.diagnosticsHistory[1].overallReadiness ? (
+                              <>
+                                <TrendingDown className="w-4 h-4 text-red-400" />
+                                <span className="text-xs text-red-400">
+                                  {member.diagnosticsHistory[0].overallReadiness - member.diagnosticsHistory[1].overallReadiness}%
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Minus className="w-4 h-4 text-gray-400" />
+                                <span className="text-xs text-gray-400">0%</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpandedMember(expandedMember === member.memberId ? null : member.memberId)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {expandedMember === member.memberId ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    {/* Expanded details */}
+                    {expandedMember === member.memberId && member.latestDiagnostics && (
+                      <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                        {member.latestDiagnostics.summary && (
+                          <p className="text-sm text-muted-foreground">{member.latestDiagnostics.summary}</p>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {member.latestDiagnostics.strengths && Array.isArray(member.latestDiagnostics.strengths) && member.latestDiagnostics.strengths.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-emerald-400 mb-2">Strengths</p>
+                              <ul className="space-y-1">
+                                {(member.latestDiagnostics.strengths as Array<string | { area?: string }>).slice(0, 3).map((s, i) => (
+                                  <li key={i} className="text-xs text-muted-foreground">
+                                    • {typeof s === "string" ? s : (s?.area || "Unknown")}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {member.latestDiagnostics.weaknesses && Array.isArray(member.latestDiagnostics.weaknesses) && member.latestDiagnostics.weaknesses.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-amber-400 mb-2">Areas to Improve</p>
+                              <ul className="space-y-1">
+                                {(member.latestDiagnostics.weaknesses as Array<string | { area?: string }>).slice(0, 3).map((w, i) => (
+                                  <li key={i} className="text-xs text-muted-foreground">
+                                    • {typeof w === "string" ? w : (w?.area || "Unknown")}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                        {member.latestDiagnostics.nextMilestone && (
+                          <div className="p-2 rounded bg-violet-500/10 text-xs">
+                            <span className="text-violet-400 font-medium">Next Milestone:</span>{" "}
+                            <span className="text-muted-foreground">{member.latestDiagnostics.nextMilestone}</span>
+                            {member.latestDiagnostics.daysToMilestone && (
+                              <span className="text-violet-400 ml-2">({member.latestDiagnostics.daysToMilestone} days)</span>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Last assessed: {new Date(member.latestDiagnostics.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Sparkles className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No member diagnostics available</p>
+                  <p className="text-xs">Members can generate diagnostics from their Analytics page</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Top Contributors */}

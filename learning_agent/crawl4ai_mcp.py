@@ -259,6 +259,10 @@ ALLOWED_ORIGINS = [
 ]
 app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+# Register routes from routes/ directory
+from routes import register_routes
+register_routes(app)
+
 
 @app.exception_handler(ApiKeyRequiredError)
 async def api_key_required_handler(request: Request, exc: ApiKeyRequiredError):

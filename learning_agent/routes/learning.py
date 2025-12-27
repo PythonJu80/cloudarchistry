@@ -21,6 +21,7 @@ from models.learning import (
     FormatStudyGuideRequest,
     GenerateFlashcardsFromCertRequest,
     DiagnosticsRequest,
+    CohortProgramRequest,
 )
 from models.diagram import AuditDiagramRequest, AuditDiagramResponse
 from models.challenge import ChallengeQuestionsRequest, GradeChallengeAnswerRequest
@@ -748,6 +749,83 @@ async def generate_diagnostics_endpoint(request: DiagnosticsRequest):
     except Exception as exc:
         logger.error("Diagnostics generation failed: %s", exc)
         raise HTTPException(status_code=500, detail=f"Diagnostics generation failed: {str(exc)}") from exc
+    finally:
+        from utils import set_request_api_key, set_request_model
+        set_request_api_key(None)
+        set_request_model(None)
+
+
+@router.post("/generate-cohort-program")
+async def generate_cohort_program_endpoint(request: CohortProgramRequest):
+    """Generate a cohort learning program for tutors"""
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.cohort_program import generate_cohort_program
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        # Query knowledge base for relevant AWS content
+        knowledge_context = ""
+        try:
+            api_key = request.openai_api_key or os.getenv("OPENAI_API_KEY")
+            if api_key:
+                # Build search query from outcome and certification
+                search_parts = [request.outcome]
+                if request.target_certification and request.target_certification in CERTIFICATION_PERSONAS:
+                    cert_info = CERTIFICATION_PERSONAS[request.target_certification]
+                    search_parts.append(cert_info.get("cert", ""))
+                    focus_areas = cert_info.get("focus", [])
+                    if focus_areas:
+                        import random
+                        selected_focus = random.sample(focus_areas, min(3, len(focus_areas)))
+                        search_parts.extend(selected_focus)
+                
+                search_query = f"AWS {request.skill_level} {' '.join(search_parts)}"
+                
+                client = AsyncOpenAI(api_key=api_key)
+                embed_response = await client.embeddings.create(
+                    model="text-embedding-3-small",
+                    input=search_query
+                )
+                query_embedding = embed_response.data[0].embedding
+                
+                kb_results = await db.search_knowledge_chunks(
+                    query_embedding=query_embedding,
+                    limit=8
+                )
+                
+                if kb_results:
+                    logger.info(f"Found {len(kb_results)} knowledge chunks for cohort program")
+                    for chunk in kb_results[:5]:
+                        knowledge_context += f"\n\n{chunk['content'][:600]}"
+        except Exception as kb_err:
+            logger.warning(f"Knowledge base search failed for cohort program: {kb_err}")
+        
+        program = await generate_cohort_program(
+            team_name=request.team_name,
+            outcome=request.outcome,
+            duration_weeks=request.duration_weeks,
+            sessions_per_week=request.sessions_per_week,
+            weekly_hours=request.weekly_hours,
+            focus_areas=request.focus_areas,
+            skill_level=request.skill_level,
+            target_certification=request.target_certification,
+            openai_api_key=request.openai_api_key,
+            knowledge_context=knowledge_context if knowledge_context else None,
+        )
+        
+        return {
+            "success": True,
+            "program": program,
+        }
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err)) from val_err
+    except Exception as exc:
+        logger.error("Cohort program generation failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Cohort program generation failed: {str(exc)}") from exc
     finally:
         from utils import set_request_api_key, set_request_model
         set_request_api_key(None)
