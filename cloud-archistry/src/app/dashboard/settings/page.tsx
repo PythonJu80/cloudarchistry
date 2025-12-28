@@ -1041,7 +1041,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* OpenAI API Key Section */}
+          {/* OpenAI API Key Section - Commented out
           <Card className="bg-card/50 border-border/50 mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1054,7 +1054,6 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Add/Update Key Form */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="apiKey">
@@ -1110,7 +1109,6 @@ export default function SettingsPage() {
                 </Button>
               </div>
 
-              {/* Security Note */}
               <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
                 <Shield className="w-5 h-5 text-blue-400 mt-0.5" />
                 <div className="text-sm">
@@ -1123,8 +1121,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+          */}
 
-          {/* Model Selection - Compact */}
+          {/* Model Selection - Compact - Commented out
           {settings?.hasOpenAiKey && (
             <Card className="bg-card/50 border-border/50 mb-6">
               <CardHeader className="pb-3">
@@ -1178,8 +1177,9 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
+          */}
 
-          {/* AWS Credentials Section */}
+          {/* AWS Credentials Section - Commented out
           <Card className="bg-card/50 border-border/50 mb-6">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -1277,7 +1277,6 @@ export default function SettingsPage() {
                 </Button>
               </div>
 
-              {/* Security Note */}
               <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
                 <Shield className="w-5 h-5 text-blue-400 mt-0.5" />
                 <div className="text-sm">
@@ -1289,7 +1288,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* IAM Permissions Note */}
               <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
                 <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5" />
                 <div className="text-sm">
@@ -1303,6 +1301,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+          */}
 
           {/* Cohort Section - Show for learners (can view) and tutors (can create/manage) */}
           {settings?.subscriptionTier && ["learner", "tutor"].includes(settings.subscriptionTier) && (
