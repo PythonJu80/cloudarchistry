@@ -382,7 +382,7 @@ Return as JSON with: summary, weeks (array with week_number, theme, focus, actio
         model=model_name,
         messages=messages,
         response_format={"type": "json_object"},
-        temperature=0.7,
+        temperature=0.5,  # Study plans should be consistent, not creative
     )
 
     content = response.choices[0].message.content

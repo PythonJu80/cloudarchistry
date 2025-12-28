@@ -1521,7 +1521,7 @@ YOUR IDENTITY:
         
         response = client.chat.completions.create(
             model=model, messages=messages, tools=CHAT_TOOLS, tool_choice="auto",
-            temperature=0.7, max_tokens=2000
+            temperature=0.5, max_tokens=2000  # Lower temp for reliable tool selection
         )
         
         assistant_message = response.choices[0].message
@@ -1544,7 +1544,7 @@ YOUR IDENTITY:
             
             response = client.chat.completions.create(
                 model=model, messages=messages, tools=CHAT_TOOLS, tool_choice="auto",
-                temperature=0.7, max_tokens=2000
+                temperature=0.5, max_tokens=2000  # Lower temp for reliable tool selection
             )
             assistant_message = response.choices[0].message
         

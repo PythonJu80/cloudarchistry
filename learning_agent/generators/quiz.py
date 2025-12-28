@@ -168,7 +168,7 @@ async def _chat_json(messages: List[Dict], model: Optional[str] = None, api_key:
         model=model,
         messages=messages,
         response_format={"type": "json_object"},
-        temperature=0.7,
+        temperature=0.5,  # Quiz questions need factual accuracy
     )
     return json.loads(response.choices[0].message.content)
 

@@ -231,7 +231,7 @@ async def _chat_json(
         model=model,
         messages=messages,
         response_format={"type": "json_object"},
-        temperature=0.95,
+        temperature=0.85,  # Balanced creativity with JSON reliability
     )
     return json.loads(response.choices[0].message.content)
 

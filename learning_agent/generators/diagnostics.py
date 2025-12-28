@@ -492,7 +492,7 @@ async def generate_diagnostics(
         model=model_name,
         messages=messages,
         response_format={"type": "json_object"},
-        temperature=0.7,
+        temperature=0.5,  # Assessments should be consistent/deterministic
     )
     
     content = response.choices[0].message.content
