@@ -18,10 +18,17 @@ import {
   Copy,
   Check,
   ChevronRight,
-  Gamepad2,
-  FileQuestion,
-  Layers,
   Trophy,
+  Presentation,
+  Monitor,
+  MessageCircle,
+  Code,
+  Layout,
+  FileText,
+  HelpCircle,
+  ClipboardCheck,
+  Edit3,
+  Gamepad2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,68 +46,119 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-// Action type icons and colors
-const ACTION_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
-  game: { icon: <Gamepad2 className="h-4 w-4" />, color: "text-red-500", bg: "bg-red-500/10" },
-  exam: { icon: <GraduationCap className="h-4 w-4" />, color: "text-amber-500", bg: "bg-amber-500/10" },
-  quiz: { icon: <FileQuestion className="h-4 w-4" />, color: "text-purple-500", bg: "bg-purple-500/10" },
-  challenge: { icon: <Target className="h-4 w-4" />, color: "text-cyan-500", bg: "bg-cyan-500/10" },
-  flashcard: { icon: <Layers className="h-4 w-4" />, color: "text-green-500", bg: "bg-green-500/10" },
-  resource: { icon: <BookOpen className="h-4 w-4" />, color: "text-blue-500", bg: "bg-blue-500/10" },
+// Teaching method icons
+const METHOD_ICONS: Record<string, React.ReactNode> = {
+  lecture: <Presentation className="h-4 w-4" />,
+  demo: <Monitor className="h-4 w-4" />,
+  guided_lab: <Users className="h-4 w-4" />,
+  independent_lab: <Target className="h-4 w-4" />,
+  group_discussion: <MessageCircle className="h-4 w-4" />,
+  code_along: <Code className="h-4 w-4" />,
+  architecture_review: <Layout className="h-4 w-4" />,
+  case_study: <FileText className="h-4 w-4" />,
+  q_and_a: <HelpCircle className="h-4 w-4" />,
+  quiz_review: <ClipboardCheck className="h-4 w-4" />,
+  pair_exercise: <Users className="h-4 w-4" />,
+  whiteboard: <Edit3 className="h-4 w-4" />,
+  game: <Gamepad2 className="h-4 w-4" />,
 };
 
-interface ProgramAction {
+// Method colors for visual distinction
+const METHOD_COLORS: Record<string, string> = {
+  lecture: "bg-blue-500/10 text-blue-500 border-blue-500/30",
+  demo: "bg-purple-500/10 text-purple-500 border-purple-500/30",
+  guided_lab: "bg-green-500/10 text-green-500 border-green-500/30",
+  independent_lab: "bg-cyan-500/10 text-cyan-500 border-cyan-500/30",
+  group_discussion: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+  code_along: "bg-pink-500/10 text-pink-500 border-pink-500/30",
+  architecture_review: "bg-indigo-500/10 text-indigo-500 border-indigo-500/30",
+  case_study: "bg-orange-500/10 text-orange-500 border-orange-500/30",
+  q_and_a: "bg-teal-500/10 text-teal-500 border-teal-500/30",
+  quiz_review: "bg-red-500/10 text-red-500 border-red-500/30",
+  pair_exercise: "bg-lime-500/10 text-lime-500 border-lime-500/30",
+  whiteboard: "bg-violet-500/10 text-violet-500 border-violet-500/30",
+  game: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
+};
+
+// Agenda item within a session
+interface AgendaItem {
   id: string;
-  actionType: string;
-  type: string;
+  time: string;
+  activity: string;
+  method: string;
+  methodTitle?: string;
+  methodIcon?: string;
+  notes: string;
+}
+
+// Demonstration to perform
+interface Demonstration {
   title: string;
+  steps: string[];
+}
+
+// A single teaching session
+interface Session {
+  id: string;
+  sessionNumber: number;
+  title: string;
+  duration: string;
+  overview: string;
+  agenda: AgendaItem[];
+  keyPoints: string[];
+  demonstrations: Demonstration[];
+  discussionQuestions: string[];
+  commonMistakes: string[];
+  completed: boolean;
+}
+
+// Homework assignment for the week
+interface Homework {
   description: string;
-  target?: string;
+  platformFeature?: string;
+  featureTitle?: string;
   link?: string;
-  estimatedMinutes?: number;
+  estimatedTime: string;
   completed: boolean;
 }
 
-interface WeekCheckpoint {
-  id: string;
-  title: string;
-  type: "quiz" | "practical";
-  criteria?: string[];
-  completed: boolean;
-}
-
+// Week plan with sessions
 interface WeekPlan {
   week: number;
   title: string;
-  focus?: string;
-  topics: string[];
-  actions: ProgramAction[];
-  checkpoint?: WeekCheckpoint;
+  learningObjectives: string[];
+  sessions: Session[];
+  homework?: Homework;
+  assessmentCriteria: string[];
 }
 
+// Milestone
 interface Milestone {
   id: string;
   label: string;
   weekNumber: number;
-  metric: string;
+  successIndicators: string[];
   completed: boolean;
 }
 
-interface Deliverable {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-}
-
+// Capstone project
 interface Capstone {
   id: string;
   title: string;
   description: string;
-  deliverables: Deliverable[];
+  evaluationCriteria: string[];
+  presentationFormat: string;
   completed: boolean;
 }
 
+// Tutor resources
+interface TutorResources {
+  prerequisiteKnowledge: string[];
+  suggestedPrep: string[];
+  commonChallenges: string[];
+}
+
+// Full cohort program (teaching delivery plan)
 interface CohortProgram {
   id?: string;
   title: string;
@@ -113,6 +171,7 @@ interface CohortProgram {
   weeks: WeekPlan[];
   milestones?: Milestone[];
   capstone: Capstone;
+  tutorResources?: TutorResources;
 }
 
 interface CohortProgramBuilderProps {
@@ -209,46 +268,43 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
     }
   };
 
-  // Toggle action completion
-  const toggleAction = async (actionId: string, actionType: "action" | "checkpoint" | "milestone" | "deliverable") => {
+  // Toggle session/milestone completion
+  const toggleItem = async (itemId: string, itemType: "session" | "milestone" | "homework") => {
     if (!program?.id) return;
     
     // Optimistic update
     setProgram(prev => {
       if (!prev) return prev;
       
-      if (actionType === "milestone") {
+      if (itemType === "milestone") {
         return {
           ...prev,
           milestones: prev.milestones?.map(m => 
-            m.id === actionId ? { ...m, completed: !m.completed } : m
+            m.id === itemId ? { ...m, completed: !m.completed } : m
           ),
         };
       }
       
-      if (actionType === "deliverable") {
+      if (itemType === "homework") {
         return {
           ...prev,
-          capstone: {
-            ...prev.capstone,
-            deliverables: prev.capstone.deliverables.map(d =>
-              d.id === actionId ? { ...d, completed: !d.completed } : d
-            ),
-          },
+          weeks: prev.weeks.map(week => ({
+            ...week,
+            homework: week.homework
+              ? { ...week.homework, completed: !week.homework.completed }
+              : week.homework,
+          })),
         };
       }
       
-      // Action or checkpoint
+      // Session
       return {
         ...prev,
         weeks: prev.weeks.map(week => ({
           ...week,
-          actions: week.actions.map(a =>
-            a.id === actionId ? { ...a, completed: !a.completed } : a
+          sessions: week.sessions.map(s =>
+            s.id === itemId ? { ...s, completed: !s.completed } : s
           ),
-          checkpoint: week.checkpoint?.id === actionId
-            ? { ...week.checkpoint, completed: !week.checkpoint.completed }
-            : week.checkpoint,
         })),
       };
     });
@@ -258,10 +314,10 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
       await fetch("/api/cohort/program/action", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ programId: program.id, actionId, actionType }),
+        body: JSON.stringify({ programId: program.id, actionId: itemId, actionType: itemType }),
       });
     } catch (error) {
-      console.error("Failed to update action:", error);
+      console.error("Failed to update item:", error);
       loadProgram(); // Revert on error
     }
   };
@@ -284,33 +340,102 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
     text += `**Sessions/Week:** ${prog.sessionsPerWeek}\n`;
     text += `**Weekly Hours:** ${prog.weeklyHours}\n\n`;
     
-    text += `## Weekly Breakdown\n\n`;
+    text += `## Weekly Teaching Plan\n\n`;
     prog.weeks.forEach((week) => {
-      text += `### Week ${week.week}: ${week.title}\n`;
-      if (week.focus) text += `**Focus:** ${week.focus}\n`;
-      text += `**Topics:** ${week.topics.join(", ")}\n`;
-      text += `**Actions:**\n`;
-      week.actions.forEach((action) => {
-        text += `- [${action.completed ? "x" : " "}] ${action.title}: ${action.description}\n`;
+      text += `### Week ${week.week}: ${week.title}\n\n`;
+      text += `**Learning Objectives:**\n`;
+      week.learningObjectives.forEach((obj) => {
+        text += `- ${obj}\n`;
       });
-      if (week.checkpoint) {
-        text += `**Checkpoint:** ${week.checkpoint.title} (${week.checkpoint.type})\n`;
-      }
       text += `\n`;
+      
+      week.sessions.forEach((session) => {
+        text += `#### Session ${session.sessionNumber}: ${session.title} (${session.duration})\n`;
+        text += `${session.overview}\n\n`;
+        
+        text += `**Agenda:**\n`;
+        session.agenda.forEach((item) => {
+          text += `- ${item.time}: ${item.activity} [${item.method}]\n`;
+          if (item.notes) text += `  - Notes: ${item.notes}\n`;
+        });
+        text += `\n`;
+        
+        if (session.keyPoints.length > 0) {
+          text += `**Key Points:**\n`;
+          session.keyPoints.forEach((point) => {
+            text += `- ${point}\n`;
+          });
+          text += `\n`;
+        }
+        
+        if (session.demonstrations.length > 0) {
+          text += `**Demonstrations:**\n`;
+          session.demonstrations.forEach((demo) => {
+            text += `- ${demo.title}\n`;
+            demo.steps.forEach((step) => {
+              text += `  - ${step}\n`;
+            });
+          });
+          text += `\n`;
+        }
+        
+        if (session.discussionQuestions.length > 0) {
+          text += `**Discussion Questions:**\n`;
+          session.discussionQuestions.forEach((q) => {
+            text += `- ${q}\n`;
+          });
+          text += `\n`;
+        }
+        
+        if (session.commonMistakes.length > 0) {
+          text += `**Common Mistakes to Address:**\n`;
+          session.commonMistakes.forEach((m) => {
+            text += `- ${m}\n`;
+          });
+          text += `\n`;
+        }
+      });
+      
+      if (week.homework) {
+        text += `**Homework:** ${week.homework.description} (${week.homework.estimatedTime})\n\n`;
+      }
+      
+      text += `**Assessment Criteria:**\n`;
+      week.assessmentCriteria.forEach((c) => {
+        text += `- ${c}\n`;
+      });
+      text += `\n---\n\n`;
     });
     
     text += `## Capstone Project\n\n`;
     text += `**${prog.capstone.title}**\n`;
     text += `${prog.capstone.description}\n\n`;
-    text += `**Deliverables:**\n`;
-    prog.capstone.deliverables.forEach((d) => {
-      text += `- [${d.completed ? "x" : " "}] ${d.title}\n`;
+    text += `**Presentation Format:** ${prog.capstone.presentationFormat}\n\n`;
+    text += `**Evaluation Criteria:**\n`;
+    prog.capstone.evaluationCriteria.forEach((c) => {
+      text += `- ${c}\n`;
     });
+    
+    if (prog.tutorResources) {
+      text += `\n## Tutor Resources\n\n`;
+      text += `**Prerequisite Knowledge:**\n`;
+      prog.tutorResources.prerequisiteKnowledge.forEach((k) => {
+        text += `- ${k}\n`;
+      });
+      text += `\n**Suggested Prep:**\n`;
+      prog.tutorResources.suggestedPrep.forEach((p) => {
+        text += `- ${p}\n`;
+      });
+      text += `\n**Common Challenges:**\n`;
+      prog.tutorResources.commonChallenges.forEach((c) => {
+        text += `- ${c}\n`;
+      });
+    }
     
     return text;
   };
 
-  // Calculate progress
+  // Calculate progress (sessions completed)
   const calculateProgress = () => {
     if (!program) return { completed: 0, total: 0, percentage: 0 };
     
@@ -318,14 +443,10 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
     let total = 0;
     
     program.weeks.forEach(week => {
-      week.actions.forEach(action => {
+      week.sessions.forEach(session => {
         total++;
-        if (action.completed) completed++;
+        if (session.completed) completed++;
       });
-      if (week.checkpoint) {
-        total++;
-        if (week.checkpoint.completed) completed++;
-      }
     });
     
     return {
@@ -336,6 +457,21 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
   };
 
   const progress = calculateProgress();
+  
+  // State for expanded sessions
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  
+  const toggleSessionExpand = (sessionId: string) => {
+    setExpandedSessions(prev => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      return next;
+    });
+  };
 
   return (
     <Card className="bg-gradient-to-br from-purple-500/10 via-card/50 to-cyan-500/10 border-purple-500/30">
@@ -495,7 +631,7 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
             </div>
           )}
 
-          {/* Program Display with Interactive Checkboxes */}
+          {/* Teaching Delivery Plan Display */}
           {program && (
             <div className="space-y-6">
               {/* Program Header with Progress */}
@@ -517,7 +653,7 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
                   {/* Progress bar */}
                   <div className="mt-4">
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">Progress</span>
+                      <span className="text-muted-foreground">Sessions Delivered</span>
                       <span className="font-medium">{progress.completed}/{progress.total} ({progress.percentage}%)</span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
@@ -552,26 +688,24 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
                 </div>
               </div>
 
-              {/* Weekly Actions with Checkboxes */}
-              <div className="space-y-4">
+              {/* Weekly Teaching Plan */}
+              <div className="space-y-6">
                 <h4 className="font-semibold flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-purple-400" />
-                  Weekly Actions
-                  <span className="text-xs text-muted-foreground font-normal">
-                    (Click to mark complete)
-                  </span>
+                  Weekly Teaching Plan
                 </h4>
                 
                 {program.weeks.map((week) => {
-                  const weekCompleted = week.actions.filter(a => a.completed).length;
-                  const weekTotal = week.actions.length;
+                  const weekSessionsCompleted = week.sessions.filter(s => s.completed).length;
+                  const weekSessionsTotal = week.sessions.length;
                   
                   return (
                     <div
                       key={week.week}
                       className="p-4 rounded-lg bg-background/50 border border-border/50"
                     >
-                      <div className="flex items-center justify-between mb-3">
+                      {/* Week Header */}
+                      <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
                             Week {week.week}
@@ -579,105 +713,235 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
                           <span className="font-medium">{week.title}</span>
                         </div>
                         <Badge variant="outline" className="text-xs">
-                          {weekCompleted}/{weekTotal} done
+                          {weekSessionsCompleted}/{weekSessionsTotal} sessions
                         </Badge>
                       </div>
                       
-                      {week.focus && (
-                        <p className="text-sm text-muted-foreground mb-3">{week.focus}</p>
-                      )}
-                      
-                      {/* Topics */}
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {week.topics.map((topic, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {topic}
-                          </Badge>
-                        ))}
+                      {/* Learning Objectives */}
+                      <div className="mb-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                        <p className="text-xs font-medium text-blue-400 mb-2 flex items-center gap-1">
+                          <Target className="w-3 h-3" />
+                          Learning Objectives
+                        </p>
+                        <ul className="space-y-1">
+                          {(week.learningObjectives || []).map((obj, i) => (
+                            <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                              <span className="text-blue-400 mt-1">•</span>
+                              {obj}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                       
-                      {/* Actions with checkboxes */}
-                      <div className="space-y-2">
-                        {week.actions.map((action) => {
-                          const config = ACTION_CONFIG[action.type] || ACTION_CONFIG.resource;
+                      {/* Sessions */}
+                      <div className="space-y-3">
+                        {week.sessions.map((session) => {
+                          const isExpanded = expandedSessions.has(session.id);
+                          
                           return (
                             <div
-                              key={action.id}
+                              key={session.id}
                               className={cn(
-                                "flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer",
-                                action.completed 
-                                  ? "bg-muted/50 border-muted" 
-                                  : "hover:border-primary/50"
+                                "rounded-lg border transition-all",
+                                session.completed 
+                                  ? "bg-green-500/5 border-green-500/30" 
+                                  : "border-border/50"
                               )}
-                              onClick={() => toggleAction(action.id, "action")}
                             >
-                              <button className="mt-0.5 flex-shrink-0">
-                                {action.completed ? (
-                                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                ) : (
-                                  <Circle className="h-5 w-5 text-muted-foreground" />
-                                )}
-                              </button>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className={cn("p-1 rounded", config.bg, config.color)}>
-                                    {config.icon}
-                                  </span>
-                                  <span className={cn(
-                                    "font-medium",
-                                    action.completed && "line-through text-muted-foreground"
-                                  )}>
-                                    {action.title}
-                                  </span>
+                              {/* Session Header */}
+                              <div 
+                                className="p-3 flex items-center justify-between cursor-pointer"
+                                onClick={() => toggleSessionExpand(session.id)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <button 
+                                    className="flex-shrink-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleItem(session.id, "session");
+                                    }}
+                                  >
+                                    {session.completed ? (
+                                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                    ) : (
+                                      <Circle className="h-5 w-5 text-muted-foreground" />
+                                    )}
+                                  </button>
+                                  <div>
+                                    <p className={cn(
+                                      "font-medium",
+                                      session.completed && "text-muted-foreground"
+                                    )}>
+                                      Session {session.sessionNumber}: {session.title}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                                      <Clock className="w-3 h-3" />
+                                      {session.duration}
+                                    </p>
+                                  </div>
                                 </div>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {action.description}
-                                </p>
-                                {action.target && (
-                                  <p className="text-xs text-primary mt-1">
-                                    Target: {action.target}
-                                  </p>
-                                )}
+                                <ChevronRight className={cn(
+                                  "w-5 h-5 text-muted-foreground transition-transform",
+                                  isExpanded && "rotate-90"
+                                )} />
                               </div>
-                              {action.link && (
-                                <Link 
-                                  href={action.link}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex-shrink-0"
-                                >
-                                  <Button size="sm" variant="ghost">
-                                    <ChevronRight className="h-4 w-4" />
-                                  </Button>
-                                </Link>
+                              
+                              {/* Expanded Session Details */}
+                              {isExpanded && (
+                                <div className="px-3 pb-3 space-y-4 border-t border-border/50 pt-3">
+                                  {/* Overview */}
+                                  <p className="text-sm text-muted-foreground">{session.overview}</p>
+                                  
+                                  {/* Agenda */}
+                                  <div>
+                                    <p className="text-xs font-medium text-purple-400 mb-2 flex items-center gap-1">
+                                      <BookOpen className="w-3 h-3" />
+                                      Session Agenda
+                                    </p>
+                                    <div className="space-y-2">
+                                      {(session.agenda || []).map((item) => (
+                                        <div 
+                                          key={item.id}
+                                          className={cn(
+                                            "p-2 rounded-lg border text-sm",
+                                            METHOD_COLORS[item.method] || "bg-secondary/50"
+                                          )}
+                                        >
+                                          <div className="flex items-center gap-2 mb-1">
+                                            {METHOD_ICONS[item.method] || <BookOpen className="h-4 w-4" />}
+                                            <span className="font-medium">{item.time}</span>
+                                            <span className="text-xs opacity-70">({item.methodTitle || item.method})</span>
+                                          </div>
+                                          <p>{item.activity}</p>
+                                          {item.notes && (
+                                            <p className="text-xs mt-1 opacity-70 italic">💡 {item.notes}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Key Points */}
+                                  {session.keyPoints.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium text-green-400 mb-2 flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        Key Points to Emphasize
+                                      </p>
+                                      <ul className="space-y-1">
+                                        {(session.keyPoints || []).map((point, i) => (
+                                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                                            <span className="text-green-400 mt-1">✓</span>
+                                            {point}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Demonstrations */}
+                                  {session.demonstrations.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium text-cyan-400 mb-2 flex items-center gap-1">
+                                        <Monitor className="w-3 h-3" />
+                                        Demonstrations
+                                      </p>
+                                      {(session.demonstrations || []).map((demo, i) => (
+                                        <div key={i} className="mb-2 p-2 rounded bg-cyan-500/5 border border-cyan-500/20">
+                                          <p className="text-sm font-medium">{demo.title}</p>
+                                          <ol className="mt-1 space-y-1">
+                                            {(demo.steps || []).map((step, j) => (
+                                              <li key={j} className="text-xs text-muted-foreground flex items-start gap-2">
+                                                <span className="text-cyan-400 font-mono">{j + 1}.</span>
+                                                {step}
+                                              </li>
+                                            ))}
+                                          </ol>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Discussion Questions */}
+                                  {session.discussionQuestions.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium text-amber-400 mb-2 flex items-center gap-1">
+                                        <MessageCircle className="w-3 h-3" />
+                                        Discussion Questions
+                                      </p>
+                                      <ul className="space-y-1">
+                                        {(session.discussionQuestions || []).map((q, i) => (
+                                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                                            <span className="text-amber-400">?</span>
+                                            {q}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Common Mistakes */}
+                                  {session.commonMistakes.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium text-red-400 mb-2 flex items-center gap-1">
+                                        <HelpCircle className="w-3 h-3" />
+                                        Common Mistakes to Address
+                                      </p>
+                                      <ul className="space-y-1">
+                                        {(session.commonMistakes || []).map((m, i) => (
+                                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                                            <span className="text-red-400">⚠</span>
+                                            {m}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           );
                         })}
                       </div>
                       
-                      {/* Checkpoint */}
-                      {week.checkpoint && (
-                        <div 
-                          className={cn(
-                            "mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer transition-all",
-                            week.checkpoint.completed 
-                              ? "border-green-500/50 bg-green-500/10" 
-                              : "border-amber-500/50 bg-amber-500/10"
-                          )}
-                          onClick={() => toggleAction(week.checkpoint!.id, "checkpoint")}
-                        >
-                          <div className="flex items-center gap-2">
-                            {week.checkpoint.completed ? (
-                              <CheckCircle2 className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <Circle className="h-5 w-5 text-amber-500" />
-                            )}
-                            <span className="font-medium">
-                              {week.checkpoint.type === "quiz" ? "📝" : "🔧"} {week.checkpoint.title}
+                      {/* Homework */}
+                      {week.homework && (
+                        <div className="mt-4 p-3 rounded-lg bg-orange-500/5 border border-orange-500/20">
+                          <p className="text-xs font-medium text-orange-400 mb-2 flex items-center gap-1">
+                            <BookOpen className="w-3 h-3" />
+                            Homework Assignment
+                          </p>
+                          <p className="text-sm">{week.homework.description}</p>
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {week.homework.estimatedTime}
                             </span>
+                            {week.homework.link && (
+                              <Link href={week.homework.link} className="text-orange-400 hover:underline flex items-center gap-1">
+                                {week.homework.featureTitle || "Platform Feature"}
+                                <ChevronRight className="w-3 h-3" />
+                              </Link>
+                            )}
                           </div>
                         </div>
                       )}
+                      
+                      {/* Assessment Criteria */}
+                      <div className="mt-4 p-3 rounded-lg bg-violet-500/5 border border-violet-500/20">
+                        <p className="text-xs font-medium text-violet-400 mb-2 flex items-center gap-1">
+                          <ClipboardCheck className="w-3 h-3" />
+                          Assessment Criteria
+                        </p>
+                        <ul className="space-y-1">
+                          {(week.assessmentCriteria || []).map((c, i) => (
+                            <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                              <span className="text-violet-400 mt-1">•</span>
+                              {c}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   );
                 })}
@@ -695,25 +959,31 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
                       <div 
                         key={milestone.id}
                         className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                          "p-3 rounded-lg border transition-all cursor-pointer",
                           milestone.completed 
-                            ? "bg-muted/50 border-muted" 
+                            ? "bg-green-500/5 border-green-500/30" 
                             : "hover:border-primary/50"
                         )}
-                        onClick={() => toggleAction(milestone.id, "milestone")}
+                        onClick={() => toggleItem(milestone.id, "milestone")}
                       >
-                        {milestone.completed ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                        )}
-                        <div className="flex-1">
-                          <p className={cn("font-medium", milestone.completed && "line-through text-muted-foreground")}>
-                            {milestone.label}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{milestone.metric}</p>
+                        <div className="flex items-center gap-3">
+                          {milestone.completed ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          )}
+                          <div className="flex-1">
+                            <p className={cn("font-medium", milestone.completed && "text-muted-foreground")}>
+                              {milestone.label}
+                            </p>
+                            <ul className="mt-1 space-y-0.5">
+                              {(milestone.successIndicators || []).map((indicator, i) => (
+                                <li key={i} className="text-xs text-muted-foreground">• {indicator}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <Badge variant="outline">Week {milestone.weekNumber}</Badge>
                         </div>
-                        <Badge variant="outline">Week {milestone.weekNumber}</Badge>
                       </div>
                     ))}
                   </div>
@@ -730,29 +1000,59 @@ export function CohortProgramBuilder({ teamId, teamName, onProgramGenerated }: C
                 <p className="text-sm text-muted-foreground mt-1">
                   {program.capstone.description}
                 </p>
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Deliverables:</p>
-                  {program.capstone.deliverables.map((d) => (
-                    <div 
-                      key={d.id} 
-                      className={cn(
-                        "flex items-center gap-2 p-2 rounded cursor-pointer transition-all",
-                        d.completed ? "bg-green-500/10" : "hover:bg-secondary/50"
-                      )}
-                      onClick={() => toggleAction(d.id, "deliverable")}
-                    >
-                      {d.completed ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <Circle className="w-4 h-4 text-amber-400" />
-                      )}
-                      <span className={cn("text-sm", d.completed && "line-through text-muted-foreground")}>
-                        {d.title}
-                      </span>
-                    </div>
-                  ))}
+                <div className="mt-3 p-2 rounded bg-amber-500/10">
+                  <p className="text-xs font-medium text-amber-400 mb-1">Presentation Format</p>
+                  <p className="text-sm">{program.capstone.presentationFormat}</p>
+                </div>
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Evaluation Criteria:</p>
+                  <ul className="space-y-1">
+                    {(program.capstone.evaluationCriteria || []).map((c, i) => (
+                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                        <span className="text-amber-400 mt-1">•</span>
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
+
+              {/* Tutor Resources */}
+              {program.tutorResources && (
+                <div className="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30">
+                  <h4 className="font-semibold flex items-center gap-2 mb-4">
+                    <Users className="w-5 h-5 text-indigo-400" />
+                    Tutor Resources
+                  </h4>
+                  
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="text-xs font-medium text-indigo-400 mb-2">Prerequisite Knowledge</p>
+                      <ul className="space-y-1">
+                        {(program.tutorResources.prerequisiteKnowledge || []).map((k, i) => (
+                          <li key={i} className="text-sm text-muted-foreground">• {k}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-indigo-400 mb-2">Suggested Prep</p>
+                      <ul className="space-y-1">
+                        {(program.tutorResources.suggestedPrep || []).map((p, i) => (
+                          <li key={i} className="text-sm text-muted-foreground">• {p}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-indigo-400 mb-2">Common Challenges</p>
+                      <ul className="space-y-1">
+                        {(program.tutorResources.commonChallenges || []).map((c, i) => (
+                          <li key={i} className="text-sm text-muted-foreground">• {c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

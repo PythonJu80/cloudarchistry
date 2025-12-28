@@ -1,9 +1,12 @@
 """
 Cohort Program Generator
 ========================
-Generates structured cohort learning programs for tutors.
-Creates week-by-week curriculum with platform-aware actions, checkpoints, and capstone projects.
-Includes links to specific platform features (games, challenges, flashcards, etc.)
+Generates structured cohort TEACHING programs for tutors/instructors.
+Creates week-by-week delivery plans with session outlines, teaching methods,
+demonstrations, activities, and assessments.
+
+This is a DELIVERY PLAN for the tutor - what to teach and how to teach it,
+NOT a study guide for learners.
 """
 
 from __future__ import annotations
@@ -23,9 +26,20 @@ from utils import (
 )
 
 
-# Platform features available for cohort programs
-# Maps to actual platform routes
-PLATFORM_ACTIONS = {
+# Teaching methods available for cohort sessions
+TEACHING_METHODS = {
+    "lecture": "Direct instruction with slides or whiteboard",
+    "demo": "Live demonstration (AWS Console, CLI, or platform features)",
+    "guided_lab": "Walk learners through hands-on exercise step-by-step",
+    "group_discussion": "Facilitate discussion on concepts or scenarios",
+    "game": "Play a CloudArchistry game together as a group",
+    "quiz_review": "Run quiz and review answers together",
+    "pair_exercise": "Learners work in pairs on a problem",
+    "whiteboard": "Collaborative diagramming and problem-solving",
+}
+
+# Platform features available for demonstrations and homework
+PLATFORM_FEATURES = {
     # Core learning features
     "world_challenge": {
         "title": "World Map Challenge",
@@ -109,32 +123,50 @@ PLATFORM_ACTIONS = {
 }
 
 
-COHORT_PROGRAM_SYSTEM_PROMPT = """You are an expert AWS training curriculum designer creating a cohort learning program.
+COHORT_PROGRAM_SYSTEM_PROMPT = """You are an expert AWS training curriculum designer creating a TEACHING DELIVERY PLAN for tutors/instructors using the CloudArchistry learning platform.
 
-## Platform Features Available
-You MUST recommend actions from these specific platform features with their exact IDs:
+This is NOT a study guide for learners. This is a detailed plan for the TUTOR on:
+- What to teach each session
+- How to deliver it (teaching methods)
+- Which CloudArchistry platform features to DEMO during sessions
+- What activities to run together as a group
+- What to assign as homework
 
-**CORE LEARNING (prioritize these - 70-80% of actions)**
-- world_challenge: Real-world scenario challenges from the world map
-- architecture_drawing: Design and draw AWS architectures
-- cli_simulator: Practice AWS CLI commands in a sandbox
-- practice_exam: Full-length certification practice exams
-- flashcards: Spaced repetition flashcard study
-- quiz: Focused quizzes on specific AWS topics
-- study_notes: AI-generated comprehensive study notes
-- learning_center: Comprehensive learning resources
-- ai_chat: Ask questions and get AI explanations
+## Teaching Methods Available
+Use these method IDs in your session agenda:
+- lecture: Direct instruction with slides/whiteboard
+- demo: Live demonstration (AWS Console, CLI, or CloudArchistry platform features)
+- guided_lab: Walk learners through hands-on exercise step-by-step
+- group_discussion: Facilitate discussion on concepts or scenarios
+- game: Play a CloudArchistry game together as a group
+- quiz_review: Run quiz and review answers together
+- pair_exercise: Learners work in pairs on a problem
+- whiteboard: Collaborative diagramming and problem-solving
 
-**GAMES (use sparingly - max 1-2 per week as reinforcement)**
-- sniper_quiz: High-stakes single-shot questions
-- hot_streak: Build multiplier streaks
-- lightning_round: 60-second speed challenges
-- cloud_tycoon: Build infrastructure simulation
+## CloudArchistry Platform Features
+The tutor demos these features and assigns them as homework:
+
+GAMES (in Game Zone - great for group demos):
+- Service Slots: Match AWS services that work together
+- Hot Streak: Build streaks with multipliers - good for warm-ups
+- Ticking Bomb: Hot potato game - PERFECT for group sessions
+- Quiz Battle: 1v1 competitive quiz
+- Cloud Tycoon: Build infrastructure simulation
+
+LEARNING TOOLS:
+- Flashcards: Spaced repetition cards - great for warm-ups or review
+- Topic Quizzes: Quick knowledge checks on specific topics
+- Practice Exams: Full certification practice tests
+- CLI Simulator: Safe sandbox to practice AWS CLI commands
+
+CHALLENGES:
+- World Map Challenge: Place services on world map - teaches global infrastructure
+- Architecture Drawing: Draw AWS diagrams to solve scenarios
 
 ## Output Format
 Return a JSON object with this exact structure:
 {
-  "title": "string - catchy program title",
+  "title": "string - program title",
   "outcome": "string - the main learning outcome",
   "duration": number,
   "level": "string",
@@ -145,101 +177,115 @@ Return a JSON object with this exact structure:
     {
       "week": number,
       "title": "string - week theme",
-      "focus": "string - what to focus on this week",
-      "topics": ["string array of 3-5 topics covered"],
-      "actions": [
+      "learningObjectives": ["string array of 2-4 specific objectives for this week"],
+      "sessions": [
         {
-          "id": "unique-action-id",
-          "actionType": "world_challenge|architecture_drawing|cli_simulator|practice_exam|flashcards|quiz|study_notes|learning_center|ai_chat|sniper_quiz|hot_streak|lightning_round|cloud_tycoon",
-          "title": "string - specific action title",
-          "description": "string - what to do",
-          "target": "string - specific measurable target (e.g., 'Complete 2 scenarios', 'Score 80%')",
-          "estimatedMinutes": number
+          "sessionNumber": number,
+          "title": "string - session title",
+          "duration": "string - e.g., '120 minutes'",
+          "overview": "string - brief description of what this session covers",
+          "agenda": [
+            {
+              "time": "string - e.g., '0-15 min'",
+              "activity": "string - what to do",
+              "method": "lecture|demo|guided_lab|group_discussion|game|quiz_review|pair_exercise|whiteboard",
+              "notes": "string - tutor notes/tips for this segment"
+            }
+          ],
+          "keyPoints": ["string array of 3-5 key points to emphasize during this session"],
+          "demonstrations": [
+            {
+              "title": "string - what to demo",
+              "platformFeature": "string - which CloudArchistry feature to use (optional)",
+              "steps": ["string array of demo steps"]
+            }
+          ],
+          "discussionQuestions": ["string array of 2-3 questions to ask the group"],
+          "commonMistakes": ["string array of 2-3 common learner mistakes to watch for"]
         }
       ],
-      "checkpoint": {
-        "id": "checkpoint-id",
-        "title": "string - checkpoint name",
-        "type": "quiz|practical",
-        "criteria": ["string array of 2-3 success criteria"]
-      }
+      "homework": {
+        "description": "string - what learners should do independently",
+        "platformFeature": "string - which CloudArchistry feature to use",
+        "estimatedMinutes": number
+      },
+      "assessmentCriteria": ["string array of 2-4 criteria to assess learner progress"]
     }
   ],
   "milestones": [
     {
-      "id": "milestone-id",
       "label": "string - milestone name",
       "weekNumber": number,
-      "metric": "string - how to measure success"
+      "successIndicators": ["string array of 1-3 success indicators"]
     }
   ],
   "capstone": {
-    "id": "capstone-id",
     "title": "string - capstone project title",
-    "description": "string - what they'll build",
-    "deliverables": [
-      {
-        "id": "deliverable-id",
-        "title": "string - deliverable name",
-        "description": "string - what to submit"
-      }
-    ]
+    "description": "string - what learners will build/present",
+    "presentationFormat": "string - how they'll present (e.g., 'Team presentation with Q&A')",
+    "evaluationCriteria": ["string array of 3-5 evaluation criteria"]
+  },
+  "tutorResources": {
+    "prerequisiteKnowledge": ["string array of what tutor should know"],
+    "suggestedPrep": ["string array of prep tasks for tutor"],
+    "commonChallenges": ["string array of common learner struggles and how to address them"]
   }
 }
 
 ## Guidelines
-1. Create the specified number of weeks
-2. Each week should have 4-6 specific actions
-3. **CRITICAL**: 70-80% of actions should be CORE LEARNING features
-4. **CRITICAL**: Maximum 1-2 games per week, positioned as breaks/reinforcement
-5. Include checkpoints at weeks 2, 4, and the final week
-6. Add 3-4 meaningful milestones tied to learning objectives
-7. Each action must have a specific, measurable target
-8. Progress from fundamentals to advanced topics
-9. Capstone should tie together all learned skills
-10. Tailor difficulty to the specified skill level
+1. Create the specified number of weeks with the specified sessions per week
+2. Each session should have a detailed agenda with 4-6 timed segments
+3. Include at least one platform demo per session
+4. Assign homework using CloudArchistry platform features
+5. Include discussion questions to engage the group
+6. Add tutor notes with tips for delivery
+7. Progress from fundamentals to advanced topics
+8. Capstone should tie together all learned skills
+9. Include tutor resources section with prep guidance
 
 For skill levels:
-- beginner: Focus on fundamentals, console-first, lots of guidance, more flashcards/notes
-- intermediate: Mix of console and CLI, architecture challenges, practice exams
-- advanced: CLI/IaC focus, complex architectures, production considerations"""
+- beginner: More lecture/demo, guided labs, lots of flashcards, slower pace
+- intermediate: Mix of methods, architecture challenges, practice exams
+- advanced: More discussion, complex scenarios, learner-led activities"""
 
 
-def enrich_program_with_links(program: Dict[str, Any]) -> Dict[str, Any]:
+def enrich_program_with_metadata(program: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Post-process the AI-generated program to add platform links and ensure IDs.
+    Post-process the AI-generated program to add IDs and completion tracking.
     """
     # Process weeks
-    for week in program.get("weeks", []):
-        for action in week.get("actions", []):
-            # Ensure action has an ID
-            if not action.get("id"):
-                action["id"] = f"action-{uuid.uuid4().hex[:8]}"
-            
-            # Add link and type from platform actions
-            action_type = action.get("actionType", "")
-            if action_type in PLATFORM_ACTIONS:
-                platform_action = PLATFORM_ACTIONS[action_type]
-                action["link"] = platform_action["link"]
-                action["type"] = platform_action["type"]
-            else:
-                # Default to learning center
-                action["link"] = "/learn"
-                action["type"] = "resource"
-            
-            # Ensure completed flag
-            action["completed"] = False
+    for week_idx, week in enumerate(program.get("weeks", [])):
+        # Ensure week has ID
+        if not week.get("id"):
+            week["id"] = f"week-{week_idx + 1}-{uuid.uuid4().hex[:8]}"
+        week["completed"] = False
         
-        # Ensure checkpoint has ID
-        checkpoint = week.get("checkpoint")
-        if checkpoint and not checkpoint.get("id"):
-            checkpoint["id"] = f"checkpoint-{week.get('week', 0)}-{uuid.uuid4().hex[:8]}"
-            checkpoint["completed"] = False
+        # Process sessions
+        for session_idx, session in enumerate(week.get("sessions", [])):
+            if not session.get("id"):
+                session["id"] = f"session-{week_idx + 1}-{session_idx + 1}-{uuid.uuid4().hex[:8]}"
+            session["completed"] = False
+            
+            # Process agenda items
+            for agenda_idx, agenda in enumerate(session.get("agenda", [])):
+                if not agenda.get("id"):
+                    agenda["id"] = f"agenda-{session['id']}-{agenda_idx}"
+            
+            # Process demonstrations
+            for demo_idx, demo in enumerate(session.get("demonstrations", [])):
+                if not demo.get("id"):
+                    demo["id"] = f"demo-{session['id']}-{demo_idx}"
+        
+        # Ensure homework has ID
+        homework = week.get("homework")
+        if homework and not homework.get("id"):
+            homework["id"] = f"homework-{week_idx + 1}-{uuid.uuid4().hex[:8]}"
+            homework["completed"] = False
     
     # Ensure milestones have IDs
-    for milestone in program.get("milestones", []):
+    for milestone_idx, milestone in enumerate(program.get("milestones", [])):
         if not milestone.get("id"):
-            milestone["id"] = f"milestone-{uuid.uuid4().hex[:8]}"
+            milestone["id"] = f"milestone-{milestone_idx + 1}-{uuid.uuid4().hex[:8]}"
         milestone["completed"] = False
     
     # Ensure capstone has ID
@@ -247,12 +293,6 @@ def enrich_program_with_links(program: Dict[str, Any]) -> Dict[str, Any]:
     if not capstone.get("id"):
         capstone["id"] = f"capstone-{uuid.uuid4().hex[:8]}"
     capstone["completed"] = False
-    
-    # Ensure deliverables have IDs
-    for deliverable in capstone.get("deliverables", []):
-        if not deliverable.get("id"):
-            deliverable["id"] = f"deliverable-{uuid.uuid4().hex[:8]}"
-        deliverable["completed"] = False
     
     return program
 
@@ -320,7 +360,7 @@ async def generate_cohort_program(
 {knowledge_context}
 """
     
-    user_prompt += "\nCreate a complete week-by-week curriculum with platform actions, checkpoints, milestones, and a capstone project."
+    user_prompt += "\nCreate a complete week-by-week TEACHING DELIVERY PLAN with session agendas, demonstrations, discussion questions, homework assignments, milestones, and a capstone project. Remember: this is for the TUTOR, not the learner."
     
     # Get model
     model = get_request_model() or DEFAULT_MODEL
@@ -348,6 +388,17 @@ async def generate_cohort_program(
         if not content:
             raise ValueError("No response from AI")
         
+        # Strip markdown code fences if present
+        content = content.strip()
+        if content.startswith("```"):
+            # Remove opening fence (```json or ```)
+            first_newline = content.find("\n")
+            if first_newline != -1:
+                content = content[first_newline + 1:]
+            # Remove closing fence
+            if content.endswith("```"):
+                content = content[:-3].strip()
+        
         program = json.loads(content)
         
         # Validate required fields
@@ -359,8 +410,8 @@ async def generate_cohort_program(
         if target_certification:
             program["targetCertification"] = target_certification
         
-        # Enrich with platform links and ensure IDs
-        program = enrich_program_with_links(program)
+        # Enrich with metadata and ensure IDs
+        program = enrich_program_with_metadata(program)
         
         logger.info(f"Generated {duration_weeks}-week cohort program for {team_name}")
         
