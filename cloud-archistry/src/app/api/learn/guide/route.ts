@@ -423,12 +423,17 @@ interface StoredPlan {
   planOutput: unknown;
   studyHoursPerWeek: number | null;
   planInputs: unknown;
+  progressData: unknown;
   generatedAt: Date;
 }
 
 function transformPlanOutput(plan: StoredPlan) {
   const output = plan.planOutput as Record<string, unknown> | null;
   const inputs = plan.planInputs as Record<string, unknown> | null;
+  const progressData = (plan.progressData as {
+    completedActions?: string[];
+    completedMilestones?: string[];
+  }) || {};
   
   if (!output) {
     return null;
@@ -455,7 +460,7 @@ function transformPlanOutput(plan: StoredPlan) {
             description: a.description as string,
             target: a.target as string | undefined,
             link: a.link as string | undefined,
-            completed: a.completed as boolean || false,
+            completed: progressData.completedActions?.includes(a.id as string) || false,
           };
         }),
       };
@@ -466,7 +471,7 @@ function transformPlanOutput(plan: StoredPlan) {
         label: milestone.label as string,
         weekNumber: milestone.week_number as number,
         metric: milestone.metric as string,
-        completed: milestone.completed as boolean || false,
+        completed: progressData.completedMilestones?.includes(milestone.label as string) || false,
       };
     }),
     accountability: (output.accountability as string[]) || [],

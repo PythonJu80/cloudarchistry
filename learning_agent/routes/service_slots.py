@@ -49,7 +49,7 @@ class ValidateAnswerRequest(BaseModel):
     services: List[Dict]  # The 3 services
     pattern_name: str
     options: List[Dict]  # The 4 options
-    difficulty: str
+    user_level: str
     base_payout: float
     selected_option_id: str
     bet_amount: int
@@ -77,7 +77,7 @@ class ChallengeResponse(BaseModel):
     pattern_name: str
     pattern_description: str
     options: List[AnswerOptionResponse]
-    difficulty: str
+    user_level: str
     base_payout: float
 
 
@@ -107,7 +107,6 @@ async def generate_challenge(request: GenerateChallengeRequest):
         challenge = await generate_slot_challenge(
             user_level=request.user_level,
             cert_code=request.cert_code,
-            difficulty=request.difficulty,
             api_key=request.openai_api_key,
             model=request.preferred_model,
         )
@@ -133,7 +132,7 @@ async def generate_challenge(request: GenerateChallengeRequest):
                 )
                 for opt in challenge.options
             ],
-            difficulty=challenge.difficulty,
+            user_level=challenge.user_level,
             base_payout=challenge.base_payout,
         )
     except ApiKeyRequiredError as e:
@@ -179,7 +178,7 @@ async def generate_challenges_batch(request: GenerateBatchRequest):
                     )
                     for opt in challenge.options
                 ],
-                difficulty=challenge.difficulty,
+                user_level=challenge.user_level,
                 base_payout=challenge.base_payout,
             )
             for challenge in challenges
@@ -221,7 +220,7 @@ async def validate_answer(request: ValidateAnswerRequest):
                 )
                 for opt in request.options
             ],
-            difficulty=request.difficulty,
+            user_level=request.user_level,
             base_payout=request.base_payout,
         )
         

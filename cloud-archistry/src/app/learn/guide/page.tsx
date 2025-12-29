@@ -253,10 +253,40 @@ export default function GuidePage() {
       await fetch("/api/learn/guide/action", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: plan.id, weekNumber, actionId }),
+        body: JSON.stringify({ planId: plan.id, weekNumber, actionId, actionType: "action" }),
       });
     } catch (err) {
       console.error("Failed to update action:", err);
+      // Revert on error
+      loadData();
+    }
+  };
+
+  // Toggle milestone completion
+  const toggleMilestone = async (milestoneLabel: string) => {
+    if (!plan) return;
+    
+    // Optimistic update
+    setPlan(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        milestones: prev.milestones.map(milestone => {
+          if (milestone.label !== milestoneLabel) return milestone;
+          return { ...milestone, completed: !milestone.completed };
+        }),
+      };
+    });
+    
+    // Persist to backend
+    try {
+      await fetch("/api/learn/guide/action", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: plan.id, actionId: milestoneLabel, actionType: "milestone" }),
+      });
+    } catch (err) {
+      console.error("Failed to update milestone:", err);
       // Revert on error
       loadData();
     }
@@ -584,15 +614,26 @@ export default function GuidePage() {
                       {plan.milestones.map((milestone, idx) => (
                         <div 
                           key={idx}
-                          className="flex items-center gap-3 p-3 rounded-lg border"
-                        >
-                          {milestone.completed ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                          ) : (
-                            <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer",
+                            milestone.completed 
+                              ? "bg-muted/50 border-muted" 
+                              : "hover:border-primary/50"
                           )}
+                          onClick={() => toggleMilestone(milestone.label)}
+                        >
+                          <button className="flex-shrink-0">
+                            {milestone.completed ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <Circle className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </button>
                           <div className="flex-1">
-                            <p className="font-medium">{milestone.label}</p>
+                            <p className={cn(
+                              "font-medium",
+                              milestone.completed && "line-through text-muted-foreground"
+                            )}>{milestone.label}</p>
                             <p className="text-sm text-muted-foreground">{milestone.metric}</p>
                           </div>
                           <Badge variant="outline">Week {milestone.weekNumber}</Badge>

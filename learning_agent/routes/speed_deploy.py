@@ -42,7 +42,7 @@ class ValidateDeploymentRequest(BaseModel):
     optimal_solution: List[str]
     acceptable_solutions: List[List[str]]
     time_limit: int
-    difficulty: str
+    user_level: str
     max_score: int
     submitted_services: List[str]
     time_remaining: int
@@ -66,7 +66,7 @@ class BriefResponse(BaseModel):
     optimal_solution: List[str]
     acceptable_solutions: List[List[str]]
     time_limit: int
-    difficulty: str
+    user_level: str
     max_score: int
 
 
@@ -101,7 +101,6 @@ async def generate_brief(request: GenerateBriefRequest):
         brief = await generate_deploy_brief(
             user_level=request.user_level,
             cert_code=request.cert_code,
-            difficulty=request.difficulty,
             api_key=request.openai_api_key,
             model=request.preferred_model,
         )
@@ -123,7 +122,7 @@ async def generate_brief(request: GenerateBriefRequest):
             optimal_solution=brief.optimal_solution,
             acceptable_solutions=brief.acceptable_solutions,
             time_limit=brief.time_limit,
-            difficulty=brief.difficulty,
+            user_level=brief.user_level,
             max_score=brief.max_score,
         )
     except ApiKeyRequiredError as e:
@@ -160,7 +159,8 @@ async def validate_deploy(request: ValidateDeploymentRequest):
             optimal_solution=request.optimal_solution,
             acceptable_solutions=request.acceptable_solutions,
             time_limit=request.time_limit,
-            difficulty=request.difficulty,
+            user_level=request.user_level,
+            target_cert="",
             max_score=request.max_score,
         )
         

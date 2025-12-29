@@ -2024,6 +2024,7 @@ model StudyPlan {
   confidenceLevel    String?  @map("confidence_level")
   planInputs         Json     @map("plan_inputs")
   planOutput         Json?    @map("plan_output")
+  progressData       Json     @default("{}") @map("progress_data")
   generatedAt        DateTime @default(now()) @map("generated_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
