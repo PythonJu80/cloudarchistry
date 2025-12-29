@@ -6,6 +6,222 @@ import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 
 const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 
+// Types for cohort program structure
+interface CohortWeek {
+  week: number;
+  title: string;
+  learningObjectives: string[];
+  sessions: Array<{
+    sessionNumber: number;
+    title: string;
+    duration: string;
+    overview: string;
+    keyPoints: string[];
+  }>;
+  homework?: {
+    description: string;
+    platformFeature?: string;
+    estimatedMinutes?: number;
+    link?: string;
+  };
+}
+
+interface CohortMilestone {
+  label: string;
+  weekNumber: number;
+  successIndicators?: string[];
+}
+
+interface CohortProgram {
+  title: string;
+  outcome: string;
+  duration: number;
+  level: string;
+  sessionsPerWeek: number;
+  weeklyHours: number;
+  targetCertification?: string;
+  weeks: CohortWeek[];
+  milestones?: CohortMilestone[];
+  capstone?: {
+    title: string;
+    description: string;
+  };
+}
+
+/**
+ * Transform a tutor's cohort program into learner-focused study guide content.
+ * Extracts homework, learning objectives, and key points as actionable study items.
+ */
+function transformCohortProgramToStudyContent(program: CohortProgram) {
+  return {
+    weeks: program.weeks.map((week) => ({
+      weekNumber: week.week,
+      actions: [
+        // Learning objectives as study focus items
+        ...week.learningObjectives.map((objective) => ({
+          type: "study",
+          title: objective,
+          description: `Week ${week.week}: ${week.title}`,
+          link: "/learn",
+        })),
+        // Homework as primary learner action
+        ...(week.homework ? [{
+          type: week.homework.platformFeature || "task",
+          title: week.homework.description,
+          description: week.homework.estimatedMinutes 
+            ? `Estimated: ${week.homework.estimatedMinutes} minutes`
+            : "Complete before next session",
+          link: week.homework.link || "/learn",
+        }] : []),
+        // Key points from sessions as review items
+        ...week.sessions.flatMap((session) => 
+          (session.keyPoints || []).slice(0, 2).map((point) => ({
+            type: "review",
+            title: point,
+            description: `From Session ${session.sessionNumber}: ${session.title}`,
+            link: "/learn/flashcards",
+          }))
+        ),
+      ],
+    })),
+    milestones: (program.milestones || []).map((m) => ({
+      weekNumber: m.weekNumber,
+      label: m.label,
+      metric: (m.successIndicators || []).join(", ") || "Complete milestone",
+    })),
+    focusAreas: program.weeks.flatMap((w) => w.learningObjectives).slice(0, 10),
+    progress: { 
+      challengesCompleted: 0, 
+      totalChallenges: program.weeks.length * 2, 
+      examsPassed: 0, 
+      currentStreak: 0 
+    },
+  };
+}
+
+/**
+ * Generate study guides for all cohort members (excluding owner).
+ * Runs asynchronously after program creation - does not block response.
+ */
+async function generateStudyGuidesForMembers(
+  teamId: string,
+  program: CohortProgram,
+  savedProgramId: string,
+  skillLevel: string,
+  targetCertification: string | null,
+  weeklyHours: number,
+  duration: number,
+  teamName: string,
+  aiConfig: { key?: string; preferredModel?: string } | null
+) {
+  try {
+    // Get all non-owner members with their profiles
+    const members = await prisma.academyTeamMember.findMany({
+      where: {
+        teamId,
+        role: { not: "owner" },
+      },
+      include: {
+        academyUser: {
+          include: {
+            profile: {
+              select: {
+                id: true,
+                skillLevel: true,
+                targetCertification: true,
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (members.length === 0) {
+      console.log(`[Cohort] No non-owner members found for team ${teamId}`);
+      return;
+    }
+
+    console.log(`[Cohort] Generating study guides for ${members.length} members`);
+
+    // Transform cohort program to study guide content
+    const structuredContent = transformCohortProgramToStudyContent(program);
+
+    // Generate study guide for each member
+    for (const member of members) {
+      if (!member.academyUser?.profile?.id) {
+        console.log(`[Cohort] Skipping member ${member.id} - no profile`);
+        continue;
+      }
+
+      const profileId = member.academyUser.profile.id;
+
+      // Check for existing study plan from this cohort program (deduplication)
+      const existingPlan = await prisma.studyPlan.findFirst({
+        where: {
+          profileId,
+          planInputs: {
+            path: ["cohortProgramId"],
+            equals: savedProgramId,
+          },
+        },
+      });
+
+      if (existingPlan) {
+        console.log(`[Cohort] Study plan already exists for profile ${profileId}`);
+        continue;
+      }
+
+      try {
+        const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/format-study-guide`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            target_certification: targetCertification || member.academyUser.profile.targetCertification || "cloud-practitioner",
+            skill_level: skillLevel,
+            time_horizon_weeks: duration,
+            hours_per_week: weeklyHours,
+            learning_styles: ["hands_on"],
+            coach_notes: `Part of cohort: ${teamName}. Follow your tutor's guidance during live sessions.`,
+            structured_content: structuredContent,
+            openai_api_key: aiConfig?.key || "",
+            preferred_model: aiConfig?.preferredModel || "gpt-4o",
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.success && data?.plan) {
+            await prisma.studyPlan.create({
+              data: {
+                profileId,
+                targetExam: targetCertification,
+                studyHoursPerWeek: weeklyHours,
+                confidenceLevel: skillLevel,
+                planInputs: { 
+                  cohortProgramId: savedProgramId, 
+                  teamId,
+                  teamName,
+                  generatedFromCohort: true,
+                },
+                planOutput: data.plan,
+              },
+            });
+            console.log(`[Cohort] Created study plan for profile ${profileId}`);
+          }
+        } else {
+          console.error(`[Cohort] Failed to generate study guide for profile ${profileId}:`, await response.text());
+        }
+      } catch (memberError) {
+        console.error(`[Cohort] Error generating study guide for profile ${profileId}:`, memberError);
+      }
+    }
+
+    console.log(`[Cohort] Finished generating study guides for team ${teamId}`);
+  } catch (error) {
+    console.error(`[Cohort] Error in generateStudyGuidesForMembers:`, error);
+  }
+}
+
 interface GenerateProgramRequest {
   teamId: string;
   outcome: string;
@@ -127,6 +343,17 @@ export async function POST(req: NextRequest) {
 
     const program = data.program;
 
+    // Archive any existing active programs for this team
+    await prisma.cohortProgram.updateMany({
+      where: {
+        teamId,
+        status: "active",
+      },
+      data: {
+        status: "archived",
+      },
+    });
+
     // Save to database
     const savedProgram = await prisma.cohortProgram.create({
       data: {
@@ -144,6 +371,21 @@ export async function POST(req: NextRequest) {
         status: "active",
         createdBy: academyUser.id,
       },
+    });
+
+    // Generate study guides for all cohort members (async - don't block response)
+    generateStudyGuidesForMembers(
+      teamId,
+      program as CohortProgram,
+      savedProgram.id,
+      skillLevel,
+      targetCertification,
+      weeklyHours,
+      duration,
+      teamMember.team.name,
+      aiConfig
+    ).catch((err) => {
+      console.error("[Cohort] Background study guide generation failed:", err);
     });
 
     return NextResponse.json({

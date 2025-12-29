@@ -28,6 +28,8 @@ import {
   Minus,
   ChevronDown,
   ChevronUp,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -147,6 +149,19 @@ export default function CohortDashboardPage() {
   const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
 
+  // Archived programs state
+  const [archivedPrograms, setArchivedPrograms] = useState<Array<{
+    id: string;
+    title: string;
+    outcome: string;
+    durationWeeks: number;
+    skillLevel: string;
+    targetCertification: string | null;
+    generatedAt: string;
+  }>>([]);
+  const [isRestoring, setIsRestoring] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
   const fetchTeamData = useCallback(async () => {
     if (!teamId) return;
 
@@ -154,10 +169,11 @@ export default function CohortDashboardPage() {
     setError(null);
 
     try {
-      const [teamRes, statsRes, activityRes] = await Promise.all([
+      const [teamRes, statsRes, activityRes, programRes] = await Promise.all([
         fetch(`/api/team/${teamId}`),
         fetch(`/api/team/${teamId}/stats`),
         fetch(`/api/team/${teamId}/activity?limit=20`),
+        fetch(`/api/cohort/program?teamId=${teamId}`),
       ]);
 
       if (!teamRes.ok) {
@@ -176,6 +192,13 @@ export default function CohortDashboardPage() {
       if (activityRes.ok) {
         const activityData = await activityRes.json();
         setActivities(activityData.activities || []);
+      }
+
+      if (programRes.ok) {
+        const programData = await programRes.json();
+        if (programData.archivedPrograms) {
+          setArchivedPrograms(programData.archivedPrograms);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load cohort data");
@@ -335,8 +358,130 @@ export default function CohortDashboardPage() {
     return null;
   }
 
+  // Restore archived program
+  const handleRestoreProgram = async (programId: string) => {
+    setIsRestoring(programId);
+    try {
+      const response = await fetch("/api/cohort/program/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programId }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Program restored",
+          description: "The archived program is now active.",
+        });
+        fetchTeamData();
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to restore program");
+      }
+    } catch (error) {
+      toast({
+        title: "Restore failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRestoring(null);
+    }
+  };
+
+  // Delete archived program
+  const handleDeleteProgram = async (programId: string) => {
+    setIsDeleting(programId);
+    try {
+      const response = await fetch(`/api/cohort/program/delete?programId=${programId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Program deleted",
+          description: "The archived program has been permanently deleted.",
+        });
+        setArchivedPrograms((prev) => prev.filter((p) => p.id !== programId));
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete program");
+      }
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Fixed Right Sidebar - Archived Programs (owners/admins only) */}
+      {canManageInvites && archivedPrograms.length > 0 && (
+        <div className="fixed right-0 top-0 h-full w-72 bg-card/95 backdrop-blur border-l border-border shadow-xl z-40 overflow-y-auto">
+          <div className="p-4 border-b border-border sticky top-0 bg-card/95 backdrop-blur">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Archive className="w-4 h-4 text-purple-400" />
+              Archived Programs
+              <Badge variant="secondary" className="ml-auto">{archivedPrograms.length}</Badge>
+            </h3>
+          </div>
+          <div className="p-3 space-y-3">
+            {archivedPrograms.map((archived) => (
+              <div
+                key={archived.id}
+                className="p-3 rounded-lg border border-border/50 bg-background/50 hover:border-purple-500/30 transition-colors"
+              >
+                <p className="font-medium text-sm line-clamp-2">{archived.title}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{archived.outcome}</p>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <Badge variant="outline" className="text-xs">{archived.durationWeeks}w</Badge>
+                  <Badge variant="outline" className="text-xs">{archived.skillLevel}</Badge>
+                  {archived.targetCertification && (
+                    <Badge variant="secondary" className="text-xs">{archived.targetCertification}</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {new Date(archived.generatedAt).toLocaleDateString()}
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1"
+                    onClick={() => handleRestoreProgram(archived.id)}
+                    disabled={isRestoring === archived.id || isDeleting === archived.id}
+                  >
+                    {isRestoring === archived.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RotateCcw className="w-3 h-3" />
+                    )}
+                    Restore
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    onClick={() => handleDeleteProgram(archived.id)}
+                    disabled={isRestoring === archived.id || isDeleting === archived.id}
+                  >
+                    {isDeleting === archived.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <X className="w-3 h-3" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="border-b border-border/50 bg-card/30">
         <div className="max-w-6xl mx-auto px-6 py-4">

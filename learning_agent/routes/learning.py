@@ -655,7 +655,7 @@ async def format_study_guide_endpoint(request: FormatStudyGuideRequest):
         from generators.study_plan import format_study_guide
 
         plan = await format_study_guide(
-            target_certification=request.target_certification,
+            cert_code=request.target_certification,
             skill_level=request.skill_level,
             time_horizon_weeks=request.time_horizon_weeks,
             hours_per_week=request.hours_per_week,

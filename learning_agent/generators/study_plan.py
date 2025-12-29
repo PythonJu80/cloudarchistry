@@ -26,7 +26,45 @@ from utils import (
 
 # Valid user levels
 VALID_USER_LEVELS = ["beginner", "intermediate", "advanced", "expert"]
-VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys())
+
+# Map cert codes (e.g., "SAA-C03" from DB) to persona IDs
+CERT_CODE_TO_PERSONA = {
+    # Foundational
+    "CLF": "cloud-practitioner",
+    "CLF-C02": "cloud-practitioner",
+    "AIF": "ai-practitioner",
+    "AIF-C01": "ai-practitioner",
+    # Associate
+    "SAA": "solutions-architect-associate",
+    "SAA-C03": "solutions-architect-associate",
+    "DVA": "developer-associate",
+    "DVA-C02": "developer-associate",
+    "SOA": "sysops-associate",
+    "SOA-C02": "sysops-associate",
+    "DEA": "data-engineer-associate",
+    "DEA-C01": "data-engineer-associate",
+    "MLA": "machine-learning-engineer-associate",
+    "MLA-C01": "machine-learning-engineer-associate",
+    # Professional
+    "SAP": "solutions-architect-professional",
+    "SAP-C02": "solutions-architect-professional",
+    "DOP": "devops-professional",
+    "DOP-C02": "devops-professional",
+    # Specialty
+    "ANS": "networking-specialty",
+    "ANS-C01": "networking-specialty",
+    "SCS": "security-specialty",
+    "SCS-C02": "security-specialty",
+    "MLS": "machine-learning-specialty",
+    "MLS-C01": "machine-learning-specialty",
+    "PAS": "sap-specialty",
+    "PAS-C01": "sap-specialty",
+    # Legacy (retired but kept for backward compatibility)
+    "DBS": "database-specialty",
+    "DBS-C01": "database-specialty",
+}
+
+VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys()) + list(CERT_CODE_TO_PERSONA.keys())
 
 
 class StudyPlanValidationError(Exception):
@@ -34,13 +72,17 @@ class StudyPlanValidationError(Exception):
     pass
 
 
-def validate_study_plan_params(user_level: str, cert_code: str) -> None:
+def validate_study_plan_params(user_level: str, cert_code: str) -> str:
     """
     Validate that user_level and cert_code are provided and valid.
+    Converts exam codes (e.g., 'CLF', 'SAA') to persona IDs.
     
     Args:
         user_level: User skill level ('beginner', 'intermediate', 'advanced', 'expert')
-        cert_code: AWS certification persona ID (e.g., 'solutions-architect-associate')
+        cert_code: AWS certification code or persona ID (e.g., 'CLF', 'SAA-C03', 'solutions-architect-associate')
+    
+    Returns:
+        Normalized persona ID (e.g., 'cloud-practitioner')
     
     Raises:
         StudyPlanValidationError: If parameters are missing or invalid
@@ -63,11 +105,17 @@ def validate_study_plan_params(user_level: str, cert_code: str) -> None:
             f"Valid levels: {', '.join(VALID_USER_LEVELS)}"
         )
     
-    if cert_code not in VALID_CERT_CODES:
+    # Convert exam code to persona ID if needed
+    if cert_code.upper() in CERT_CODE_TO_PERSONA:
+        cert_code = CERT_CODE_TO_PERSONA[cert_code.upper()]
+    
+    if cert_code not in CERTIFICATION_PERSONAS:
         raise StudyPlanValidationError(
             f"Invalid cert_code '{cert_code}'. "
-            f"Valid cert codes: {', '.join(VALID_CERT_CODES)}"
+            f"Valid cert codes: {', '.join(list(CERTIFICATION_PERSONAS.keys()))}"
         )
+    
+    return cert_code
 
 # Platform features that can be recommended
 # COMPREHENSIVE list of ALL platform features available to learners
@@ -419,8 +467,8 @@ async def generate_study_guide(
         StudyPlanValidationError: If cert_code or skill_level are missing/invalid
     """
     
-    # CRITICAL: Validate required parameters
-    validate_study_plan_params(context.skill_level, context.cert_code)
+    # CRITICAL: Validate required parameters and normalize cert_code
+    cert_code = validate_study_plan_params(context.skill_level, context.cert_code)
     
     key = os.getenv("OPENAI_API_KEY")
     if not key:
@@ -429,19 +477,16 @@ async def generate_study_guide(
     # Fetch current AWS knowledge from database
     from utils import fetch_knowledge_for_generation
     knowledge_context = await fetch_knowledge_for_generation(
-        cert_code=context.cert_code,
-        topic=f"{context.target_certification} study guide",
+        cert_code=cert_code,
+        topic=f"{cert_code} study guide",
         limit=5,
         api_key=api_key
     )
     
     model_name = model or get_request_model() or DEFAULT_MODEL
     
-    # Get certification context (cert_code is now required and validated)
-    if context.cert_code not in CERTIFICATION_PERSONAS:
-        raise StudyPlanValidationError(f"Unknown certification persona: {context.cert_code}")
-    
-    persona = CERTIFICATION_PERSONAS[context.cert_code]
+    # Get certification context (cert_code is now validated and normalized)
+    persona = CERTIFICATION_PERSONAS[cert_code]
     target_certification = persona["cert"]
 
     # Build the prompt
@@ -654,18 +699,15 @@ async def format_study_guide(
         StudyPlanValidationError: If cert_code or skill_level are missing/invalid
     """
     
-    # CRITICAL: Validate required parameters
-    validate_study_plan_params(skill_level, cert_code)
+    # CRITICAL: Validate required parameters and normalize cert_code
+    cert_code = validate_study_plan_params(skill_level, cert_code)
     key = os.getenv("OPENAI_API_KEY")
     if not key:
         raise ApiKeyRequiredError("OpenAI API key required. Set OPENAI_API_KEY in .env file.")
 
     model_name = model or get_request_model() or DEFAULT_MODEL
     
-    # Get certification context (cert_code is now required and validated)
-    if cert_code not in CERTIFICATION_PERSONAS:
-        raise StudyPlanValidationError(f"Unknown certification persona: {cert_code}")
-    
+    # Get certification context (cert_code is now validated and normalized)
     persona = CERTIFICATION_PERSONAS[cert_code]
     target_certification = persona["cert"]
 

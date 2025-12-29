@@ -53,8 +53,30 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // Get archived programs for this team
+    const archivedPrograms = await prisma.cohortProgram.findMany({
+      where: {
+        teamId,
+        status: "archived",
+      },
+      orderBy: {
+        generatedAt: "desc",
+      },
+      select: {
+        id: true,
+        title: true,
+        outcome: true,
+        durationWeeks: true,
+        sessionsPerWeek: true,
+        weeklyHours: true,
+        skillLevel: true,
+        targetCertification: true,
+        generatedAt: true,
+      },
+    });
+
     if (!program) {
-      return NextResponse.json({ program: null });
+      return NextResponse.json({ program: null, archivedPrograms });
     }
 
     // Merge progress data with program data
@@ -110,6 +132,7 @@ export async function GET(req: NextRequest) {
         generatedAt: program.generatedAt,
         ...programData,
       },
+      archivedPrograms,
     });
   } catch (error) {
     console.error("Cohort program fetch error:", error);
