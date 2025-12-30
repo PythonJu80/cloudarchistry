@@ -98,8 +98,11 @@ async function triggerPortfolioGeneration(attemptId: string): Promise<void> {
     const location = scenario.location;
 
     // Find the best diagram from challenge progress
+    // Priority: 1) Highest audit score (passed), 2) Most nodes as fallback
     let bestDiagram: DiagramData | null = null;
+    let bestDiagramAuditScore = 0;
     let bestDiagramNodeCount = 0;
+    let bestDiagramChallengeProgressId: string | null = null;
     const totalCLIProgress = {
       commandsRun: [] as Array<{ command: string; isCorrect?: boolean }>,
       totalCommands: 0,
@@ -114,14 +117,25 @@ async function triggerPortfolioGeneration(attemptId: string): Promise<void> {
       const solution = progress.solution as {
         diagramData?: DiagramData;
         diagramScore?: { total: number };
+        auditScore?: number;
+        auditPassed?: boolean;
         cliProgress?: typeof totalCLIProgress;
       } | null;
 
       if (solution?.diagramData?.nodes) {
+        const auditScore = solution.auditScore || 0;
         const nodeCount = solution.diagramData.nodes.length;
-        if (nodeCount > bestDiagramNodeCount) {
+        
+        // Prefer diagrams with higher audit scores (quality over quantity)
+        // Fall back to node count if no audit scores exist
+        const isBetterByAudit = auditScore > bestDiagramAuditScore;
+        const isBetterByNodes = bestDiagramAuditScore === 0 && auditScore === 0 && nodeCount > bestDiagramNodeCount;
+        
+        if (isBetterByAudit || isBetterByNodes) {
           bestDiagram = solution.diagramData;
+          bestDiagramAuditScore = auditScore;
           bestDiagramNodeCount = nodeCount;
+          bestDiagramChallengeProgressId = progress.id;
         }
       }
 
@@ -195,8 +209,9 @@ async function triggerPortfolioGeneration(attemptId: string): Promise<void> {
         body: JSON.stringify({
           profileId,
           scenarioAttemptId: attemptId,
-          challengeProgressId: attempt.challengeProgress[0]?.id,
+          challengeProgressId: bestDiagramChallengeProgressId || attempt.challengeProgress[0]?.id,
           diagram: bestDiagram,
+          diagramAuditScore: bestDiagramAuditScore,  // Quality score from AI audit
           cliProgress: totalCLIProgress.totalCommands > 0 ? totalCLIProgress : null,
           scenarioContext,
           locationContext,
@@ -313,7 +328,7 @@ async function triggerPortfolioGeneration(attemptId: string): Promise<void> {
         ${completionTimeMinutes},
         ${totalHintsUsed},
         ${attemptId},
-        ${attempt.challengeProgress[0]?.id || null},
+        ${bestDiagramChallengeProgressId || attempt.challengeProgress[0]?.id || null},
         ${location?.slug || null},
         ${enhancedDiagram ? JSON.stringify(enhancedDiagram) : null}::jsonb,
         NOW(),
@@ -372,6 +387,8 @@ interface ProgressUpdate {
   };
   diagramData?: DiagramData;
   diagramScore?: DiagramScore;
+  auditScore?: number;
+  auditPassed?: boolean;
 }
 
 /**
@@ -401,6 +418,8 @@ export async function POST(request: NextRequest) {
       questionsData,
       diagramData,
       diagramScore,
+      auditScore,
+      auditPassed,
     } = body;
 
     if (!attemptId || !challengeId) {
@@ -425,12 +444,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if the challenge is locked - if so, reject the update
+    const existingProgress = await prisma.challengeProgress.findUnique({
+      where: {
+        attemptId_challengeId: {
+          attemptId,
+          challengeId,
+        },
+      },
+    });
+
+    if (existingProgress?.status === "locked") {
+      return NextResponse.json(
+        { error: "Challenge is locked. Complete the previous challenge first." },
+        { status: 403 }
+      );
+    }
+
     // Prepare solution JSON - Prisma needs it as a plain object
     const solutionData = JSON.parse(JSON.stringify({
       answers,
       questionsData,
       diagramData,  // Include diagram data in solution
       diagramScore,
+      auditScore,   // AI audit score (0-100)
+      auditPassed,  // Whether drawing passed audit (>= 70)
       lastUpdated: new Date().toISOString(),
     }));
 

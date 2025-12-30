@@ -312,8 +312,8 @@ Create a scenario that:
    - Advanced: Multi-region, DR, compliance, cost optimization
    - Expert: Global scale, zero-trust, complex compliance, edge cases
 
-Include 3-5 progressive challenges that build on each other.
-Each challenge should teach a specific skill."""
+Include exactly 1 focused challenge.
+The challenge should teach specific skills relevant to the certification."""
 
 # =============================================================================
 # FLASHCARD GENERATION
@@ -587,8 +587,8 @@ For {level} certification level:
 - professional: Complex multi-account, hybrid, enterprise-scale decisions
 - specialty: Deep expertise in the specialty domain, edge cases
 
-Include 3-5 progressive challenges that build certification-relevant skills.
-Each challenge should map to specific {cert_name} exam domains.
+Include exactly 1 focused challenge that builds certification-relevant skills.
+The challenge should map to specific {cert_name} exam domains.
 
 CRITICAL - TITLE VARIETY:
 - Do NOT use generic titles like "Understanding X", "Exploring Y", "Identifying Z"

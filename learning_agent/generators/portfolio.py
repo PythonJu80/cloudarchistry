@@ -42,11 +42,17 @@ The candidate designed an architecture with these AWS services:
 **Architecture Structure:**
 {architecture_structure}
 
+### Proficiency Assessment
+{proficiency_summary}
+
 ### CLI Proficiency
 {cli_summary}
 
 ### Performance
-- Score: {score}/{max_score} ({score_percent}%)
+- Challenge Score: {score}/{max_score} ({score_percent}%)
+- Architecture Audit Score: {diagram_audit_score}/100 (AI-assessed quality)
+- Proficiency Test Score: {proficiency_score}/100 (conversation-based assessment)
+- CLI Objectives Score: {cli_objectives_score}% ({cli_objectives_completed}/{cli_objectives_total} objectives)
 - Completion Time: {completion_time} minutes
 - Hints Used: {hints_used}
 
@@ -59,14 +65,16 @@ Return JSON with exactly these fields:
   "solutionSummary": "2-3 paragraphs describing what the candidate built, why they made key choices, and how it addresses the business requirements. Be specific to their actual architecture.",
   "keyDecisions": ["List 4-6 specific architectural decisions the candidate made and WHY they were good choices for this scenario"],
   "complianceAchieved": ["List compliance standards their architecture helps achieve based on the services used and requirements"],
-  "awsServicesUsed": ["List of AWS services used in their solution"]
+  "awsServicesUsed": ["List of AWS services used in their solution"],
+  "proficiencyHighlights": ["2-3 highlights from their proficiency assessment showing their understanding"]
 }}
 
 Focus on:
 1. What makes THIS solution appropriate for THIS business
 2. Specific architectural patterns they implemented
 3. How their choices address the stated requirements
-4. Real compliance implications of their service choices"""
+4. Real compliance implications of their service choices
+5. Their demonstrated understanding from the proficiency assessment"""
 
 
 def _extract_services_from_diagram(diagram: Dict[str, Any]) -> List[str]:
@@ -166,6 +174,30 @@ def _summarize_cli_progress(cli_progress: Optional[Dict[str, Any]]) -> str:
     return "\n".join(parts)
 
 
+def _summarize_proficiency_test(proficiency_test: Optional[Dict[str, Any]]) -> str:
+    """Generate a summary of the proficiency test conversation."""
+    if not proficiency_test:
+        return "Proficiency assessment not completed."
+    
+    score = proficiency_test.get("score", 0)
+    summary = proficiency_test.get("summary", "")
+    strengths = proficiency_test.get("strengths", [])
+    areas = proficiency_test.get("areasForImprovement", [])
+    
+    parts = [f"**Score:** {score}/100"]
+    
+    if summary:
+        parts.append(f"**Assessment:** {summary}")
+    
+    if strengths:
+        parts.append(f"**Strengths:** {', '.join(strengths)}")
+    
+    if areas:
+        parts.append(f"**Areas for Improvement:** {', '.join(areas)}")
+    
+    return "\n".join(parts) if parts else "Proficiency assessment not completed."
+
+
 async def generate_portfolio_content(
     request: GeneratePortfolioRequest,
     openai_client,
@@ -185,6 +217,8 @@ async def generate_portfolio_content(
     # Extract data from request
     diagram = request.diagram or {"nodes": [], "edges": []}
     cli_progress = request.cliProgress.model_dump() if request.cliProgress else None
+    proficiency_test = request.proficiencyTest.model_dump() if request.proficiencyTest else None
+    cli_objectives = request.cliObjectives.model_dump() if request.cliObjectives else None
     scenario = request.scenarioContext
     location = request.locationContext
     
@@ -192,6 +226,7 @@ async def generate_portfolio_content(
     services_used = _extract_services_from_diagram(diagram)
     architecture_structure = _describe_architecture_structure(diagram)
     cli_summary = _summarize_cli_progress(cli_progress)
+    proficiency_summary = _summarize_proficiency_test(proficiency_test)
     
     # Format requirements
     tech_reqs = "\n".join([f"- {r}" for r in (scenario.technicalRequirements if scenario else [])]) or "- Not specified"
@@ -199,6 +234,12 @@ async def generate_portfolio_content(
     
     # Calculate score percentage
     score_percent = round((request.challengeScore / request.maxScore * 100)) if request.maxScore > 0 else 0
+    
+    # Extract proficiency and CLI objectives scores
+    proficiency_score = proficiency_test.get("score", 0) if proficiency_test else 0
+    cli_obj_score = cli_objectives.get("score", 0) if cli_objectives else 0
+    cli_obj_completed = cli_objectives.get("completedObjectives", 0) if cli_objectives else 0
+    cli_obj_total = cli_objectives.get("totalObjectives", 0) if cli_objectives else 0
     
     # Build the prompt
     prompt = PORTFOLIO_GENERATION_PROMPT.format(
@@ -210,10 +251,16 @@ async def generate_portfolio_content(
         compliance_requirements=compliance_reqs,
         services_used=", ".join(services_used) if services_used else "No services identified",
         architecture_structure=architecture_structure,
+        proficiency_summary=proficiency_summary,
         cli_summary=cli_summary,
         score=request.challengeScore,
         max_score=request.maxScore,
         score_percent=score_percent,
+        diagram_audit_score=request.diagramAuditScore or "N/A",
+        proficiency_score=proficiency_score,
+        cli_objectives_score=cli_obj_score,
+        cli_objectives_completed=cli_obj_completed,
+        cli_objectives_total=cli_obj_total,
         completion_time=request.completionTimeMinutes,
         hints_used=request.hintsUsed,
     )
@@ -246,6 +293,7 @@ async def generate_portfolio_content(
             keyDecisions=result.get("keyDecisions", []),
             complianceAchieved=result.get("complianceAchieved", []),
             awsServicesUsed=all_services,
+            proficiencyHighlights=result.get("proficiencyHighlights", []),
         )
         
     except json.JSONDecodeError as e:
@@ -257,6 +305,7 @@ async def generate_portfolio_content(
             keyDecisions=["Architecture designed to meet business requirements"],
             complianceAchieved=scenario.complianceRequirements if scenario else [],
             awsServicesUsed=services_used,
+            proficiencyHighlights=[],
         )
     except Exception as e:
         logger.error(f"Portfolio generation failed: {e}")

@@ -234,7 +234,7 @@ async def generate_challenge_questions(
     cert_code: str,
     
     # Options
-    question_count: int = 5,
+    question_count: int = 10,
 ) -> ChallengeQuestions:
     """
     Generate questions for a specific challenge, tailored to the business case.
@@ -249,7 +249,7 @@ async def generate_challenge_questions(
         business_context: Scenario description
         user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
         cert_code: Certification persona ID (REQUIRED, e.g., 'solutions-architect-associate')
-        question_count: Number of questions to generate (default 5)
+        question_count: Number of questions to generate (default 10)
     
     Returns:
         ChallengeQuestions with brief and questions tailored to cert and level

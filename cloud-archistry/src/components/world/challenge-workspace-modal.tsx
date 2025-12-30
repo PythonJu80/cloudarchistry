@@ -10,18 +10,17 @@ import {
   Send, 
   Loader2, 
   CheckCircle2,
-  ChevronLeft,
   ChevronRight,
   Lightbulb,
   HelpCircle,
   MessageCircle,
-  PanelRightClose,
   AlertCircle,
   Trophy,
   Clock,
   RotateCcw,
   PenTool,
   Sparkles,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -165,12 +164,57 @@ export function ChallengeWorkspaceModal({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen] = useState(true); // Chat always available in workspace mode
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Workspace mode: questions or drawing (brief always visible)
-  const [workspaceMode, setWorkspaceMode] = useState<"questions" | "drawing">("questions");
+  // Workspace mode: 4 stages - questions, drawing, chat, cli
+  const [workspaceMode, setWorkspaceMode] = useState<"questions" | "drawing" | "chat" | "cli">("questions");
+  
+  // Stage completion tracking
+  const [hasChatCompleted, setHasChatCompleted] = useState(false);
+  const [hasCLICompleted, setHasCLICompleted] = useState(false);
+  
+  // Proficiency Test state
+  const [proficiencyTestId, setProficiencyTestId] = useState<string | null>(null);
+  const [proficiencyQuestionsAsked, setProficiencyQuestionsAsked] = useState(0);
+  const [proficiencyReadyToEvaluate, setProficiencyReadyToEvaluate] = useState(false);
+  const [proficiencyResult, setProficiencyResult] = useState<{
+    score: number;
+    summary: string;
+    strengths: string[];
+    areasForImprovement: string[];
+  } | null>(null);
+  const [isProficiencyStarted, setIsProficiencyStarted] = useState(false);
+  
+  // CLI Objectives state
+  const [cliObjectives, setCliObjectives] = useState<Array<{
+    id: string;
+    description: string;
+    command_pattern: string;
+    example_command: string;
+    hint?: string;
+    points: number;
+    service: string;
+    completed: boolean;
+  }>>([]);
+  const [cliContextMessage, setCliContextMessage] = useState<string>("");
+  const [cliTotalPoints, setCliTotalPoints] = useState(0);
+  const [cliEarnedPoints, setCliEarnedPoints] = useState(0);
+  
+  // AWS Console mock data for CLI page
+  const [consoleData, setConsoleData] = useState<{
+    account_id: string;
+    account_alias: string;
+    region: string;
+    recently_visited: Array<{ name: string; color: string; abbr: string }>;
+    resource_counts: Record<string, number>;
+    cost_current_month: number;
+    cost_forecast: number;
+    cost_trend: number[];
+    health_open_issues: number;
+    health_scheduled_changes: number;
+  } | null>(null);
   
   // Diagram state
   const [diagramData, setDiagramData] = useState<DiagramData | null>(null);
@@ -179,11 +223,14 @@ export function ChallengeWorkspaceModal({
   const [challengeProgressId, setChallengeProgressId] = useState<string | null>(null);
   const [diagramScore, setDiagramScore] = useState<DiagramScore>(createInitialScore());
   
-  // Right panel state (chat or terminal)
-  const [rightPanelTab, setRightPanelTab] = useState<"chat" | "terminal">("chat");
 
   // Hint state per question
   const [revealedQuestionHints, setRevealedQuestionHints] = useState<Set<string>>(new Set());
+
+  // Drawing audit pass state
+  const [hasDrawingPassed, setHasDrawingPassed] = useState(false);
+  const [showDrawingCelebration, setShowDrawingCelebration] = useState(false);
+  const AUDIT_PASS_THRESHOLD = 70; // Minimum audit score to pass drawing
 
   // Load existing progress from database
   const loadExistingProgress = useCallback(async () => {
@@ -205,12 +252,16 @@ export function ChallengeWorkspaceModal({
           const solutionData = progress.solution;
           const savedDiagramScore = solutionData?.diagramScore || progress.diagramScore || null;
           const savedDiagramData = solutionData?.diagramData || progress.diagramData || null;
+          const savedAuditPassed = solutionData?.auditPassed || false;
 
           if (savedDiagramScore) {
             setDiagramScore(savedDiagramScore);
           }
           if (savedDiagramData) {
             setDiagramData(savedDiagramData);
+          }
+          if (savedAuditPassed) {
+            setHasDrawingPassed(true);
           }
 
           if (solutionData) {
@@ -232,6 +283,19 @@ export function ChallengeWorkspaceModal({
     setQuestionsError(null);
     
     try {
+      // First check the challenge status - if locked, show error
+      const statusResponse = await fetch(
+        `/api/challenge/progress?attemptId=${attemptId}&challengeId=${challenge.id}`
+      );
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json();
+        if (statusData.exists && statusData.progress?.status === "locked") {
+          setQuestionsError("This challenge is locked. Complete the previous challenge first.");
+          setIsLoadingQuestions(false);
+          return;
+        }
+      }
+      
       // First check if we have existing progress with saved questions
       const existingProgress = await loadExistingProgress();
       
@@ -298,7 +362,7 @@ export function ChallengeWorkspaceModal({
           business_context: scenario.business_context,
           user_level: userLevel,
           cert_code: certCode,
-          question_count: 5,
+          question_count: 10,
         }),
       });
 
@@ -334,7 +398,7 @@ export function ChallengeWorkspaceModal({
         // so they can be retrieved when resuming
         if (attemptId && challenge?.id) {
           try {
-            await fetch("/api/challenge/progress", {
+            const saveResponse = await fetch("/api/challenge/progress", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -352,6 +416,9 @@ export function ChallengeWorkspaceModal({
                 },
               }),
             });
+            if (!saveResponse.ok) {
+              console.error("Failed to save questions - response not ok:", await saveResponse.text());
+            }
           } catch (saveErr) {
             console.error("Failed to save generated questions:", saveErr);
           }
@@ -379,10 +446,308 @@ export function ChallengeWorkspaceModal({
       setChallengeProgressId(null);
       setDiagramData(null);
       setDiagramScore(createInitialScore());
+      setHasDrawingPassed(false);
+      setShowDrawingCelebration(false);
+      setLastAuditResult(null);
+      setHasChatCompleted(false);
+      setHasCLICompleted(false);
+      setWorkspaceMode("questions");
+      setConsoleData(null);
+      // Reset proficiency test state
+      setProficiencyTestId(null);
+      setProficiencyQuestionsAsked(0);
+      setProficiencyReadyToEvaluate(false);
+      setProficiencyResult(null);
+      setIsProficiencyStarted(false);
+      // Reset CLI objectives state
+      setCliObjectives([]);
+      setCliContextMessage("");
+      setCliTotalPoints(0);
+      setCliEarnedPoints(0);
       fetchQuestions();
+      fetchConsoleData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, challenge?.id]);
+
+  // Fetch AWS console mock data for CLI page
+  const fetchConsoleData = useCallback(async () => {
+    if (!challenge?.id || !scenario?.company_name) return;
+    
+    try {
+      const response = await fetch("/api/console/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: challenge.id,
+          challengeTitle: challenge.title,
+          challengeDescription: challenge.description,
+          awsServices: challenge.aws_services_relevant,
+          successCriteria: challenge.success_criteria,
+          companyName: scenario.company_name,
+          industry: industry || companyInfo?.industry || "Technology",
+          businessContext: scenario.business_context,
+          region: "eu-west-2",
+          openaiApiKey: apiKey,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.console_data) {
+          setConsoleData(data.console_data);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch console data:", err);
+    }
+  }, [challenge, scenario, industry, companyInfo, apiKey]);
+
+  // Start proficiency test - agent initiates conversation about user's work
+  const startProficiencyTest = useCallback(async () => {
+    if (!challenge?.id || !scenario?.company_name || isProficiencyStarted) return;
+    
+    setIsChatLoading(true);
+    setIsProficiencyStarted(true);
+    
+    try {
+      // Extract services from diagram
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const diagramServices = (diagramData?.nodes as any[])
+        ?.filter((n) => !["vpc", "subnet", "availabilityZone"].includes(n.type))
+        .map((n) => n.data?.label)
+        .filter(Boolean) || [];
+      
+      const response = await fetch("/api/proficiency-test/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: challenge.id,
+          challengeTitle: challenge.title,
+          challengeDescription: challenge.description,
+          challengeBrief: questionsData?.brief || "",
+          successCriteria: challenge.success_criteria,
+          awsServices: challenge.aws_services_relevant,
+          diagramData: diagramData,
+          diagramServices: diagramServices,
+          questionAnswers: Object.entries(answers).map(([qId, ans]) => ({
+            questionId: qId,
+            isCorrect: ans.isCorrect,
+          })),
+          companyName: scenario.company_name,
+          industry: industry || companyInfo?.industry || "Technology",
+          businessContext: scenario.business_context,
+          userLevel: "intermediate",
+          // Pass existing chat history so agent can consider it in the proficiency test
+          previousChatHistory: messages.map(m => ({
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp.toISOString(),
+          })),
+          openaiApiKey: apiKey,
+          preferredModel: preferredModel,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setProficiencyTestId(data.test_id);
+          setProficiencyQuestionsAsked(data.questions_asked || 1);
+          
+          // Add agent's initial message - preserve existing chat history
+          const assistantMessage: ChatMessage = {
+            role: "assistant",
+            content: data.initial_message,
+            timestamp: new Date(),
+          };
+          // Keep existing messages and add the proficiency test start message
+          setMessages(prev => [...prev, assistantMessage]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to start proficiency test:", err);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }, [challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, questionsData, answers, isProficiencyStarted]);
+
+  // Continue proficiency test conversation
+  const sendProficiencyMessage = useCallback(async () => {
+    if (!inputValue.trim() || isChatLoading || !isProficiencyStarted) return;
+    
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: inputValue.trim(),
+      timestamp: new Date(),
+    };
+    
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setIsChatLoading(true);
+    
+    try {
+      // Extract services from diagram
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const diagramServices = (diagramData?.nodes as any[])
+        ?.filter((n) => !["vpc", "subnet", "availabilityZone"].includes(n.type))
+        .map((n) => n.data?.label)
+        .filter(Boolean) || [];
+      
+      const response = await fetch("/api/proficiency-test/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: challenge.id,
+          challengeTitle: challenge.title,
+          challengeDescription: challenge.description,
+          challengeBrief: questionsData?.brief || "",
+          successCriteria: challenge.success_criteria,
+          awsServices: challenge.aws_services_relevant,
+          diagramData: diagramData,
+          diagramServices: diagramServices,
+          companyName: scenario.company_name,
+          industry: industry || companyInfo?.industry || "Technology",
+          businessContext: scenario.business_context,
+          userLevel: "intermediate",
+          chatHistory: messages.map(m => ({
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp.toISOString(),
+          })),
+          userMessage: inputValue.trim(),
+          questionsAsked: proficiencyQuestionsAsked,
+          openaiApiKey: apiKey,
+          preferredModel: preferredModel,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setProficiencyQuestionsAsked(data.questions_asked);
+          setProficiencyReadyToEvaluate(data.ready_to_evaluate);
+          
+          const assistantMessage: ChatMessage = {
+            role: "assistant",
+            content: data.agent_response,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+          
+          // If ready to evaluate, trigger evaluation
+          if (data.ready_to_evaluate) {
+            evaluateProficiencyTest();
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to continue proficiency test:", err);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }, [inputValue, isChatLoading, isProficiencyStarted, challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, questionsData, messages, proficiencyQuestionsAsked]);
+
+  // Evaluate proficiency test and get final score
+  const evaluateProficiencyTest = useCallback(async () => {
+    if (!challenge?.id || !scenario?.company_name) return;
+    
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const diagramServices = (diagramData?.nodes as any[])
+        ?.filter((n) => !["vpc", "subnet", "availabilityZone"].includes(n.type))
+        .map((n) => n.data?.label)
+        .filter(Boolean) || [];
+      
+      const response = await fetch("/api/proficiency-test/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: challenge.id,
+          challengeTitle: challenge.title,
+          successCriteria: challenge.success_criteria,
+          awsServices: challenge.aws_services_relevant,
+          diagramServices: diagramServices,
+          companyName: scenario.company_name,
+          industry: industry || companyInfo?.industry || "Technology",
+          chatHistory: messages.map(m => ({
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp.toISOString(),
+          })),
+          openaiApiKey: apiKey,
+          preferredModel: preferredModel,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setProficiencyResult({
+            score: data.score,
+            summary: data.summary,
+            strengths: data.strengths || [],
+            areasForImprovement: data.areas_for_improvement || [],
+          });
+          
+          // Mark chat as completed if score >= 70
+          if (data.score >= 70) {
+            setHasChatCompleted(true);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to evaluate proficiency test:", err);
+    }
+  }, [challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, messages]);
+
+  // Fetch CLI objectives for the challenge
+  const fetchCliObjectives = useCallback(async () => {
+    if (!challenge?.id || !scenario?.company_name || cliObjectives.length > 0) return;
+    
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const diagramServices = (diagramData?.nodes as any[])
+        ?.filter((n) => !["vpc", "subnet", "availabilityZone"].includes(n.type))
+        .map((n) => n.data?.label)
+        .filter(Boolean) || [];
+      
+      const response = await fetch("/api/cli-objectives/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: challenge.id,
+          challengeTitle: challenge.title,
+          challengeDescription: challenge.description,
+          successCriteria: challenge.success_criteria,
+          awsServicesRelevant: challenge.aws_services_relevant,
+          companyName: scenario.company_name,
+          industry: industry || companyInfo?.industry || "Technology",
+          businessContext: scenario.business_context,
+          diagramData: diagramData,
+          diagramServices: diagramServices,
+          userLevel: "intermediate",
+          objectiveCount: 3,
+          openaiApiKey: apiKey,
+          preferredModel: preferredModel,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setCliObjectives(data.objectives.map((obj: { id: string; description: string; command_pattern: string; example_command: string; hint?: string; points: number; service: string }) => ({
+            ...obj,
+            completed: false,
+          })));
+          setCliContextMessage(data.context_message);
+          setCliTotalPoints(data.total_points);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch CLI objectives:", err);
+    }
+  }, [challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, cliObjectives.length]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -408,6 +773,13 @@ export function ChallengeWorkspaceModal({
     setIsChatLoading(true);
 
     try {
+      // Extract services from diagram for full context
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const diagramServices = (diagramData?.nodes as any[])
+        ?.filter((n) => !["vpc", "subnet", "availabilityZone"].includes(n.type))
+        .map((n) => n.data?.label)
+        .filter(Boolean) || [];
+
       const response = await fetch('/api/chat', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -415,11 +787,32 @@ export function ChallengeWorkspaceModal({
           message: inputValue.trim(),
           challenge_id: challenge.id,
           context: {
+            // Challenge details
             challenge_title: challenge.title,
+            challenge_description: challenge.description,
+            challenge_brief: questionsData?.brief || "",
+            success_criteria: challenge.success_criteria,
+            aws_services_relevant: challenge.aws_services_relevant,
+            // Business context
             company_name: scenario.company_name,
+            industry: industry || companyInfo?.industry || "Technology",
             business_context: scenario.business_context,
+            // User context
+            user_level: userLevel,
+            // User's current work
+            diagram_services: diagramServices,
+            diagram_node_count: diagramData?.nodes?.length || 0,
+            questions_answered: Object.values(answers).filter(a => a.isSubmitted).length,
+            questions_total: questionsData?.questions?.length || 0,
             current_question: questionsData?.questions[currentQuestionIndex]?.question,
+            // Scores
+            drawing_passed: hasDrawingPassed,
+            last_audit_score: lastAuditResult?.score,
           },
+          chat_history: messages.map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
           openai_api_key: apiKey,
           preferred_model: preferredModel,
         }),
@@ -506,6 +899,10 @@ export function ChallengeWorkspaceModal({
           answeredAt: new Date().toISOString(),
         })).filter(a => a.selectedOptionId !== null) || [];
 
+        // Check if challenge should be marked complete:
+        // All 4 stages: questions + drawing + chat + CLI
+        const shouldComplete = allAnswered && hasDrawingPassed && hasChatCompleted && hasCLICompleted;
+        
         await fetch("/api/challenge/progress", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -515,12 +912,39 @@ export function ChallengeWorkspaceModal({
             answers: answersToSave,
             totalPointsEarned: newEarnedPoints,
             hintsUsed: revealedQuestionHints.size,
-            isComplete: allAnswered,
+            isComplete: shouldComplete,
+            diagramData: diagramData,
+            diagramScore: diagramScore,
             questionsData: allAnswered ? {
               brief: questionsData?.brief,
               questions: questionsData?.questions,
               totalPoints: questionsData?.total_points,
               estimatedTimeMinutes: questionsData?.estimated_time_minutes,
+            } : undefined,
+            // Proficiency test results
+            proficiencyTest: proficiencyResult ? {
+              chatHistory: messages.map(m => ({
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp.toISOString(),
+              })),
+              score: proficiencyResult.score,
+              summary: proficiencyResult.summary,
+              strengths: proficiencyResult.strengths,
+              areasForImprovement: proficiencyResult.areasForImprovement,
+              completedAt: new Date().toISOString(),
+            } : undefined,
+            // CLI test results
+            cliTest: cliObjectives.length > 0 ? {
+              objectives: cliObjectives,
+              completedObjectives: cliObjectives.filter(o => o.completed).length,
+              totalObjectives: cliObjectives.length,
+              score: cliObjectives.length > 0 
+                ? Math.round((cliObjectives.filter(o => o.completed).length / cliObjectives.length) * 100)
+                : 0,
+              earnedPoints: cliEarnedPoints,
+              totalPoints: cliTotalPoints,
+              completedAt: hasCLICompleted ? new Date().toISOString() : undefined,
             } : undefined,
           }),
         });
@@ -558,12 +982,13 @@ export function ChallengeWorkspaceModal({
   const allQuestionsAnswered = questionsData?.questions.every(q => answers[q.id]?.isSubmitted) || false;
   const correctCount = Object.values(answers).filter(a => a.isCorrect).length;
 
-  const difficultyColor = {
+  // User level color indicator
+  const userLevelColor = {
     beginner: "text-green-400 bg-green-500/20",
     intermediate: "text-amber-400 bg-amber-500/20",
     advanced: "text-orange-400 bg-orange-500/20",
     expert: "text-red-400 bg-red-500/20",
-  }[challenge.difficulty] || "text-gray-400 bg-gray-500/20";
+  }[userLevel] || "text-amber-400 bg-amber-500/20";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -576,23 +1001,72 @@ export function ChallengeWorkspaceModal({
         </VisuallyHidden>
         {/* Header */}
         <div className="h-12 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-900 shrink-0 w-full">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex items-center gap-3 min-w-0">
             <Button variant="ghost" size="icon-sm" onClick={onClose} className="shrink-0">
               <X className="w-4 h-4" />
             </Button>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500">{challengeIndex + 1}/{totalChallenges}</span>
-              <span className={cn("text-xs px-2 py-0.5 rounded", difficultyColor)}>
-                {challenge.difficulty}
+            <span className={cn("text-xs px-2 py-0.5 rounded shrink-0", userLevelColor)}>
+              {userLevel}
+            </span>
+            {questionsData && (
+              <span className="text-xs text-slate-500 flex items-center gap-1 shrink-0">
+                <Clock className="w-3 h-3" />
+                ~{questionsData.estimated_time_minutes} min
               </span>
-              {questionsData && (
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  ~{questionsData.estimated_time_minutes} min
-                </span>
-              )}
-            </div>
+            )}
             <span className="text-sm font-medium text-slate-200 truncate">{challenge.title}</span>
+          </div>
+          
+          {/* Mode Toggle - 4 Stages in Header */}
+          <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1">
+            <Button
+              variant={workspaceMode === "questions" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-7 px-3 text-xs gap-1.5",
+                allQuestionsAnswered && "text-green-400"
+              )}
+              onClick={() => setWorkspaceMode("questions")}
+            >
+              {allQuestionsAnswered ? <CheckCircle2 className="w-3.5 h-3.5" /> : <HelpCircle className="w-3.5 h-3.5" />}
+              Questions
+            </Button>
+            <Button
+              variant={workspaceMode === "drawing" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-7 px-3 text-xs gap-1.5",
+                hasDrawingPassed && "text-green-400"
+              )}
+              onClick={() => setWorkspaceMode("drawing")}
+            >
+              {hasDrawingPassed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <PenTool className="w-3.5 h-3.5" />}
+              Drawing
+            </Button>
+            <Button
+              variant={workspaceMode === "chat" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-7 px-3 text-xs gap-1.5",
+                hasChatCompleted && "text-green-400"
+              )}
+              onClick={() => setWorkspaceMode("chat")}
+            >
+              {hasChatCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <MessageCircle className="w-3.5 h-3.5" />}
+              Chat
+            </Button>
+            <Button
+              variant={workspaceMode === "cli" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-7 px-3 text-xs gap-1.5",
+                hasCLICompleted && "text-green-400"
+              )}
+              onClick={() => setWorkspaceMode("cli")}
+            >
+              {hasCLICompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Terminal className="w-3.5 h-3.5" />}
+              CLI
+            </Button>
           </div>
           
           <div className="flex items-center gap-3 shrink-0">
@@ -617,14 +1091,6 @@ export function ChallengeWorkspaceModal({
                 {lastAuditResult.score}/100
               </div>
             )}
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon-sm" onClick={onPrevChallenge} disabled={challengeIndex === 0}>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon-sm" onClick={onNextChallenge} disabled={challengeIndex === totalChallenges - 1}>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
           </div>
         </div>
 
@@ -662,37 +1128,14 @@ export function ChallengeWorkspaceModal({
               <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                 {/* Brief Section - Always Visible */}
                 <div className="shrink-0 border-b border-slate-800 bg-slate-900/50 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-slate-300">Challenge Brief</h3>
-                      <div className="flex gap-1">
-                        {challenge.aws_services_relevant.slice(0, 4).map((service, i) => (
-                          <span key={i} className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 text-[10px]">
-                            {service}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Mode Toggle */}
-                    <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1">
-                      <Button
-                        variant={workspaceMode === "questions" ? "secondary" : "ghost"}
-                        size="sm"
-                        className="h-7 px-3 text-xs gap-1.5"
-                        onClick={() => setWorkspaceMode("questions")}
-                      >
-                        <HelpCircle className="w-3.5 h-3.5" />
-                        Questions
-                      </Button>
-                      <Button
-                        variant={workspaceMode === "drawing" ? "secondary" : "ghost"}
-                        size="sm"
-                        className="h-7 px-3 text-xs gap-1.5"
-                        onClick={() => setWorkspaceMode("drawing")}
-                      >
-                        <PenTool className="w-3.5 h-3.5" />
-                        Drawing
-                      </Button>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-sm font-medium text-slate-300">Challenge Brief</h3>
+                    <div className="flex gap-1">
+                      {challenge.aws_services_relevant.slice(0, 6).map((service, i) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 text-[10px]">
+                          {service}
+                        </span>
+                      ))}
                     </div>
                   </div>
                   <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-line">
@@ -920,7 +1363,57 @@ export function ChallengeWorkspaceModal({
 
                 {/* DRAWING MODE - Full React Flow Diagram Canvas */}
                 {workspaceMode === "drawing" && (
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 overflow-hidden relative">
+                    {/* Drawing Pass Celebration Overlay */}
+                    {showDrawingCelebration && (
+                      <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm">
+                        <div className="text-center max-w-md p-8 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-green-500/30 shadow-2xl">
+                          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center animate-pulse">
+                            <Trophy className="w-12 h-12 text-white" />
+                          </div>
+                          <h3 className="text-2xl font-bold text-white mb-2">🎉 Drawing Passed!</h3>
+                          <p className="text-lg text-green-400 font-medium mb-4">
+                            Score: {lastAuditResult?.score}/100
+                          </p>
+                          <p className="text-sm text-slate-400 mb-6">
+                            {allQuestionsAnswered 
+                              ? "All questions answered! Challenge complete! 🚀"
+                              : `Complete ${questionsData?.questions.filter(q => !answers[q.id]?.isSubmitted).length || 0} more question${(questionsData?.questions.filter(q => !answers[q.id]?.isSubmitted).length || 0) === 1 ? '' : 's'} to finish this challenge.`
+                            }
+                          </p>
+                          <div className="flex gap-3 justify-center">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setShowDrawingCelebration(false)}
+                              className="gap-2"
+                            >
+                              Continue Drawing
+                            </Button>
+                            {!allQuestionsAnswered && (
+                              <Button 
+                                onClick={() => {
+                                  setShowDrawingCelebration(false);
+                                  setWorkspaceMode("questions");
+                                }}
+                                className="gap-2 bg-cyan-500 hover:bg-cyan-600"
+                              >
+                                Answer Questions
+                                <ChevronRight className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {allQuestionsAnswered && onNextChallenge && challengeIndex < totalChallenges - 1 && (
+                              <Button 
+                                onClick={onNextChallenge}
+                                className="gap-2 bg-green-500 hover:bg-green-600"
+                              >
+                                Next Challenge
+                                <ChevronRight className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <DiagramCanvas
                       initialData={diagramData || undefined}
                       initialScore={diagramScore}
@@ -949,6 +1442,11 @@ export function ChallengeWorkspaceModal({
                               answeredAt: new Date().toISOString(),
                             }));
                           
+                          // Check if challenge should be marked complete:
+                          // All 4 stages: questions + drawing + chat + CLI
+                          const allQuestionsAnsweredNow = questionsData?.questions.every(q => answers[q.id]?.isSubmitted) || false;
+                          const shouldComplete = allQuestionsAnsweredNow && hasDrawingPassed && hasChatCompleted && hasCLICompleted;
+                          
                           const response = await fetch("/api/challenge/progress", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -958,7 +1456,7 @@ export function ChallengeWorkspaceModal({
                               answers: answersArray,
                               totalPointsEarned: earnedPoints,
                               hintsUsed: revealedQuestionHints.size,
-                              isComplete: false,
+                              isComplete: shouldComplete,
                               diagramData: data,
                               diagramScore: score,
                               questionsData: questionsData ? {
@@ -980,175 +1478,507 @@ export function ChallengeWorkspaceModal({
                         }
                       }}
                       onScoreChange={(score) => setDiagramScore(score)}
-                      onAuditComplete={(result) => {
+                      onAuditComplete={async (result) => {
                         setLastAuditResult(result);
                         // Update session ID for continuity
                         if (!diagramSessionId) {
                           setDiagramSessionId(`diagram-${challenge.id}-${Date.now()}`);
                         }
+                        
+                        // Check if audit score passes threshold
+                        if (result.score >= AUDIT_PASS_THRESHOLD && !hasDrawingPassed) {
+                          setHasDrawingPassed(true);
+                          setShowDrawingCelebration(true);
+                          
+                          // Save the passing audit result to database
+                          if (attemptId && challenge.id) {
+                            const answersArray = Object.entries(answers)
+                              .filter(([, state]) => state.isSubmitted)
+                              .map(([questionId, state]) => ({
+                                questionId,
+                                selectedOptionId: state.selectedOptionId,
+                                isCorrect: state.isCorrect || false,
+                                pointsEarned: state.isCorrect ? 20 : 0,
+                                hintUsed: revealedQuestionHints.has(questionId),
+                                answeredAt: new Date().toISOString(),
+                              }));
+                            
+                            // Check if all questions are also answered
+                            const allQuestionsAnsweredNow = questionsData?.questions.every(q => answers[q.id]?.isSubmitted) || false;
+                            const shouldComplete = allQuestionsAnsweredNow && hasChatCompleted && hasCLICompleted; // All 4 stages complete
+                            
+                            await fetch("/api/challenge/progress", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                attemptId,
+                                challengeId: challenge.id,
+                                answers: answersArray,
+                                totalPointsEarned: earnedPoints,
+                                hintsUsed: revealedQuestionHints.size,
+                                isComplete: shouldComplete,
+                                diagramData,
+                                diagramScore,
+                                auditScore: result.score,
+                                auditPassed: true,
+                                questionsData: questionsData ? {
+                                  brief: questionsData.brief,
+                                  questions: questionsData.questions,
+                                  totalPoints: questionsData.total_points,
+                                  estimatedTimeMinutes: questionsData.estimated_time_minutes,
+                                } : undefined,
+                              }),
+                            });
+                          }
+                        }
                       }}
                     />
+                  </div>
+                )}
+
+                {/* CHAT MODE - Proficiency Test with AI coach */}
+                {workspaceMode === "chat" && (
+                  <div className="flex-1 flex flex-col overflow-hidden bg-slate-900/50">
+                    {/* Proficiency Result Display */}
+                    {proficiencyResult && (
+                      <div className="p-4 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700">
+                        <div className="max-w-3xl mx-auto">
+                          <div className="flex items-center gap-4 mb-3">
+                            <div className={cn(
+                              "w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold",
+                              proficiencyResult.score >= 70 ? "bg-green-500/20 text-green-400" : "bg-amber-500/20 text-amber-400"
+                            )}>
+                              {proficiencyResult.score}
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-medium text-white">Proficiency Assessment</h3>
+                              <p className="text-sm text-slate-400">{proficiencyResult.summary}</p>
+                            </div>
+                          </div>
+                          {proficiencyResult.strengths.length > 0 && (
+                            <div className="mb-2">
+                              <span className="text-xs text-green-400 font-medium">Strengths: </span>
+                              <span className="text-xs text-slate-300">{proficiencyResult.strengths.join(", ")}</span>
+                            </div>
+                          )}
+                          {proficiencyResult.areasForImprovement.length > 0 && (
+                            <div>
+                              <span className="text-xs text-amber-400 font-medium">Areas to improve: </span>
+                              <span className="text-xs text-slate-300">{proficiencyResult.areasForImprovement.join(", ")}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex-1 p-4 overflow-y-auto">
+                      {messages.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500">
+                          <MessageCircle className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                          <h3 className="text-lg font-medium text-slate-300 mb-2">Chat with Sophia</h3>
+                          <p className="text-sm mb-6 max-w-md mx-auto">
+                            Ask questions about the challenge, get help with your architecture, or discuss AWS best practices.
+                          </p>
+                          <div className="max-w-md mx-auto space-y-2">
+                            {[
+                              "Help me understand the business requirements",
+                              "What AWS services should I consider?",
+                              "Review my architecture approach",
+                              "Explain the compliance requirements"
+                            ].map((suggestion) => (
+                              <button
+                                key={suggestion}
+                                onClick={() => {
+                                  setInputValue(suggestion);
+                                  setTimeout(() => sendMessage(), 100);
+                                }}
+                                className="block w-full text-sm px-4 py-3 rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300 transition-colors text-left"
+                              >
+                                {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 max-w-3xl mx-auto">
+                          {/* Show proficiency test indicator if started */}
+                          {isProficiencyStarted && !proficiencyResult && (
+                            <div className="text-center py-2 px-4 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs">
+                              📝 Proficiency Test in Progress - Sophia is evaluating your understanding
+                            </div>
+                          )}
+                          {messages.map((msg, i) => (
+                            <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                              <div className={cn(
+                                "max-w-[80%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap",
+                                msg.role === "user" 
+                                  ? "bg-cyan-500/20 text-cyan-100 rounded-br-sm" 
+                                  : "bg-slate-800 text-slate-200 rounded-bl-sm"
+                              )}>
+                                {msg.content}
+                              </div>
+                            </div>
+                          ))}
+                          {isChatLoading && (
+                            <div className="flex justify-start">
+                              <div className="bg-slate-800 rounded-xl px-4 py-3">
+                                <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                              </div>
+                            </div>
+                          )}
+                          <div ref={chatEndRef} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-4 border-t border-slate-800 shrink-0 bg-slate-900">
+                      <div className="flex gap-3 max-w-3xl mx-auto">
+                        <Input
+                          ref={inputRef}
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (isProficiencyStarted ? sendProficiencyMessage() : sendMessage())}
+                          placeholder={isProficiencyStarted ? "Explain your reasoning..." : "Ask Sophia anything about this challenge..."}
+                          className="h-11 text-sm bg-slate-800 border-slate-700"
+                          disabled={hasChatCompleted}
+                        />
+                        <Button
+                          size="icon"
+                          onClick={isProficiencyStarted ? sendProficiencyMessage : sendMessage}
+                          disabled={!inputValue.trim() || isChatLoading || hasChatCompleted}
+                          className="h-11 w-11 bg-cyan-500 hover:bg-cyan-600"
+                        >
+                          <Send className="w-5 h-5" />
+                        </Button>
+                      </div>
+                      
+                      {/* Take Proficiency Test button - show when not started and has some chat history */}
+                      {!isProficiencyStarted && !proficiencyResult && (
+                        <div className="mt-3 text-center">
+                          <Button
+                            size="sm"
+                            onClick={startProficiencyTest}
+                            disabled={isChatLoading}
+                            className="bg-purple-500 hover:bg-purple-600 gap-2"
+                          >
+                            {isChatLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Target className="w-4 h-4" />
+                            )}
+                            Take Proficiency Test
+                          </Button>
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            Sophia will review your chat history and ask you to explain your architecture
+                          </p>
+                        </div>
+                      )}
+                      
+                      {proficiencyReadyToEvaluate && !proficiencyResult && (
+                        <div className="mt-3 text-center">
+                          <Button
+                            size="sm"
+                            onClick={evaluateProficiencyTest}
+                            disabled={isChatLoading}
+                            className="bg-green-500 hover:bg-green-600 gap-2"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Get Assessment
+                          </Button>
+                        </div>
+                      )}
+                      {hasChatCompleted && (
+                        <p className="mt-3 text-center text-sm text-green-400">
+                          ✓ Proficiency test completed
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* CLI MODE - AWS Console-like interface */}
+                {workspaceMode === "cli" && (
+                  <div className="flex-1 flex flex-col overflow-hidden bg-[#232f3e]">
+                    {/* AWS Console Header */}
+                    <div className="h-10 bg-[#232f3e] border-b border-slate-700 flex items-center px-3 shrink-0">
+                      <div className="flex items-center gap-3">
+                        {/* AWS Logo */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 bg-[#ff9900] rounded flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-black">aws</span>
+                          </div>
+                          <span className="text-xs text-slate-400">Console</span>
+                        </div>
+                        {/* Service breadcrumb */}
+                        <div className="flex items-center gap-1 text-xs">
+                          <span className="text-slate-500">Services</span>
+                          <ChevronRight className="w-3 h-3 text-slate-600" />
+                          <span className="text-white font-medium">CloudShell</span>
+                        </div>
+                      </div>
+                      <div className="flex-1" />
+                      {/* Right side - Region & Account */}
+                      <div className="flex items-center gap-3 text-xs">
+                        <div className="flex items-center gap-1 px-2 py-1 rounded bg-slate-700/50 text-slate-300">
+                          <span>{consoleData?.region || "eu-west-2"}</span>
+                          <ChevronRight className="w-3 h-3 rotate-90" />
+                        </div>
+                        <div className="text-slate-400">
+                          {consoleData?.account_alias || scenario.company_name?.replace(/\s+/g, '-').toLowerCase() + '-account' || 'demo-account'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Console Dashboard Area */}
+                    <div className="flex-1 flex overflow-hidden">
+                      {/* Left sidebar - Services */}
+                      <div className="w-48 bg-[#1a242f] border-r border-slate-700 p-3 shrink-0 overflow-y-auto">
+                        <h4 className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-2">
+                          Recently Visited
+                        </h4>
+                        <div className="space-y-1">
+                          {(consoleData?.recently_visited || challenge.aws_services_relevant.slice(0, 6).map(s => ({ name: s, color: "#FF9900", abbr: s.substring(0, 2).toUpperCase() }))).map((service, i) => (
+                            <div 
+                              key={i}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded text-xs text-slate-300 hover:bg-slate-700/50 cursor-pointer"
+                            >
+                              <div 
+                                className="w-5 h-5 rounded flex items-center justify-center"
+                                style={{ backgroundColor: service.color }}
+                              >
+                                <span className="text-[8px] font-bold text-white">
+                                  {service.abbr}
+                                </span>
+                              </div>
+                              {service.name}
+                            </div>
+                          ))}
+                        </div>
+
+                        <h4 className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mt-4 mb-2">
+                          Environment
+                        </h4>
+                        <div className="space-y-2 text-[10px] text-slate-400">
+                          <div className="flex justify-between">
+                            <span>Region</span>
+                            <span className="text-cyan-400">{consoleData?.region || "eu-west-2"}</span>
+                          </div>
+                          {consoleData?.resource_counts ? (
+                            Object.entries(consoleData.resource_counts).slice(0, 4).map(([key, value]) => (
+                              <div key={key} className="flex justify-between">
+                                <span>{key}</span>
+                                <span className={value > 0 ? "text-green-400" : "text-amber-400"}>{value}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <>
+                              <div className="flex justify-between">
+                                <span>VPCs</span>
+                                <span className="text-green-400">2</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Subnets</span>
+                                <span className="text-green-400">4</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>EC2 Instances</span>
+                                <span className="text-amber-400">0</span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <h4 className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mt-4 mb-2">
+                          Cost & Usage
+                        </h4>
+                        <div className="bg-slate-800/50 rounded p-2">
+                          <div className="text-lg font-bold text-green-400">
+                            ${consoleData?.cost_current_month?.toFixed(2) || "0.00"}
+                          </div>
+                          <div className="text-[10px] text-slate-500">Current month</div>
+                          <div className="mt-2 h-8 flex items-end gap-0.5">
+                            {(consoleData?.cost_trend || [20, 35, 15, 45, 30, 25, 40]).map((h, i) => {
+                              const maxVal = Math.max(...(consoleData?.cost_trend || [45]));
+                              const heightPercent = maxVal > 0 ? (h / maxVal) * 100 : h;
+                              return (
+                                <div 
+                                  key={i} 
+                                  className="flex-1 bg-cyan-500/30 rounded-t"
+                                  style={{ height: `${heightPercent}%` }}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* AWS Health */}
+                        <h4 className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mt-4 mb-2">
+                          AWS Health
+                        </h4>
+                        <div className="space-y-1 text-[10px]">
+                          <div className="flex justify-between text-slate-400">
+                            <span>Open issues</span>
+                            <span className={consoleData?.health_open_issues === 0 ? "text-green-400" : "text-red-400"}>
+                              {consoleData?.health_open_issues ?? 0}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                            <span>Scheduled</span>
+                            <span className={consoleData?.health_scheduled_changes === 0 ? "text-green-400" : "text-amber-400"}>
+                              {consoleData?.health_scheduled_changes ?? 0}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Main content - CloudShell Terminal + Objectives */}
+                      <div className="flex-1 flex flex-col">
+                        {/* Objectives Panel */}
+                        {cliObjectives.length > 0 && (
+                          <div className="bg-[#1a242f] border-b border-slate-700 p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-xs font-medium text-slate-300">CLI Objectives</h4>
+                              <span className="text-[10px] text-slate-500">
+                                {cliObjectives.filter(o => o.completed).length}/{cliObjectives.length} completed • {cliEarnedPoints}/{cliTotalPoints} pts
+                              </span>
+                            </div>
+                            {cliContextMessage && (
+                              <p className="text-[10px] text-slate-400 mb-2">{cliContextMessage}</p>
+                            )}
+                            <div className="space-y-1.5">
+                              {cliObjectives.map((obj, i) => (
+                                <div 
+                                  key={obj.id}
+                                  className={cn(
+                                    "flex items-start gap-2 p-2 rounded text-xs",
+                                    obj.completed ? "bg-green-500/10 border border-green-500/30" : "bg-slate-800/50"
+                                  )}
+                                >
+                                  <div className={cn(
+                                    "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                                    obj.completed ? "bg-green-500 text-white" : "bg-slate-700 text-slate-400"
+                                  )}>
+                                    {obj.completed ? <CheckCircle2 className="w-3 h-3" /> : <span>{i + 1}</span>}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={cn("text-slate-300", obj.completed && "line-through opacity-60")}>
+                                      {obj.description}
+                                    </p>
+                                    {!obj.completed && obj.hint && (
+                                      <p className="text-[10px] text-slate-500 mt-0.5">💡 {obj.hint}</p>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-slate-500 shrink-0">{obj.points} pts</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Load objectives button if none loaded */}
+                        {cliObjectives.length === 0 && (
+                          <div className="bg-[#1a242f] border-b border-slate-700 p-3">
+                            <Button
+                              size="sm"
+                              onClick={fetchCliObjectives}
+                              className="w-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30"
+                            >
+                              <Target className="w-4 h-4 mr-2" />
+                              Load CLI Objectives
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* CloudShell header */}
+                        <div className="h-9 bg-[#0f1419] border-b border-slate-700 flex items-center px-3 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <Terminal className="w-4 h-4 text-green-500" />
+                            <span className="text-sm font-medium text-white">CloudShell</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                              Simulated
+                            </span>
+                          </div>
+                          <div className="flex-1" />
+                          <div className="text-[10px] text-slate-500">
+                            {scenario.company_name} • {industry || 'Technology'}
+                          </div>
+                        </div>
+
+                        {/* Terminal */}
+                        <CLISimulator
+                          className="flex-1"
+                          challengeContext={{
+                            id: challenge.id,
+                            title: challenge.title,
+                            description: challenge.description,
+                            aws_services: challenge.aws_services_relevant,
+                            success_criteria: challenge.success_criteria,
+                          }}
+                          companyName={scenario.company_name}
+                          industry={industry || (companyInfo?.industry as string) || "Technology"}
+                          businessContext={scenario.business_context}
+                          apiKey={apiKey}
+                          preferredModel={preferredModel}
+                          onCommandExecuted={async (cmd: string, output: string) => {
+                            console.log(`[CLI Simulator] ${cmd}`, output);
+                            
+                            // Validate command against objectives
+                            if (cliObjectives.length > 0 && !hasCLICompleted) {
+                              try {
+                                const response = await fetch("/api/cli-objectives/validate", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    command: cmd,
+                                    commandOutput: output,
+                                    objectives: cliObjectives.filter(o => !o.completed),
+                                    openaiApiKey: apiKey,
+                                    preferredModel: preferredModel,
+                                  }),
+                                });
+                                
+                                if (response.ok) {
+                                  const data = await response.json();
+                                  if (data.success && data.objective_id) {
+                                    // Mark objective as completed
+                                    setCliObjectives(prev => prev.map(obj => 
+                                      obj.id === data.objective_id 
+                                        ? { ...obj, completed: true }
+                                        : obj
+                                    ));
+                                    setCliEarnedPoints(prev => prev + data.points_earned);
+                                    
+                                    // Check if all objectives completed
+                                    const updatedObjectives = cliObjectives.map(obj => 
+                                      obj.id === data.objective_id ? { ...obj, completed: true } : obj
+                                    );
+                                    if (updatedObjectives.every(obj => obj.completed)) {
+                                      setHasCLICompleted(true);
+                                    }
+                                  }
+                                }
+                              } catch (err) {
+                                console.error("Failed to validate CLI command:", err);
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* CLI Completion indicator */}
+                    {hasCLICompleted && (
+                      <div className="p-2 bg-green-500/10 border-t border-green-500/30 text-center">
+                        <p className="text-sm text-green-400">✓ CLI objectives completed ({cliEarnedPoints}/{cliTotalPoints} points)</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Right side - Collapsible Panel (Chat + Terminal) */}
-          <div className={cn(
-            "flex flex-col border-l border-slate-800 transition-all duration-300 overflow-hidden",
-            isChatOpen ? "w-[380px] bg-slate-900" : "w-12 bg-slate-950"
-          )}>
-            {/* Panel toggle / header */}
-            <div className="h-12 flex items-center justify-between px-3 border-b border-slate-800 shrink-0">
-              {isChatOpen ? (
-                <>
-                  {/* Tab buttons */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setRightPanelTab("chat")}
-                      className={cn(
-                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors",
-                        rightPanelTab === "chat" 
-                          ? "bg-cyan-500/20 text-cyan-400" 
-                          : "text-slate-400 hover:text-slate-300 hover:bg-slate-800"
-                      )}
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      Chat
-                    </button>
-                    <button
-                      onClick={() => setRightPanelTab("terminal")}
-                      className={cn(
-                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors",
-                        rightPanelTab === "terminal" 
-                          ? "bg-green-500/20 text-green-400" 
-                          : "text-slate-400 hover:text-slate-300 hover:bg-slate-800"
-                      )}
-                    >
-                      <Terminal className="w-3.5 h-3.5" />
-                      AWS CLI
-                    </button>
-                  </div>
-                  <Button variant="ghost" size="icon-sm" onClick={() => setIsChatOpen(false)}>
-                    <PanelRightClose className="w-4 h-4" />
-                  </Button>
-                </>
-              ) : (
-                <div className="flex items-center justify-center gap-1 w-full">
-                  <Button 
-                    variant="ghost" 
-                    size="icon-sm"
-                    onClick={() => { setIsChatOpen(true); setRightPanelTab("chat"); }}
-                    title="AI Coach"
-                  >
-                    <MessageCircle className="w-4 h-4 text-cyan-400" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon-sm"
-                    onClick={() => { setIsChatOpen(true); setRightPanelTab("terminal"); }}
-                    title="CLI Sandbox"
-                  >
-                    <Terminal className="w-4 h-4 text-green-400" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Panel content */}
-            {isChatOpen && rightPanelTab === "chat" && (
-              <>
-                <div className="flex-1 p-3 overflow-y-auto">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
-                      <HelpCircle className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                      <p className="text-sm font-medium">Need help?</p>
-                      <p className="text-xs mt-1">Ask me anything about this challenge!</p>
-                      <div className="mt-4 space-y-2">
-                        {["Explain this question", "What AWS services should I use?", "Give me a hint"].map((suggestion) => (
-                          <button
-                            key={suggestion}
-                            onClick={() => {
-                              setInputValue(suggestion);
-                              setTimeout(() => sendMessage(), 100);
-                            }}
-                            className="block w-full text-xs px-3 py-2 rounded bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300 transition-colors"
-                          >
-                            {suggestion}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {messages.map((msg, i) => (
-                        <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-                          <div className={cn(
-                            "max-w-[90%] rounded-lg px-3 py-2 text-sm",
-                            msg.role === "user" ? "bg-cyan-500/20 text-cyan-100" : "bg-slate-800 text-slate-200"
-                          )}>
-                            {msg.content}
-                          </div>
-                        </div>
-                      ))}
-                      {isChatLoading && (
-                        <div className="flex justify-start">
-                          <div className="bg-slate-800 rounded-lg px-3 py-2">
-                            <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
-                          </div>
-                        </div>
-                      )}
-                      <div ref={chatEndRef} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-3 border-t border-slate-800 shrink-0">
-                  <div className="flex gap-2">
-                    <Input
-                      ref={inputRef}
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                      placeholder="Ask Sophia..."
-                      className="h-9 text-sm bg-slate-800 border-slate-700"
-                    />
-                    <Button
-                      size="icon"
-                      onClick={sendMessage}
-                      disabled={!inputValue.trim() || isChatLoading}
-                      className="h-9 w-9 bg-cyan-500 hover:bg-cyan-600"
-                    >
-                      <Send className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* CLI Simulator - AI-powered sandbox terminal */}
-            {isChatOpen && rightPanelTab === "terminal" && (
-              <CLISimulator
-                className="flex-1"
-                challengeContext={{
-                  id: challenge.id,
-                  title: challenge.title,
-                  description: challenge.description,
-                  aws_services: challenge.aws_services_relevant,
-                  success_criteria: challenge.success_criteria,
-                }}
-                companyName={scenario.company_name}
-                industry={industry || (companyInfo?.industry as string) || "Technology"}
-                businessContext={scenario.business_context}
-                apiKey={apiKey}
-                preferredModel={preferredModel}
-                onCommandExecuted={(cmd: string, output: string) => {
-                  console.log(`[CLI Simulator] ${cmd}`, output);
-                }}
-              />
-            )}
-          </div>
+          {/* Right side removed - Chat and CLI now in main workspace */}
         </div>
       </DialogContent>
     </Dialog>

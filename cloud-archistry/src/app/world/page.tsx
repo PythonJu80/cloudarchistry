@@ -88,268 +88,8 @@ export interface Location {
   website?: string;
 }
 
-// Sample locations - Real companies with ACTUAL HQ coordinates
-const LOCATIONS: Location[] = [
-  // ========== BEGINNER ==========
-  // Mailchimp - Atlanta (Ponce City Market, 675 Ponce De Leon Ave NE)
-  {
-    id: "mailchimp-atlanta",
-    name: "Mailchimp HQ",
-    company: "Mailchimp",
-    industry: "Technology",
-    lat: 33.7725,
-    lng: -84.3655,
-    difficulty: "beginner",
-    challenges: 3,
-    completed: 0,
-    locked: false,
-    description: "Build a simple email campaign storage system with S3 and basic Lambda triggers for notifications.",
-    compliance: ["CAN-SPAM", "GDPR Basics"],
-    icon: "💻",
-  },
-  // Shopify - Ottawa (150 Elgin Street)
-  {
-    id: "shopify-ottawa",
-    name: "Shopify HQ",
-    company: "Shopify",
-    industry: "E-Commerce",
-    lat: 45.4208,
-    lng: -75.6901,
-    difficulty: "beginner",
-    challenges: 4,
-    completed: 0,
-    locked: false,
-    description: "Create a simple product catalog API with DynamoDB and API Gateway for a small online store.",
-    compliance: ["PCI-DSS Basics"],
-    icon: "🛍️",
-  },
-  // Canva - Sydney (110 Kippax Street, Surry Hills)
-  {
-    id: "canva-sydney",
-    name: "Canva HQ",
-    company: "Canva",
-    industry: "Technology",
-    lat: -33.8837,
-    lng: 151.2086,
-    difficulty: "beginner",
-    challenges: 3,
-    completed: 0,
-    locked: false,
-    description: "Design an image asset storage system with S3, CloudFront CDN, and basic access controls.",
-    compliance: ["Basic Security"],
-    icon: "💻",
-  },
-  // Atlassian/Trello - Sydney (341 George Street - Atlassian owns Trello)
-  {
-    id: "trello-sydney",
-    name: "Atlassian HQ",
-    company: "Trello",
-    industry: "Technology",
-    lat: -33.8651,
-    lng: 151.2070,
-    difficulty: "beginner",
-    challenges: 3,
-    completed: 0,
-    locked: false,
-    description: "Build a simple task board backend with DynamoDB and WebSocket API for real-time updates.",
-    compliance: ["SOC 2 Basics"],
-    icon: "💻",
-  },
-  
-  // ========== INTERMEDIATE & ADVANCED ==========
-  // HSBC - London (8 Canada Square, Canary Wharf)
-  {
-    id: "hsbc-london",
-    name: "HSBC Tower",
-    company: "HSBC",
-    industry: "Banking & Finance",
-    lat: 51.5049,
-    lng: -0.0183,
-    difficulty: "advanced",
-    challenges: 8,
-    completed: 0,
-    locked: false,
-    description: "Design a multi-region, PCI-DSS compliant banking infrastructure with real-time transaction processing.",
-    compliance: ["PCI-DSS", "GDPR", "FCA"],
-    icon: "🏦",
-  },
-  // Barclays - London (1 Churchill Place, Canary Wharf)
-  {
-    id: "barclays-canary",
-    name: "Barclays HQ",
-    company: "Barclays",
-    industry: "Banking & Finance",
-    lat: 51.5050,
-    lng: -0.0155,
-    difficulty: "advanced",
-    challenges: 6,
-    completed: 0,
-    locked: false,
-    description: "Build a secure trading platform with sub-millisecond latency and disaster recovery.",
-    compliance: ["PCI-DSS", "MiFID II", "GDPR"],
-    icon: "🏦",
-  },
-  // NHS Digital - Leeds (7 & 8 Wellington Place)
-  {
-    id: "nhs-leeds",
-    name: "NHS Digital",
-    company: "NHS",
-    industry: "Healthcare",
-    lat: 53.7960,
-    lng: -1.5511,
-    difficulty: "expert",
-    challenges: 10,
-    completed: 0,
-    locked: false,
-    description: "Architect a nationwide health records system with strict data sovereignty and HIPAA-equivalent compliance.",
-    compliance: ["NHS DSPT", "GDPR", "ISO 27001"],
-    icon: "🏥",
-  },
-  // Google - Mountain View (1600 Amphitheatre Parkway)
-  {
-    id: "google-mv",
-    name: "Googleplex",
-    company: "Google",
-    industry: "Technology",
-    lat: 37.4220,
-    lng: -122.0841,
-    difficulty: "expert",
-    challenges: 12,
-    completed: 0,
-    locked: true,
-    description: "Design a planet-scale search infrastructure handling billions of queries per day.",
-    compliance: ["SOC 2", "ISO 27001", "CCPA"],
-    icon: "💻",
-  },
-  // Meta - Menlo Park (1 Hacker Way)
-  {
-    id: "meta-menlo",
-    name: "Meta HQ",
-    company: "Meta",
-    industry: "Technology",
-    lat: 37.4845,
-    lng: -122.1477,
-    difficulty: "expert",
-    challenges: 10,
-    completed: 0,
-    locked: true,
-    description: "Build a real-time social graph with billions of connections and instant updates.",
-    compliance: ["GDPR", "CCPA", "SOC 2"],
-    icon: "💻",
-  },
-  // Amazon - Seattle (410 Terry Ave N, Day 1 Building)
-  {
-    id: "amazon-seattle",
-    name: "Amazon HQ",
-    company: "Amazon",
-    industry: "E-Commerce",
-    lat: 47.6222,
-    lng: -122.3369,
-    difficulty: "advanced",
-    challenges: 8,
-    completed: 0,
-    locked: false,
-    description: "Design a global e-commerce platform handling Black Friday scale traffic.",
-    compliance: ["PCI-DSS", "SOC 2", "GDPR"],
-    icon: "🛒",
-  },
-  // Netflix - Los Gatos (100 Winchester Circle)
-  {
-    id: "netflix-losgatos",
-    name: "Netflix HQ",
-    company: "Netflix",
-    industry: "Technology",
-    lat: 37.2614,
-    lng: -121.9577,
-    difficulty: "advanced",
-    challenges: 7,
-    completed: 0,
-    locked: false,
-    description: "Architect a global content delivery network for 4K streaming to 200M+ subscribers.",
-    compliance: ["SOC 2", "MPAA"],
-    icon: "💻",
-  },
-  // Nintendo - Kyoto (11-1 Kamitoba Hokotate-cho, Minami-ku)
-  {
-    id: "nintendo-kyoto",
-    name: "Nintendo HQ",
-    company: "Nintendo",
-    industry: "Technology",
-    lat: 34.9697,
-    lng: 135.7544,
-    difficulty: "intermediate",
-    challenges: 5,
-    completed: 0,
-    locked: false,
-    description: "Build a low-latency multiplayer gaming infrastructure for millions of concurrent players.",
-    compliance: ["APPI", "SOC 2"],
-    icon: "💻",
-  },
-  // BMW - Munich (BMW Welt, Am Olympiapark 1)
-  {
-    id: "bmw-munich",
-    name: "BMW Welt",
-    company: "BMW",
-    industry: "Automotive",
-    lat: 48.1770,
-    lng: 11.5562,
-    difficulty: "intermediate",
-    challenges: 6,
-    completed: 0,
-    locked: false,
-    description: "Design IoT infrastructure for connected vehicles with real-time telemetry.",
-    compliance: ["GDPR", "ISO 27001", "TISAX"],
-    icon: "🚗",
-  },
-  // DBS Bank - Singapore (Marina Bay Financial Centre Tower 3)
-  {
-    id: "dbs-singapore",
-    name: "DBS Bank Tower",
-    company: "DBS Bank",
-    industry: "Banking & Finance",
-    lat: 1.2789,
-    lng: 103.8540,
-    difficulty: "advanced",
-    challenges: 7,
-    completed: 0,
-    locked: false,
-    description: "Build a digital banking platform for Southeast Asia with multi-currency support.",
-    compliance: ["MAS TRM", "PCI-DSS", "PDPA"],
-    icon: "🏦",
-  },
-  // Emirates - Dubai (Emirates Group HQ, Airport Road)
-  {
-    id: "emirates-dubai",
-    name: "Emirates HQ",
-    company: "Emirates",
-    industry: "Aviation",
-    lat: 25.2528,
-    lng: 55.3644,
-    difficulty: "intermediate",
-    challenges: 5,
-    completed: 0,
-    locked: false,
-    description: "Design a real-time flight operations system with global coverage.",
-    compliance: ["IATA", "GDPR"],
-    icon: "✈️",
-  },
-  // LVMH - Paris (22 Avenue Montaigne)
-  {
-    id: "lvmh-paris",
-    name: "LVMH Tower",
-    company: "LVMH",
-    industry: "Retail",
-    lat: 48.8661,
-    lng: 2.3044,
-    difficulty: "intermediate",
-    challenges: 4,
-    completed: 0,
-    locked: false,
-    description: "Build a global luxury e-commerce platform with personalized experiences.",
-    compliance: ["GDPR", "PCI-DSS"],
-    icon: "👜",
-  },
-];
+// Empty locations array - system challenges removed, only user-generated challenges
+const LOCATIONS: Location[] = [];
 
 // Difficulty colors
 const difficultyColors = {
@@ -655,6 +395,8 @@ export default function WorldPage() {
     if (!visitedLocations.includes(location.id)) {
       setVisitedLocations((prev) => [...prev, location.id]);
     }
+    // Set target coordinates for the map center
+    setTargetCoords({ lat: location.lat, lng: location.lng });
     // Switch to satellite view when zooming in
     setMapView("satellite");
     setZoomLevel(15);
@@ -663,6 +405,7 @@ export default function WorldPage() {
   // Handle back to globe
   const handleBackToGlobe = useCallback(() => {
     setSelectedLocation(null);
+    setTargetCoords(null);
     setMapView("globe");
     setZoomLevel(2);
   }, []);
@@ -743,6 +486,7 @@ export default function WorldPage() {
   // User's API key for generation
   const [userApiKey, setUserApiKey] = useState<string | null>(null);
   const [preferredModel, setPreferredModel] = useState<string | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   
   // Fetch target cert, skill level, and API key from database on mount
   useEffect(() => {
@@ -769,6 +513,8 @@ export default function WorldPage() {
         }
       } catch (err) {
         console.error("Failed to fetch settings:", err);
+      } finally {
+        setSettingsLoaded(true);
       }
     };
     fetchSettings();
@@ -844,9 +590,9 @@ export default function WorldPage() {
     setSelectedLocation(null);
     setSelectedBusiness(null);
     
-    // Switch to satellite view with a nice overview zoom (not street level)
+    // Switch to satellite view - same zoom level as location select
     setMapView("satellite");
-    setZoomLevel(13); // City/district overview level
+    setZoomLevel(15);
   }, []);
 
   return (
@@ -990,6 +736,9 @@ export default function WorldPage() {
                                   const firstIncomplete = challenge.challenges.findIndex(c => c.status !== "completed");
                                   setResumeChallengeIndex(firstIncomplete >= 0 ? firstIncomplete : 0);
                                   setResumeChallenge(challenge);
+                                  // Clear any selected location to avoid showing location card
+                                  setSelectedLocation(null);
+                                  setSelectedBusiness(null);
                                 }}
                                 disabled={deletingChallengeId === challenge.id}
                                 className="w-full text-left p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-transparent hover:border-cyan-500/30 transition-all disabled:opacity-50"
@@ -1376,7 +1125,7 @@ export default function WorldPage() {
                     <Button 
                       variant="glow" 
                       className="w-full gap-2"
-                      disabled={!customBusinessName.trim() || !customBusinessAddress.trim()}
+                      disabled={!customBusinessName.trim() || !customBusinessAddress.trim() || !settingsLoaded}
                       onClick={() => {
                         // Extract country from custom address (last part after comma)
                         const addressParts = customBusinessAddress.split(',');
@@ -1488,7 +1237,7 @@ export default function WorldPage() {
         </div>
         <div className={cn(
           "absolute inset-0 transition-opacity duration-500",
-          mapView === "satellite" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+          mapView === "satellite" && targetCoords ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
         )}>
           <WorldMap
             locations={LOCATIONS}
@@ -1736,6 +1485,7 @@ export default function WorldPage() {
                     <Button 
                       variant="glow" 
                       className="w-full gap-2"
+                      disabled={!settingsLoaded}
                       onClick={() => {
                         const industry = selectedBusiness?.types ? detectIndustry(selectedBusiness.types) : "Technology";
                         // Extract country from address (last part after comma)

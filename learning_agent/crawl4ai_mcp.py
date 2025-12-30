@@ -21,6 +21,7 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
+from pydantic import BaseModel
 
 from crawl4ai import CrawlerRunConfig, CacheMode
 
@@ -1475,7 +1476,48 @@ async def get_coaching_response(
         if learner_parts:
             context_parts.append("LEARNER PROFILE:\n" + "\n".join(learner_parts))
     
-    if scenario:
+    # Use context-provided challenge info (more complete) or fall back to scenario lookup
+    if context and context.get("challenge_title"):
+        # Full challenge context from frontend
+        context_parts.append(f"\n=== CURRENT CHALLENGE ===")
+        context_parts.append(f"Challenge: {context.get('challenge_title')}")
+        if context.get("challenge_description"):
+            context_parts.append(f"Description: {context.get('challenge_description')}")
+        if context.get("challenge_brief"):
+            context_parts.append(f"Brief: {context.get('challenge_brief')}")
+        if context.get("success_criteria"):
+            criteria = context.get("success_criteria")
+            if isinstance(criteria, list):
+                context_parts.append(f"Success Criteria: {', '.join(criteria)}")
+        if context.get("aws_services_relevant"):
+            services = context.get("aws_services_relevant")
+            if isinstance(services, list):
+                context_parts.append(f"Required AWS Services: {', '.join(services)}")
+        
+        # Business context
+        context_parts.append(f"\n=== BUSINESS CONTEXT ===")
+        context_parts.append(f"Company: {context.get('company_name', 'Unknown')}")
+        context_parts.append(f"Industry: {context.get('industry', 'Technology')}")
+        if context.get("business_context"):
+            context_parts.append(f"Business Context: {context.get('business_context')}")
+        
+        # User's current progress
+        context_parts.append(f"\n=== USER'S CURRENT WORK ===")
+        diagram_services = context.get("diagram_services", [])
+        if diagram_services:
+            context_parts.append(f"Services in their diagram: {', '.join(diagram_services)}")
+        else:
+            context_parts.append("Services in their diagram: None yet")
+        context_parts.append(f"Diagram nodes: {context.get('diagram_node_count', 0)}")
+        context_parts.append(f"Questions answered: {context.get('questions_answered', 0)}/{context.get('questions_total', 0)}")
+        if context.get("drawing_passed"):
+            context_parts.append("Drawing audit: PASSED ✓")
+        elif context.get("last_audit_score") is not None:
+            context_parts.append(f"Last audit score: {context.get('last_audit_score')}/100")
+        if context.get("current_question"):
+            context_parts.append(f"Current question: {context.get('current_question')}")
+    elif scenario:
+        # Fall back to scenario lookup
         context_parts.append(f"\nCURRENT SCENARIO: {scenario.scenario_title}")
         context_parts.append(f"Company: {scenario.company_name}")
         context_parts.append(f"Business Context: {scenario.business_context}")
@@ -3645,6 +3687,357 @@ async def validate_speed_deploy(request: SpeedDeployValidateRequest):
     except Exception as e:
         logger.error(f"Speed Deploy validation error: {e}")
         raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+
+
+# ============================================
+# PROFICIENCY TEST ENDPOINTS
+# ============================================
+
+class ProficiencyTestStartRequest(BaseModel):
+    """Request to start a proficiency test."""
+    challenge_id: str
+    challenge_title: str
+    challenge_description: str
+    challenge_brief: str
+    success_criteria: List[str]
+    aws_services: List[str]
+    diagram_data: Optional[Dict[str, Any]] = None
+    diagram_services: Optional[List[str]] = None
+    question_answers: Optional[List[Dict]] = None
+    company_name: str
+    industry: str
+    business_context: str
+    user_level: str = "intermediate"
+    cert_code: Optional[str] = None
+    previous_chat_history: Optional[List[Dict[str, str]]] = None  # General chat before proficiency test
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+class ProficiencyTestChatRequest(BaseModel):
+    """Request to continue proficiency test conversation."""
+    challenge_id: str
+    challenge_title: str
+    challenge_description: str
+    challenge_brief: str
+    success_criteria: List[str]
+    aws_services: List[str]
+    diagram_data: Optional[Dict[str, Any]] = None
+    diagram_services: Optional[List[str]] = None
+    company_name: str
+    industry: str
+    business_context: str
+    user_level: str = "intermediate"
+    chat_history: List[Dict[str, str]]  # [{role, content, timestamp}]
+    user_message: str
+    questions_asked: int = 1
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+class ProficiencyTestEvaluateRequest(BaseModel):
+    """Request to evaluate proficiency test."""
+    challenge_id: str
+    challenge_title: str
+    success_criteria: List[str]
+    aws_services: List[str]
+    diagram_services: Optional[List[str]] = None
+    company_name: str
+    industry: str
+    chat_history: List[Dict[str, str]]
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+@app.post("/api/proficiency-test/start")
+async def start_proficiency_test_endpoint(request: ProficiencyTestStartRequest):
+    """Start a proficiency test conversation."""
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.proficiency_test import (
+            start_proficiency_test,
+            ProficiencyTestContext,
+        )
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        context = ProficiencyTestContext(
+            challenge_id=request.challenge_id,
+            challenge_title=request.challenge_title,
+            challenge_description=request.challenge_description,
+            challenge_brief=request.challenge_brief,
+            success_criteria=request.success_criteria,
+            aws_services=request.aws_services,
+            diagram_data=request.diagram_data,
+            diagram_services=request.diagram_services or [],
+            question_answers=request.question_answers,
+            company_name=request.company_name,
+            industry=request.industry,
+            business_context=request.business_context,
+            user_level=request.user_level,
+            cert_code=request.cert_code,
+            previous_chat_history=request.previous_chat_history,
+        )
+        
+        result = await start_proficiency_test(context, model=request.preferred_model)
+        
+        return {
+            "success": True,
+            "test_id": result["test_id"],
+            "initial_message": result["initial_message"],
+            "context_summary": result["context_summary"],
+            "questions_asked": result["questions_asked"],
+        }
+    except Exception as e:
+        logger.error(f"Proficiency test start error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start proficiency test: {str(e)}")
+
+
+@app.post("/api/proficiency-test/chat")
+async def continue_proficiency_test_endpoint(request: ProficiencyTestChatRequest):
+    """Continue the proficiency test conversation."""
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.proficiency_test import (
+            continue_proficiency_test,
+            ProficiencyTestContext,
+            ChatMessage,
+        )
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        context = ProficiencyTestContext(
+            challenge_id=request.challenge_id,
+            challenge_title=request.challenge_title,
+            challenge_description=request.challenge_description,
+            challenge_brief=request.challenge_brief,
+            success_criteria=request.success_criteria,
+            aws_services=request.aws_services,
+            diagram_data=request.diagram_data,
+            diagram_services=request.diagram_services or [],
+            company_name=request.company_name,
+            industry=request.industry,
+            business_context=request.business_context,
+            user_level=request.user_level,
+        )
+        
+        # Convert chat history to ChatMessage objects
+        chat_history = [
+            ChatMessage(
+                role=msg.get("role", "user"),
+                content=msg.get("content", ""),
+                timestamp=msg.get("timestamp", ""),
+            )
+            for msg in request.chat_history
+        ]
+        
+        result = await continue_proficiency_test(
+            context=context,
+            chat_history=chat_history,
+            user_message=request.user_message,
+            questions_asked=request.questions_asked,
+            model=request.preferred_model,
+        )
+        
+        return {
+            "success": True,
+            "agent_response": result["agent_response"],
+            "questions_asked": result["questions_asked"],
+            "ready_to_evaluate": result["ready_to_evaluate"],
+        }
+    except Exception as e:
+        logger.error(f"Proficiency test chat error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to continue proficiency test: {str(e)}")
+
+
+@app.post("/api/proficiency-test/evaluate")
+async def evaluate_proficiency_test_endpoint(request: ProficiencyTestEvaluateRequest):
+    """Evaluate the proficiency test and generate final score."""
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.proficiency_test import (
+            evaluate_proficiency_test,
+            ProficiencyTestContext,
+            ChatMessage,
+        )
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        context = ProficiencyTestContext(
+            challenge_id=request.challenge_id,
+            challenge_title=request.challenge_title,
+            challenge_description="",
+            challenge_brief="",
+            success_criteria=request.success_criteria,
+            aws_services=request.aws_services,
+            diagram_services=request.diagram_services or [],
+            company_name=request.company_name,
+            industry=request.industry,
+            business_context="",
+        )
+        
+        chat_history = [
+            ChatMessage(
+                role=msg.get("role", "user"),
+                content=msg.get("content", ""),
+                timestamp=msg.get("timestamp", ""),
+            )
+            for msg in request.chat_history
+        ]
+        
+        result = await evaluate_proficiency_test(
+            context=context,
+            chat_history=chat_history,
+            model=request.preferred_model,
+        )
+        
+        return {
+            "success": True,
+            "test_id": result.test_id,
+            "challenge_id": result.challenge_id,
+            "score": result.score,
+            "summary": result.summary,
+            "strengths": result.strengths,
+            "areas_for_improvement": result.areas_for_improvement,
+            "questions_asked": result.questions_asked,
+            "completed_at": result.completed_at,
+        }
+    except Exception as e:
+        logger.error(f"Proficiency test evaluation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to evaluate proficiency test: {str(e)}")
+
+
+# ============================================
+# CLI OBJECTIVES ENDPOINTS
+# ============================================
+
+class CLIObjectivesGenerateRequest(BaseModel):
+    """Request to generate CLI objectives."""
+    challenge_id: str
+    challenge_title: str
+    challenge_description: str
+    success_criteria: List[str]
+    aws_services_relevant: List[str]
+    company_name: str
+    industry: str
+    business_context: str
+    diagram_data: Optional[Dict[str, Any]] = None
+    diagram_services: Optional[List[str]] = None
+    user_level: str = "intermediate"
+    objective_count: int = 3
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+class CLIValidateRequest(BaseModel):
+    """Request to validate a CLI command."""
+    command: str
+    command_output: str
+    objectives: List[Dict[str, Any]]  # List of objective dicts
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+@app.post("/api/cli-objectives/generate")
+async def generate_cli_objectives_endpoint(request: CLIObjectivesGenerateRequest):
+    """Generate CLI objectives for a challenge."""
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.cli_objectives import generate_cli_objectives
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        challenge = {
+            "id": request.challenge_id,
+            "title": request.challenge_title,
+            "description": request.challenge_description,
+            "success_criteria": request.success_criteria,
+            "aws_services_relevant": request.aws_services_relevant,
+        }
+        
+        result = await generate_cli_objectives(
+            challenge=challenge,
+            company_name=request.company_name,
+            industry=request.industry,
+            business_context=request.business_context,
+            diagram_data=request.diagram_data,
+            diagram_services=request.diagram_services,
+            user_level=request.user_level,
+            objective_count=request.objective_count,
+            model=request.preferred_model,
+        )
+        
+        return {
+            "success": True,
+            "challenge_id": result.challenge_id,
+            "challenge_title": result.challenge_title,
+            "context_message": result.context_message,
+            "objectives": [obj.model_dump() for obj in result.objectives],
+            "total_points": result.total_points,
+            "estimated_time_minutes": result.estimated_time_minutes,
+        }
+    except Exception as e:
+        logger.error(f"CLI objectives generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate CLI objectives: {str(e)}")
+
+
+@app.post("/api/cli-objectives/validate")
+async def validate_cli_command_endpoint(request: CLIValidateRequest):
+    """Validate if a CLI command completes an objective."""
+    try:
+        from utils import set_request_api_key, set_request_model
+        from generators.cli_objectives import validate_cli_command, CLIObjective
+        
+        if request.openai_api_key:
+            set_request_api_key(request.openai_api_key)
+        if request.preferred_model:
+            set_request_model(request.preferred_model)
+        
+        # Convert dict objectives to CLIObjective objects
+        objectives = [
+            CLIObjective(
+                id=obj.get("id", ""),
+                description=obj.get("description", ""),
+                command_pattern=obj.get("command_pattern", ""),
+                example_command=obj.get("example_command", ""),
+                hint=obj.get("hint"),
+                points=obj.get("points", 20),
+                service=obj.get("service", ""),
+                difficulty=obj.get("difficulty", "intermediate"),
+            )
+            for obj in request.objectives
+        ]
+        
+        result = await validate_cli_command(
+            command=request.command,
+            command_output=request.command_output,
+            objectives=objectives,
+            model=request.preferred_model,
+        )
+        
+        return {
+            "success": True,
+            "command": result.command,
+            "is_valid": result.is_valid,
+            "objective_id": result.objective_id,
+            "feedback": result.feedback,
+            "points_earned": result.points_earned,
+        }
+    except Exception as e:
+        logger.error(f"CLI validation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to validate CLI command: {str(e)}")
 
 
 # ============================================

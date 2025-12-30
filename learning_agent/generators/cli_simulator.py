@@ -264,13 +264,14 @@ class CLISession(BaseModel):
     session_id: str
     challenge_id: Optional[str] = None
     commands_executed: List[Dict[str, Any]] = []  # [{ command, timestamp, exitCode, isCorrect, service }]
-    resources_created: Dict[str, Any] = {}  # Simulated AWS resources
+    resources_created: Dict[str, List[str]] = {}  # Simulated AWS resources {"vpc": ["vpc-123"], "ec2": ["i-456"]}
     current_region: str = "us-east-1"
     current_account: str = "123456789012"
     
     # Progress tracking
     correct_commands: int = 0
     total_commands: int = 0
+    syntax_errors: int = 0  # Track syntax/invalid command errors
     current_streak: int = 0
     best_streak: int = 0
     objectives_completed: List[str] = []
@@ -522,9 +523,16 @@ If the command relates to their challenge, tailor the output to be educational."
         api_key=api_key,
     )
     
-    # Update session with any created resources
+    # Update session with any created resources (store as lists for consistency)
     if result.get("resources_created"):
-        session.resources_created.update(result["resources_created"])
+        for resource_type, resource_id in result["resources_created"].items():
+            if resource_type not in session.resources_created:
+                session.resources_created[resource_type] = []
+            # Handle both single values and lists from AI response
+            if isinstance(resource_id, list):
+                session.resources_created[resource_type].extend(resource_id)
+            else:
+                session.resources_created[resource_type].append(resource_id)
     
     # Extract validation info
     exit_code = result.get("exit_code", 0)
@@ -535,7 +543,10 @@ If the command relates to their challenge, tailor the output to be educational."
     
     # Update session progress
     session.total_commands += 1
-    if is_correct and exit_code == 0:
+    if exit_code != 0:
+        session.syntax_errors += 1
+        session.current_streak = 0
+    elif is_correct:
         session.correct_commands += 1
         session.current_streak += 1
         session.best_streak = max(session.best_streak, session.current_streak)
@@ -679,6 +690,7 @@ def create_session(
         current_account="123456789012",
         correct_commands=0,
         total_commands=0,
+        syntax_errors=0,
         current_streak=0,
         best_streak=0,
         objectives_completed=[],
@@ -757,18 +769,46 @@ Be encouraging but honest. Focus on learning."""
     )
 
 
+def calculate_cli_score(session: CLISession, max_points: int = 100) -> int:
+    """
+    Calculate normalized CLI score (0-100) from session progress.
+    
+    Scoring factors:
+    - Command accuracy (40%)
+    - Points earned vs max possible (40%)
+    - Objectives completed bonus (20%)
+    """
+    if session.total_commands == 0:
+        return 0
+    
+    # Accuracy component (40%)
+    accuracy = session.correct_commands / session.total_commands
+    accuracy_score = accuracy * 40
+    
+    # Points component (40%) - capped at max_points
+    points_ratio = min(session.points_earned / max_points, 1.0) if max_points > 0 else 0
+    points_score = points_ratio * 40
+    
+    # Objectives bonus (20%) - any completed objectives add to score
+    objectives_score = min(len(session.objectives_completed) * 5, 20)
+    
+    return min(100, int(accuracy_score + points_score + objectives_score))
+
+
 def get_session_stats(session: CLISession) -> Dict:
     """Get statistics from a CLI session for progress tracking."""
     return {
         "session_id": session.session_id,
         "challenge_id": session.challenge_id,
-        "total_commands": session.total_commands,
-        "correct_commands": session.correct_commands,
+        "totalCommands": session.total_commands,
+        "correctCommands": session.correct_commands,
+        "syntaxErrors": session.syntax_errors,
         "accuracy": round(session.correct_commands / max(session.total_commands, 1) * 100, 1),
         "current_streak": session.current_streak,
         "best_streak": session.best_streak,
-        "objectives_completed": session.objectives_completed,
+        "objectivesCompleted": session.objectives_completed,
         "points_earned": session.points_earned,
-        "resources_created": session.resources_created,
-        "commands_run": session.commands_executed,
+        "cliScore": calculate_cli_score(session),
+        "resourcesCreated": session.resources_created,
+        "commandsRun": session.commands_executed,
     }

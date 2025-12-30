@@ -19,7 +19,7 @@ class ChallengeQuestionsRequest(BaseModel):
     user_level: str = "intermediate"
     cert_code: Optional[str] = None
     # Options
-    question_count: int = 5
+    question_count: int = 10
     # BYOK
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None

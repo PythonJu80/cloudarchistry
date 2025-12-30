@@ -55,6 +55,26 @@ class CLIProgressData(BaseModel):
     cliScore: int = 0
 
 
+class ProficiencyTestData(BaseModel):
+    """Proficiency test results from challenge chat"""
+    score: int = 0  # 0-100
+    summary: Optional[str] = None
+    strengths: List[str] = []
+    areasForImprovement: List[str] = []
+    questionsAsked: int = 0
+    completedAt: Optional[str] = None
+
+
+class CLIObjectivesData(BaseModel):
+    """CLI objectives test results"""
+    completedObjectives: int = 0
+    totalObjectives: int = 0
+    score: int = 0  # percentage
+    earnedPoints: int = 0
+    totalPoints: int = 0
+    completedAt: Optional[str] = None
+
+
 class ScenarioContext(BaseModel):
     """Context from the scenario/challenge"""
     scenarioTitle: Optional[str] = None
@@ -87,9 +107,16 @@ class GeneratePortfolioRequest(BaseModel):
     
     # Diagram data (from ChallengeProgress.solution)
     diagram: Optional[Dict[str, Any]] = None  # {nodes: [], edges: []}
+    diagramAuditScore: Optional[int] = None  # AI audit score (0-100) for diagram quality
     
     # CLI data (from CLIProgress)
     cliProgress: Optional[CLIProgressData] = None
+    
+    # Proficiency test data (from ChallengeProgress.solution.proficiencyTest)
+    proficiencyTest: Optional[ProficiencyTestData] = None
+    
+    # CLI objectives data (from ChallengeProgress.solution.cliTest)
+    cliObjectives: Optional[CLIObjectivesData] = None
     
     # Context
     scenarioContext: Optional[ScenarioContext] = None
@@ -117,6 +144,7 @@ class PortfolioContent(BaseModel):
     keyDecisions: List[str]
     complianceAchieved: List[str]
     awsServicesUsed: List[str]
+    proficiencyHighlights: List[str] = []  # Highlights from proficiency assessment
 
 
 class GeneratePortfolioResponse(BaseModel):

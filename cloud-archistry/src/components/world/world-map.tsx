@@ -111,28 +111,27 @@ function MapController({
   onZoomOut?: () => void;
 }) {
   const map = useMap();
-  const initialPositionSet = useRef(false);
-  const lastCenter = useRef<string>("");
+  const lastKey = useRef<string>("");
   
+  // Always update map when center or zoom changes
   useEffect(() => {
-    const centerKey = `${center[0]},${center[1]}`;
+    const key = `${center[0]},${center[1]},${zoom}`;
     
-    // Only set view on initial load or when center actually changes (new city selected from globe)
-    if (!initialPositionSet.current || lastCenter.current !== centerKey) {
+    // When center or zoom changes, update the view
+    if (lastKey.current !== key) {
       map.setView(center, zoom);
-      initialPositionSet.current = true;
-      lastCenter.current = centerKey;
-      return;
+      lastKey.current = key;
     }
-    
-    // Only fly to location if a system location is selected
+  }, [map, center, zoom]);
+  
+  // Handle selected location separately - fly to it when selected
+  useEffect(() => {
     if (selectedLocation) {
       map.flyTo([selectedLocation.lat, selectedLocation.lng], 15, {
         duration: 2,
       });
     }
-    // Don't fly anywhere when selectedLocation becomes null - let user control the map
-  }, [map, center, zoom, selectedLocation]);
+  }, [map, selectedLocation]);
 
   // Listen for zoom changes and switch to globe when zoomed out
   useEffect(() => {
@@ -152,39 +151,34 @@ function MapController({
   return null;
 }
 
-// Map Google place types to industry - UNIFIED with system challenges
-export const mapTypeToIndustry = (types: string[]): string => {
+// Map Google place types to industry for coloring
+const getIndustryFromTypes = (types: string[]): string => {
   for (const type of types) {
-    if (["bank", "finance", "accounting", "insurance_agency", "atm"].includes(type)) return "Banking & Finance";
+    if (["bank", "finance", "accounting", "insurance_agency", "atm"].includes(type)) return "Finance";
     if (["hospital", "doctor", "dentist", "pharmacy", "health"].includes(type)) return "Healthcare";
     if (["electronics_store", "computer_store"].includes(type)) return "Technology";
     if (["store", "shopping_mall", "clothing_store", "department_store", "supermarket"].includes(type)) return "Retail";
     if (["restaurant", "cafe", "bar", "bakery", "food", "hotel", "lodging", "gym", "spa", "beauty_salon"].includes(type)) return "Hospitality";
     if (["car_dealer", "car_rental", "car_repair", "gas_station"].includes(type)) return "Automotive";
     if (["school", "university", "library"].includes(type)) return "Education";
-    if (["lawyer", "real_estate_agency"].includes(type)) return "Professional Services";
     if (["travel_agency", "airport"].includes(type)) return "Aviation";
   }
-  return "Business";
+  return "Technology";
 };
 
-// Business marker icon - matches existing style
+// Business marker icon - matches existing style with industry colors
 const createBusinessIcon = (business: Business, isSelected: boolean = false) => {
-  const industry = mapTypeToIndustry(business.types);
+  const industry = getIndustryFromTypes(business.types);
   const colors: Record<string, string> = {
-    "Banking & Finance": "#22d3ee",
+    "Finance": "#22d3ee",
     "Healthcare": "#4ade80",
     "Technology": "#a78bfa",
     "Retail": "#fbbf24",
     "Hospitality": "#f87171",
     "Automotive": "#fb923c",
     "Education": "#60a5fa",
-    "E-Commerce": "#fbbf24",
     "Aviation": "#2dd4bf",
-    "Professional Services": "#f472b6",
-    "Business": "#22d3ee",
   };
-
   const color = colors[industry] || "#22d3ee";
   const size = isSelected ? 28 : 22;
   const dotSize = isSelected ? 10 : 8;

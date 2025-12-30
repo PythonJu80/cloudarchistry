@@ -586,6 +586,7 @@ export default function DashboardPage() {
                     apiKey={userApiKey || undefined}
                     preferredModel={userPreferredModel || undefined}
                     onRefresh={fetchDashboardData}
+                    userSkillLevel={data?.profile?.skillLevel || "intermediate"}
                   />
                 </CardContent>
               </Card>

@@ -24,6 +24,7 @@ class CLIHelpRequest(BaseModel):
     topic: str
     challenge_context: Optional[Dict[str, Any]] = None
     user_level: str = "intermediate"
+    cert_code: str = "solutions-architect-associate"  # Required for tailored help
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
 

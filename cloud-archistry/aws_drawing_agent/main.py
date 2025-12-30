@@ -596,6 +596,327 @@ Return the enhanced React Flow diagram JSON with improved structure."""
         raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}")
 
 
+# ============================================
+# AWS CONSOLE MOCK DATA GENERATOR
+# ============================================
+
+class ConsoleGeneratorRequest(BaseModel):
+    """Request to generate realistic AWS console mock data for a challenge."""
+    challenge_id: str
+    challenge_title: str
+    challenge_description: str
+    aws_services: List[str]
+    success_criteria: List[str]
+    company_name: str
+    industry: str
+    business_context: Optional[str] = None
+    region: Optional[str] = "eu-west-2"
+    openai_api_key: Optional[str] = None
+
+
+class AWSResource(BaseModel):
+    """A mock AWS resource."""
+    id: str
+    name: str
+    type: str
+    status: str  # running, stopped, available, etc.
+    created_at: str
+    details: Dict
+
+
+class ConsoleData(BaseModel):
+    """Generated AWS console mock data."""
+    account_id: str
+    account_alias: str
+    region: str
+    
+    # Recently visited services with icons
+    recently_visited: List[Dict]
+    
+    # Resource counts by service
+    resource_counts: Dict[str, int]
+    
+    # Mock resources (VPCs, instances, buckets, etc.)
+    resources: List[AWSResource]
+    
+    # Cost & usage
+    cost_current_month: float
+    cost_forecast: float
+    cost_by_service: List[Dict]
+    cost_trend: List[float]  # Last 7 days
+    
+    # Health status
+    health_open_issues: int
+    health_scheduled_changes: int
+    health_notifications: int
+    
+    # IAM summary
+    iam_users: int
+    iam_roles: int
+    iam_policies: int
+    
+    # Knowledge base context for services (from AWS documentation)
+    service_context: Optional[Dict[str, List[Dict]]] = None
+
+
+@app.post("/console/generate")
+async def generate_console_data(request: ConsoleGeneratorRequest):
+    """
+    Generate realistic AWS console mock data based on challenge context.
+    
+    Creates contextual mock data including:
+    - Resource counts based on services in the challenge
+    - Realistic cost estimates for the industry
+    - Health status (typically clean for learning)
+    - IAM summary
+    - Recently visited services
+    - Knowledge base context for AWS services
+    
+    This data populates the AWS Console-like UI in the CLI workspace.
+    """
+    try:
+        api_key = request.openai_api_key or OPENAI_API_KEY
+        
+        # Generate account info from company name
+        company_slug = request.company_name.lower().replace(" ", "-").replace("'", "")[:20]
+        account_id = f"{hash(request.company_name) % 900000000000 + 100000000000}"
+        
+        # Search knowledge base for AWS service context
+        service_context = {}
+        try:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=api_key)
+            
+            # Build search query from challenge services
+            search_query = f"AWS {' '.join(request.aws_services[:5])} architecture best practices {request.industry}"
+            
+            # Get embedding for search
+            embed_response = await client.embeddings.create(
+                model="text-embedding-3-small",
+                input=search_query
+            )
+            query_embedding = embed_response.data[0].embedding
+            
+            # Search knowledge base
+            kb_results = await db.search_knowledge_chunks(
+                query_embedding=query_embedding,
+                limit=5
+            )
+            
+            if kb_results:
+                # Extract relevant facts from knowledge base
+                for chunk in kb_results[:3]:
+                    content = chunk.get("content", "")[:500]
+                    url = chunk.get("url", "")
+                    # Try to identify which service this is about
+                    for service in request.aws_services:
+                        if service.lower() in content.lower() or service.lower() in url.lower():
+                            if service not in service_context:
+                                service_context[service] = []
+                            service_context[service].append({
+                                "fact": content[:200],
+                                "source": url
+                            })
+                
+                logger.info(f"Found {len(kb_results)} knowledge chunks for console context")
+        except Exception as kb_err:
+            logger.warning(f"Knowledge base search failed (non-critical): {kb_err}")
+        
+        # Map services to AWS service icons/colors
+        service_icons = {
+            "EC2": {"color": "#FF9900", "abbr": "EC"},
+            "S3": {"color": "#569A31", "abbr": "S3"},
+            "RDS": {"color": "#3B48CC", "abbr": "RD"},
+            "Lambda": {"color": "#FF9900", "abbr": "λ"},
+            "DynamoDB": {"color": "#3B48CC", "abbr": "DB"},
+            "VPC": {"color": "#8C4FFF", "abbr": "VP"},
+            "CloudFront": {"color": "#8C4FFF", "abbr": "CF"},
+            "Route 53": {"color": "#8C4FFF", "abbr": "53"},
+            "ELB": {"color": "#8C4FFF", "abbr": "EL"},
+            "ALB": {"color": "#8C4FFF", "abbr": "AL"},
+            "API Gateway": {"color": "#FF4F8B", "abbr": "AG"},
+            "SNS": {"color": "#FF4F8B", "abbr": "SN"},
+            "SQS": {"color": "#FF4F8B", "abbr": "SQ"},
+            "CloudWatch": {"color": "#FF4F8B", "abbr": "CW"},
+            "IAM": {"color": "#DD344C", "abbr": "IA"},
+            "Cognito": {"color": "#DD344C", "abbr": "CG"},
+            "ECS": {"color": "#FF9900", "abbr": "EC"},
+            "EKS": {"color": "#FF9900", "abbr": "EK"},
+            "Fargate": {"color": "#FF9900", "abbr": "FG"},
+            "ElastiCache": {"color": "#3B48CC", "abbr": "EC"},
+            "Redshift": {"color": "#3B48CC", "abbr": "RS"},
+            "Athena": {"color": "#3B48CC", "abbr": "AT"},
+            "Glue": {"color": "#3B48CC", "abbr": "GL"},
+            "SageMaker": {"color": "#01A88D", "abbr": "SM"},
+            "Kinesis": {"color": "#8C4FFF", "abbr": "KN"},
+            "Step Functions": {"color": "#FF4F8B", "abbr": "SF"},
+            "Secrets Manager": {"color": "#DD344C", "abbr": "SM"},
+            "KMS": {"color": "#DD344C", "abbr": "KM"},
+            "WAF": {"color": "#DD344C", "abbr": "WF"},
+            "CloudFormation": {"color": "#FF4F8B", "abbr": "CF"},
+        }
+        
+        # Build recently visited with proper icons
+        recently_visited = []
+        for service in request.aws_services[:8]:
+            icon_info = service_icons.get(service, {"color": "#FF9900", "abbr": service[:2].upper()})
+            recently_visited.append({
+                "name": service,
+                "color": icon_info["color"],
+                "abbr": icon_info["abbr"],
+                "url": f"/{service.lower().replace(' ', '-')}"
+            })
+        
+        # Generate realistic resource counts based on services
+        resource_counts = {}
+        resources = []
+        
+        # Base resources that most architectures have
+        if any(s in request.aws_services for s in ["VPC", "EC2", "RDS", "Lambda"]):
+            resource_counts["VPCs"] = 2
+            resource_counts["Subnets"] = 4
+            resource_counts["Security Groups"] = 3
+            resource_counts["Route Tables"] = 2
+            
+            # Add VPC resources
+            resources.append(AWSResource(
+                id=f"vpc-{hash(request.company_name) % 10000000:08x}",
+                name=f"{company_slug}-prod-vpc",
+                type="VPC",
+                status="available",
+                created_at="2024-01-15T10:30:00Z",
+                details={"cidr": "10.0.0.0/16", "tenancy": "default"}
+            ))
+            resources.append(AWSResource(
+                id=f"vpc-{(hash(request.company_name) + 1) % 10000000:08x}",
+                name=f"{company_slug}-dev-vpc",
+                type="VPC",
+                status="available",
+                created_at="2024-01-15T10:35:00Z",
+                details={"cidr": "10.1.0.0/16", "tenancy": "default"}
+            ))
+        
+        if "EC2" in request.aws_services:
+            resource_counts["EC2 Instances"] = 0  # Start with 0, user will create
+            resource_counts["AMIs"] = 3
+            resource_counts["EBS Volumes"] = 2
+        
+        if "S3" in request.aws_services:
+            resource_counts["S3 Buckets"] = 2
+            resources.append(AWSResource(
+                id=f"{company_slug}-assets-{request.region}",
+                name=f"{company_slug}-assets-{request.region}",
+                type="S3 Bucket",
+                status="available",
+                created_at="2024-01-10T08:00:00Z",
+                details={"versioning": "enabled", "encryption": "AES-256"}
+            ))
+            resources.append(AWSResource(
+                id=f"{company_slug}-logs-{request.region}",
+                name=f"{company_slug}-logs-{request.region}",
+                type="S3 Bucket",
+                status="available",
+                created_at="2024-01-10T08:05:00Z",
+                details={"versioning": "disabled", "encryption": "AES-256"}
+            ))
+        
+        if "RDS" in request.aws_services:
+            resource_counts["RDS Instances"] = 0  # Start with 0
+            resource_counts["DB Snapshots"] = 1
+        
+        if "Lambda" in request.aws_services:
+            resource_counts["Lambda Functions"] = 0
+        
+        if "DynamoDB" in request.aws_services:
+            resource_counts["DynamoDB Tables"] = 0
+        
+        if "ECS" in request.aws_services or "EKS" in request.aws_services:
+            resource_counts["ECS Clusters"] = 0
+        
+        if "CloudFront" in request.aws_services:
+            resource_counts["CloudFront Distributions"] = 0
+        
+        if "API Gateway" in request.aws_services:
+            resource_counts["API Gateway APIs"] = 0
+        
+        # Generate realistic costs based on industry
+        industry_cost_multipliers = {
+            "Restaurant": 0.3,
+            "Retail": 0.5,
+            "Healthcare": 0.8,
+            "Finance": 1.2,
+            "Technology": 0.7,
+            "Manufacturing": 0.6,
+            "Education": 0.4,
+            "Media": 0.9,
+        }
+        
+        base_cost = 150.0  # Base monthly cost
+        multiplier = industry_cost_multipliers.get(request.industry, 0.5)
+        current_cost = round(base_cost * multiplier * (len(request.aws_services) / 5), 2)
+        
+        # Cost breakdown by service
+        cost_by_service = []
+        remaining_cost = current_cost
+        for i, service in enumerate(request.aws_services[:5]):
+            if i == len(request.aws_services[:5]) - 1:
+                service_cost = remaining_cost
+            else:
+                service_cost = round(remaining_cost * (0.3 + (i * 0.1)), 2)
+                remaining_cost -= service_cost
+            cost_by_service.append({
+                "service": service,
+                "cost": max(0, service_cost),
+                "percentage": round((service_cost / current_cost) * 100) if current_cost > 0 else 0
+            })
+        
+        # Cost trend (last 7 days - slight variation)
+        import random
+        cost_trend = [round(current_cost / 30 * (0.8 + random.random() * 0.4), 2) for _ in range(7)]
+        
+        # Health status - clean for learning environment
+        health_open_issues = 0
+        health_scheduled_changes = 1 if random.random() > 0.7 else 0
+        health_notifications = 0
+        
+        # IAM summary
+        iam_users = 3
+        iam_roles = 5 + len(request.aws_services)
+        iam_policies = 8 + len(request.aws_services)
+        
+        console_data = ConsoleData(
+            account_id=account_id,
+            account_alias=f"{company_slug}-account",
+            region=request.region,
+            recently_visited=recently_visited,
+            resource_counts=resource_counts,
+            resources=resources,
+            cost_current_month=current_cost,
+            cost_forecast=round(current_cost * 1.1, 2),
+            cost_by_service=cost_by_service,
+            cost_trend=cost_trend,
+            health_open_issues=health_open_issues,
+            health_scheduled_changes=health_scheduled_changes,
+            health_notifications=health_notifications,
+            iam_users=iam_users,
+            iam_roles=iam_roles,
+            iam_policies=iam_policies,
+            service_context=service_context if service_context else None,
+        )
+        
+        logger.info(f"Generated console data for challenge {request.challenge_id}")
+        
+        return {
+            "success": True,
+            "console_data": console_data.model_dump(),
+            "challenge_id": request.challenge_id,
+        }
+        
+    except Exception as e:
+        logger.error(f"Console generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Console generation failed: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     import os

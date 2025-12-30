@@ -10,6 +10,7 @@ from .cli_simulator import (
     create_session, 
     validate_cli_challenge,
     get_session_stats,
+    calculate_cli_score,
     CLISession, 
     CLIResponse,
     CLIValidationResult,

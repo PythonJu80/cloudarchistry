@@ -203,7 +203,7 @@ SCALE: {company_info.employee_count or 'Medium-sized'} employees
 
 USER LEVEL: {user_level}
 
-Create 3-5 progressive challenges. Make it feel like a real consulting engagement."""
+Create exactly 1 focused challenge. Make it feel like a real consulting engagement."""
 
     user_prompt += f"\n\nCERTIFICATION FOCUS: {persona_context['cert_name']}\nKey Topics: {persona_context['focus_areas']}\nCert Level: {persona_context['level']}\nUser Skill: {user_level}"
 

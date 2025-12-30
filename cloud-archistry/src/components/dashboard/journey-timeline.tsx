@@ -106,6 +106,7 @@ interface JourneyTimelineProps {
   apiKey?: string;
   preferredModel?: string;
   onRefresh?: () => void;
+  userSkillLevel?: string;
 }
 
 function formatTimeAgo(dateString: string) {
@@ -453,11 +454,13 @@ const JourneyCard = memo(function JourneyCard({
   apiKey,
   preferredModel,
   onRefresh,
+  userSkillLevel,
 }: { 
   journey: Journey;
   apiKey?: string;
   preferredModel?: string;
   onRefresh?: () => void;
+  userSkillLevel?: string;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedChallengeIndex, setSelectedChallengeIndex] = useState<number | null>(null);
@@ -620,7 +623,7 @@ const JourneyCard = memo(function JourneyCard({
           }}
           apiKey={apiKey}
           preferredModel={preferredModel}
-          userLevel={journey.scenario.difficulty}
+          userLevel={userSkillLevel}
           industry={journey.location.industry}
           scenarioId={journey.scenarioId}
           attemptId={journey.id}
@@ -630,7 +633,7 @@ const JourneyCard = memo(function JourneyCard({
   );
 });
 
-export function JourneyTimeline({ journeys, apiKey, preferredModel, onRefresh }: JourneyTimelineProps) {
+export function JourneyTimeline({ journeys, apiKey, preferredModel, onRefresh, userSkillLevel = "intermediate" }: JourneyTimelineProps) {
   const activeJourneys = journeys.filter(j => j.status === "in_progress");
   
   if (activeJourneys.length === 0) {
@@ -668,6 +671,7 @@ export function JourneyTimeline({ journeys, apiKey, preferredModel, onRefresh }:
           apiKey={apiKey}
           preferredModel={preferredModel}
           onRefresh={onRefresh}
+          userSkillLevel={userSkillLevel}
         />
       ))}
     </div>
