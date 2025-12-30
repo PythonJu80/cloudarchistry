@@ -91,6 +91,42 @@ export interface Location {
 // Empty locations array - system challenges removed, only user-generated challenges
 const LOCATIONS: Location[] = [];
 
+// Certification code to display name mapping (matches settings page)
+const CERT_DISPLAY_NAMES: Record<string, string> = {
+  "CLF": "Cloud Practitioner",
+  "AIF": "AI Practitioner",
+  "SAA": "Solutions Architect Associate",
+  "DVA": "Developer Associate",
+  "SOA": "SysOps Administrator Associate",
+  "DEA": "Data Engineer Associate",
+  "MLA": "ML Engineer Associate",
+  "SAP": "Solutions Architect Professional",
+  "DOP": "DevOps Engineer Professional",
+  "ANS": "Advanced Networking Specialty",
+  "SCS": "Security Specialty",
+  "MLS": "Machine Learning Specialty",
+  "PAS": "SAP on AWS Specialty",
+  "DBS": "Database Specialty",
+};
+
+// Certification level mapping
+const CERT_LEVELS: Record<string, string> = {
+  "CLF": "foundational",
+  "AIF": "foundational",
+  "SAA": "associate",
+  "DVA": "associate",
+  "SOA": "associate",
+  "DEA": "associate",
+  "MLA": "associate",
+  "SAP": "professional",
+  "DOP": "professional",
+  "ANS": "specialty",
+  "SCS": "specialty",
+  "MLS": "specialty",
+  "PAS": "specialty",
+  "DBS": "specialty",
+};
+
 // Difficulty colors
 const difficultyColors = {
   beginner: { bg: "bg-green-500/20", text: "text-green-400", border: "border-green-500/50" },
@@ -432,7 +468,7 @@ export default function WorldPage() {
   const [customBusinessAddress, setCustomBusinessAddress] = useState("");
   const [customBusinessIndustry, setCustomBusinessIndustry] = useState("Technology");
   const [customSearchResults, setCustomSearchResults] = useState<Array<{ place_id: string; name: string; vicinity: string; types: string[] }>>([]);
-  const [selectedCert, setSelectedCert] = useState("solutions-architect-associate"); // Default to Solutions Architect Associate
+  const [selectedCert, setSelectedCert] = useState("SAA"); // Default to Solutions Architect Associate (short code)
   const [selectedSkillLevel, setSelectedSkillLevel] = useState<"beginner" | "intermediate" | "advanced" | "expert">("intermediate"); // Default skill level
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -462,44 +498,45 @@ export default function WorldPage() {
     });
   };
   
-  // Available certifications - using full IDs that match backend
-  const certifications = [
-    // Foundational
-    { code: "cloud-practitioner", name: "Cloud Practitioner", level: "foundational" },
-    { code: "ai-practitioner", name: "AI Practitioner", level: "foundational" },
-    // Associate
-    { code: "solutions-architect-associate", name: "Solutions Architect Associate", level: "associate" },
-    { code: "developer-associate", name: "Developer Associate", level: "associate" },
-    { code: "sysops-associate", name: "SysOps Administrator Associate", level: "associate" },
-    { code: "data-engineer-associate", name: "Data Engineer Associate", level: "associate" },
-    { code: "machine-learning-engineer-associate", name: "ML Engineer Associate", level: "associate" },
-    // Professional
-    { code: "solutions-architect-professional", name: "Solutions Architect Professional", level: "professional" },
-    { code: "devops-professional", name: "DevOps Engineer Professional", level: "professional" },
-    // Specialty
-    { code: "networking-specialty", name: "Advanced Networking Specialty", level: "specialty" },
-    { code: "security-specialty", name: "Security Specialty", level: "specialty" },
-    { code: "machine-learning-specialty", name: "Machine Learning Specialty", level: "specialty" },
-    { code: "sap-specialty", name: "SAP on AWS Specialty", level: "specialty" },
-  ];
+  // Available certifications from API (fetched from settings/profile)
+  const [certificationOptions, setCertificationOptions] = useState<string[]>([]);
+  
+  // Build certifications array from options
+  const certifications = useMemo(() => 
+    certificationOptions.map(code => ({
+      code,
+      name: CERT_DISPLAY_NAMES[code] || code,
+      level: CERT_LEVELS[code] || "associate",
+    })),
+    [certificationOptions]
+  );
   
   // User's API key for generation
   const [userApiKey, setUserApiKey] = useState<string | null>(null);
   const [preferredModel, setPreferredModel] = useState<string | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   
-  // Fetch target cert, skill level, and API key from database on mount
+  // Fetch target cert, skill level, certification options, and API key from database on mount
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        // Fetch cert and skill level from profile
-        const certRes = await fetch("/api/profile/certification");
-        const certData = await certRes.json();
-        if (certData.targetCertification) {
-          setSelectedCert(certData.targetCertification);
+        // Fetch profile data including cert options (same as settings page)
+        const profileRes = await fetch("/api/settings/profile");
+        const profileData = await profileRes.json();
+        
+        // Set certification options from API
+        if (profileData.certificationOptions) {
+          setCertificationOptions(profileData.certificationOptions);
         }
-        if (certData.skillLevel) {
-          setSelectedSkillLevel(certData.skillLevel as "beginner" | "intermediate" | "advanced" | "expert");
+        
+        // Set target certification (uses short codes like "DVA", "SAA")
+        if (profileData.targetCertification) {
+          setSelectedCert(profileData.targetCertification);
+        }
+        
+        // Set skill level
+        if (profileData.skillLevel) {
+          setSelectedSkillLevel(profileData.skillLevel as "beginner" | "intermediate" | "advanced" | "expert");
         }
         
         // Fetch API key (encrypted, returned decrypted for use)
@@ -520,26 +557,26 @@ export default function WorldPage() {
     fetchSettings();
   }, []);
   
-  // Save cert to database when changed
+  // Save cert to database when changed (uses same endpoint as settings page)
   const handleCertChange = async (certCode: string) => {
     setSelectedCert(certCode);
     try {
-      await fetch("/api/profile/certification", {
-        method: "PUT",
+      await fetch("/api/settings/profile", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ certCode }),
+        body: JSON.stringify({ targetCertification: certCode }),
       });
     } catch (err) {
       console.error("Failed to save cert:", err);
     }
   };
   
-  // Save skill level to database when changed
+  // Save skill level to database when changed (uses same endpoint as settings page)
   const handleSkillLevelChange = async (level: "beginner" | "intermediate" | "advanced" | "expert") => {
     setSelectedSkillLevel(level);
     try {
-      await fetch("/api/profile/certification", {
-        method: "PUT",
+      await fetch("/api/settings/profile", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ skillLevel: level }),
       });
@@ -643,21 +680,34 @@ export default function WorldPage() {
                   className="w-full h-10 px-3 rounded-lg bg-slate-800 border border-cyan-500/30 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 appearance-none cursor-pointer"
                   style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2306b6d4'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
                 >
-                  <optgroup label="Associate" className="bg-slate-800 text-white">
-                    {certifications.filter(c => c.level === "associate").map(cert => (
-                      <option key={cert.code} value={cert.code} className="bg-slate-800 text-white py-2">{cert.name}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Professional" className="bg-slate-800 text-white">
-                    {certifications.filter(c => c.level === "professional").map(cert => (
-                      <option key={cert.code} value={cert.code} className="bg-slate-800 text-white py-2">{cert.name}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Specialty" className="bg-slate-800 text-white">
-                    {certifications.filter(c => c.level === "specialty").map(cert => (
-                      <option key={cert.code} value={cert.code} className="bg-slate-800 text-white py-2">{cert.name}</option>
-                    ))}
-                  </optgroup>
+                  {certifications.filter(c => c.level === "foundational").length > 0 && (
+                    <optgroup label="Foundational" className="bg-slate-800 text-white">
+                      {certifications.filter(c => c.level === "foundational").map(cert => (
+                        <option key={cert.code} value={cert.code} className="bg-slate-800 text-white py-2">{cert.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {certifications.filter(c => c.level === "associate").length > 0 && (
+                    <optgroup label="Associate" className="bg-slate-800 text-white">
+                      {certifications.filter(c => c.level === "associate").map(cert => (
+                        <option key={cert.code} value={cert.code} className="bg-slate-800 text-white py-2">{cert.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {certifications.filter(c => c.level === "professional").length > 0 && (
+                    <optgroup label="Professional" className="bg-slate-800 text-white">
+                      {certifications.filter(c => c.level === "professional").map(cert => (
+                        <option key={cert.code} value={cert.code} className="bg-slate-800 text-white py-2">{cert.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {certifications.filter(c => c.level === "specialty").length > 0 && (
+                    <optgroup label="Specialty" className="bg-slate-800 text-white">
+                      {certifications.filter(c => c.level === "specialty").map(cert => (
+                        <option key={cert.code} value={cert.code} className="bg-slate-800 text-white py-2">{cert.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
             </div>
@@ -1423,25 +1473,8 @@ export default function WorldPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Skill Level Selector & Industry Tag */}
+                  {/* Industry Tag & Rating */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <select
-                      value={selectedSkillLevel}
-                      onChange={(e) => setSelectedSkillLevel(e.target.value as "beginner" | "intermediate" | "advanced" | "expert")}
-                      className={cn(
-                        "text-xs px-2 py-1 rounded-full border cursor-pointer appearance-none pr-6 [&>option]:bg-zinc-900 [&>option]:text-white",
-                        selectedSkillLevel === "beginner" && "border-green-500/50 bg-green-500/20 text-green-400",
-                        selectedSkillLevel === "intermediate" && "border-amber-500/50 bg-amber-500/20 text-amber-400",
-                        selectedSkillLevel === "advanced" && "border-orange-500/50 bg-orange-500/20 text-orange-400",
-                        selectedSkillLevel === "expert" && "border-red-500/50 bg-red-500/20 text-red-400"
-                      )}
-                      style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 4px center", backgroundSize: "12px" }}
-                    >
-                      <option value="beginner" className="bg-zinc-900 text-green-400">Beginner</option>
-                      <option value="intermediate" className="bg-zinc-900 text-amber-400">Intermediate</option>
-                      <option value="advanced" className="bg-zinc-900 text-orange-400">Advanced</option>
-                      <option value="expert" className="bg-zinc-900 text-red-400">Expert</option>
-                    </select>
                     <span className="text-xs px-2 py-1 rounded-full bg-secondary text-muted-foreground">
                       {businessIndustry}
                     </span>
@@ -1670,7 +1703,7 @@ export default function WorldPage() {
             apiKey={userApiKey}
             preferredModel={preferredModel}
             certCode={selectedCert}
-            userLevel={resumeChallenge.scenario.difficulty}
+            userLevel={selectedSkillLevel}
             industry={resumeChallenge.location.industry}
             scenarioId={resumeChallenge.scenarioId}
             attemptId={resumeChallenge.id}
@@ -1727,7 +1760,7 @@ export default function WorldPage() {
             apiKey={userApiKey}
             preferredModel={preferredModel}
             certCode={selectedCert}
-            userLevel={generationTarget?.skillLevel || "intermediate"}
+            userLevel={selectedSkillLevel}
             industry={generationTarget?.industry}
             scenarioId={newChallengeData.scenarioId}
             attemptId={newChallengeData.attemptId}

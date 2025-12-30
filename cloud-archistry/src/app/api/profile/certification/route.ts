@@ -22,6 +22,7 @@ const CERT_CODE_MAP: Record<string, string> = {
   "SCS": "security-specialty",
   "MLS": "machine-learning-specialty",
   "PAS": "sap-specialty",
+  "DBS": "database-specialty",
 };
 
 // Reverse mapping: long code -> short code

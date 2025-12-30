@@ -29,6 +29,7 @@ const CERTIFICATION_OPTIONS = [
   "SCS", // Security Specialty
   "MLS", // Machine Learning Specialty
   "PAS", // SAP on AWS Specialty
+  "DBS", // Database Specialty
 ];
 
 /**

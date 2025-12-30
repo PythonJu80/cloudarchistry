@@ -537,7 +537,7 @@ export function ChallengeWorkspaceModal({
           companyName: scenario.company_name,
           industry: industry || companyInfo?.industry || "Technology",
           businessContext: scenario.business_context,
-          userLevel: "intermediate",
+          userLevel: userLevel,
           // Pass existing chat history so agent can consider it in the proficiency test
           previousChatHistory: messages.map(m => ({
             role: m.role,
@@ -570,7 +570,7 @@ export function ChallengeWorkspaceModal({
     } finally {
       setIsChatLoading(false);
     }
-  }, [challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, questionsData, answers, isProficiencyStarted]);
+  }, [challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, questionsData, answers, isProficiencyStarted, messages, userLevel]);
 
   // Continue proficiency test conversation
   const sendProficiencyMessage = useCallback(async () => {
@@ -609,7 +609,7 @@ export function ChallengeWorkspaceModal({
           companyName: scenario.company_name,
           industry: industry || companyInfo?.industry || "Technology",
           businessContext: scenario.business_context,
-          userLevel: "intermediate",
+          userLevel: userLevel,
           chatHistory: messages.map(m => ({
             role: m.role,
             content: m.content,
@@ -646,7 +646,8 @@ export function ChallengeWorkspaceModal({
     } finally {
       setIsChatLoading(false);
     }
-  }, [inputValue, isChatLoading, isProficiencyStarted, challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, questionsData, messages, proficiencyQuestionsAsked]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputValue, isChatLoading, isProficiencyStarted, challenge, scenario, industry, companyInfo, diagramData, messages, questionsData, proficiencyQuestionsAsked, apiKey, preferredModel, userLevel]);
 
   // Evaluate proficiency test and get final score
   const evaluateProficiencyTest = useCallback(async () => {
@@ -726,7 +727,7 @@ export function ChallengeWorkspaceModal({
           businessContext: scenario.business_context,
           diagramData: diagramData,
           diagramServices: diagramServices,
-          userLevel: "intermediate",
+          userLevel: userLevel,
           objectiveCount: 3,
           openaiApiKey: apiKey,
           preferredModel: preferredModel,
@@ -747,7 +748,7 @@ export function ChallengeWorkspaceModal({
     } catch (err) {
       console.error("Failed to fetch CLI objectives:", err);
     }
-  }, [challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, cliObjectives.length]);
+  }, [challenge, scenario, industry, companyInfo, apiKey, preferredModel, diagramData, cliObjectives.length, userLevel]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -982,14 +983,6 @@ export function ChallengeWorkspaceModal({
   const allQuestionsAnswered = questionsData?.questions.every(q => answers[q.id]?.isSubmitted) || false;
   const correctCount = Object.values(answers).filter(a => a.isCorrect).length;
 
-  // User level color indicator
-  const userLevelColor = {
-    beginner: "text-green-400 bg-green-500/20",
-    intermediate: "text-amber-400 bg-amber-500/20",
-    advanced: "text-orange-400 bg-orange-500/20",
-    expert: "text-red-400 bg-red-500/20",
-  }[userLevel] || "text-amber-400 bg-amber-500/20";
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
@@ -1005,9 +998,6 @@ export function ChallengeWorkspaceModal({
             <Button variant="ghost" size="icon-sm" onClick={onClose} className="shrink-0">
               <X className="w-4 h-4" />
             </Button>
-            <span className={cn("text-xs px-2 py-0.5 rounded shrink-0", userLevelColor)}>
-              {userLevel}
-            </span>
             {questionsData && (
               <span className="text-xs text-slate-500 flex items-center gap-1 shrink-0">
                 <Clock className="w-3 h-3" />

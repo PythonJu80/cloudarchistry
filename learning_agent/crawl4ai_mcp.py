@@ -1122,8 +1122,11 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                 }
                 skill_context = skill_keywords.get(request.user_level, "best practices")
 
-                if request.cert_code and request.cert_code in CERTIFICATION_PERSONAS:
-                    cert_focus = CERTIFICATION_PERSONAS[request.cert_code]["focus"]
+                # Resolve short cert code (e.g., "CLF") to long persona ID (e.g., "cloud-practitioner")
+                resolved_cert = _resolve_persona_id(request.cert_code) if request.cert_code else None
+                
+                if resolved_cert and resolved_cert in CERTIFICATION_PERSONAS:
+                    cert_focus = CERTIFICATION_PERSONAS[resolved_cert]["focus"]
                     selected_focus = kb_random.sample(cert_focus, min(3, len(cert_focus)))
                     kb_query = f"{' '.join(selected_focus)} {skill_context} AWS {research.company_info.industry}"
                     focus_str = ", ".join(selected_focus)
@@ -1161,18 +1164,22 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
                 logger.warning(f"Knowledge base search failed: {kb_err}")
                 yield f"data: {json.dumps({'type': 'status', 'message': '⚠️ Knowledge base search skipped'})}\n\n"
 
-            # Step 4: Validate cert_code (required by generator)
+            # Step 4: Validate and resolve cert_code (required by generator)
             if not request.cert_code:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'cert_code is required for scenario generation'})}\n\n"
                 return
             
+            # Resolve short cert code to long persona ID for the generator
+            resolved_cert_code = _resolve_persona_id(request.cert_code)
+            
             # Get cert name for status messages
             cert_name = None
-            if request.cert_code in CERTIFICATION_PERSONAS:
-                cert_name = CERTIFICATION_PERSONAS[request.cert_code]["cert"]
+            if resolved_cert_code in CERTIFICATION_PERSONAS:
+                cert_name = CERTIFICATION_PERSONAS[resolved_cert_code]["cert"]
                 yield f"data: {json.dumps({'type': 'status', 'message': f'🎯 Applying {cert_name} certification focus...', 'step': 4, 'total_steps': 5})}\n\n"
             else:
-                yield f"data: {json.dumps({'type': 'status', 'message': '🎯 Building cloud scenario...', 'step': 4, 'total_steps': 5})}\n\n"
+                yield f"data: {json.dumps({'type': 'error', 'message': f'Invalid cert_code: {request.cert_code}. Could not resolve to a valid certification.'})}\n\n"
+                return
 
             await asyncio.sleep(0.1)
 
@@ -1192,7 +1199,7 @@ async def generate_scenario_stream_endpoint(request: LocationRequest):
 
             scenario = await gen_scenario(
                 company_info=company_info,
-                target_cert=request.cert_code,
+                target_cert=resolved_cert_code,  # Use resolved long code, not short code
                 user_level=request.user_level,
                 knowledge_context=knowledge_context if knowledge_context else None,
             )
@@ -1259,16 +1266,22 @@ async def generate_scenario_endpoint(request: LocationRequest):
                 detail="cert_code is required for scenario generation"
             )
         
+        # Resolve short cert code to long persona ID
+        resolved_cert_code = _resolve_persona_id(request.cert_code)
+        if resolved_cert_code not in CERTIFICATION_PERSONAS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid cert_code: {request.cert_code}. Could not resolve to a valid certification."
+            )
+        
         scenario = await generate_scenario(
             company_info=company_info,
-            target_cert=request.cert_code,
+            target_cert=resolved_cert_code,  # Use resolved long code
             user_level=request.user_level,
         )
         
         # Get cert name for response
-        cert_name = None
-        if request.cert_code in CERTIFICATION_PERSONAS:
-            cert_name = CERTIFICATION_PERSONAS[request.cert_code]["cert"]
+        cert_name = CERTIFICATION_PERSONAS[resolved_cert_code]["cert"]
         
         if request.place_id:
             try:
@@ -1909,10 +1922,18 @@ async def generate_challenge_questions_endpoint(request: ChallengeQuestionsReque
         if request.preferred_model:
             set_request_model(request.preferred_model)
         
+        # Resolve short cert code (e.g., "CLF") to long persona ID (e.g., "cloud-practitioner")
+        resolved_cert_code = _resolve_persona_id(request.cert_code) if request.cert_code else None
+        if not resolved_cert_code or resolved_cert_code not in CERTIFICATION_PERSONAS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid cert_code: {request.cert_code}. Could not resolve to a valid certification."
+            )
+        
         result = await generate_challenge_questions(
             challenge=request.challenge, company_name=request.company_name,
             industry=request.industry, business_context=request.business_context,
-            user_level=request.user_level, cert_code=request.cert_code,
+            user_level=request.user_level, cert_code=resolved_cert_code,
             question_count=request.question_count,
         )
         
