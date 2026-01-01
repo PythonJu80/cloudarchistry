@@ -251,7 +251,8 @@ class CLIResponse(BaseModel):
     
     # Validation for challenge objectives
     is_correct_for_challenge: bool = True  # Was this the right command for the objective?
-    objective_completed: Optional[str] = None  # Which objective this command completed
+    objective_id: Optional[str] = None  # ID of the objective this command completed
+    objective_completed: Optional[str] = None  # Description of objective completed
     points_earned: int = 0  # Points for this command
     
     # Service tracking
@@ -342,7 +343,7 @@ RULES:
 11. FOCUS on {cert_name} exam-relevant commands and patterns
 12. Emphasize certification focus areas: {focus_areas}
 
-CHALLENGE OBJECTIVES (if applicable):
+CHALLENGE OBJECTIVES (user must complete these - use EXACT IDs when matching):
 {challenge_objectives}
 
 RESPONSE FORMAT (JSON):
@@ -356,13 +357,20 @@ RESPONSE FORMAT (JSON):
     "warning": null,
     "resources_created": {{"resource_type": "resource_id"}},
     
-    // Validation fields - IMPORTANT for tracking progress
+    // Validation fields - CRITICAL for tracking progress
     "is_correct_for_challenge": true,  // Does this command help complete the challenge?
-    "objective_completed": "created_vpc",  // Which objective this completes (null if none)
-    "points_earned": 10,  // Points for this command (0-20 based on relevance)
+    "objective_id": "EXACT_ID_FROM_OBJECTIVES_LIST",  // MUST be the exact ID from CHALLENGE OBJECTIVES above, or null if no match
+    "objective_completed": "Create a VPC",  // Description of objective completed (null if none)
+    "points_earned": 10,  // Points for this command (use the points value from the matching objective)
     "aws_service": "ec2",  // The AWS service used
     "command_type": "create"  // describe, create, update, delete, list
 }}
+
+OBJECTIVE MATCHING RULES:
+- Compare the user's command against each objective's command_pattern
+- If the command matches an objective's pattern, return that objective's EXACT ID and points
+- Only mark ONE objective per command (the best match)
+- If no objective matches, set objective_id to null
 
 SCORING RULES:
 - Correct command for challenge objective: 10-20 points
@@ -411,6 +419,7 @@ async def simulate_cli_command(
     company_name: str,
     industry: str,
     business_context: str,
+    objectives: Optional[List[Dict[str, Any]]] = None,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
 ) -> CLIResponse:
@@ -429,6 +438,7 @@ async def simulate_cli_command(
         company_name: Company name for context (REQUIRED)
         industry: Industry for context (REQUIRED)
         business_context: Business scenario description (REQUIRED)
+        objectives: Optional list of CLI objectives to check against
         api_key: Optional OpenAI API key
         model: Optional model override
         
@@ -464,9 +474,25 @@ Relevant AWS Services: {', '.join(challenge_context.get('aws_services', []))}
 Success Criteria: {', '.join(challenge_context.get('success_criteria', []))}
 """
     
-    # Build objectives from success criteria
-    objectives = challenge_context.get('success_criteria', [])
-    challenge_objectives = "\n".join(f"- {obj}" for obj in objectives) if objectives else "Complete the challenge"
+    # Build objectives string from passed objectives or fall back to success criteria
+    if objectives:
+        # Use the actual CLI objectives with their IDs for proper tracking
+        # Format clearly so AI can match and return exact IDs
+        objective_lines = []
+        for obj in objectives:
+            obj_id = obj.get('id', 'unknown')
+            desc = obj.get('description', '')
+            pattern = obj.get('command_pattern', '')
+            points = obj.get('points', 20)
+            objective_lines.append(f"  - OBJECTIVE_ID: \"{obj_id}\"")
+            objective_lines.append(f"    Description: {desc}")
+            objective_lines.append(f"    Command Pattern: {pattern}")
+            objective_lines.append(f"    Points: {points}")
+        challenge_objectives = "\n".join(objective_lines)
+    else:
+        # Fall back to success criteria
+        success_criteria = challenge_context.get('success_criteria', [])
+        challenge_objectives = "\n".join(f"- {obj}" for obj in success_criteria) if success_criteria else "Complete the challenge"
     
     # Fetch current AWS knowledge from database
     from utils import fetch_knowledge_for_generation
@@ -538,6 +564,7 @@ If the command relates to their challenge, tailor the output to be educational."
     exit_code = result.get("exit_code", 0)
     is_correct = result.get("is_correct_for_challenge", exit_code == 0)
     points = result.get("points_earned", 0)
+    objective_id = result.get("objective_id")
     objective = result.get("objective_completed")
     aws_service = result.get("aws_service")
     
@@ -584,6 +611,7 @@ If the command relates to their challenge, tailor the output to be educational."
         is_dangerous=result.get("is_dangerous", False),
         warning=result.get("warning"),
         is_correct_for_challenge=is_correct,
+        objective_id=objective_id,
         objective_completed=objective,
         points_earned=points,
         aws_service=aws_service,
@@ -595,21 +623,21 @@ async def get_cli_help(
     topic: str,
     user_level: str,
     cert_code: str,
-    challenge_context: Dict,
+    challenge_context: Optional[Dict] = None,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
 ) -> Dict:
     """
     Get contextual CLI help for a topic.
     
-    IMPORTANT: user_level, cert_code, and challenge_context are REQUIRED.
-    Help must be tailored to the user's certification and current challenge.
+    IMPORTANT: user_level and cert_code are REQUIRED.
+    Help is tailored to the user's certification and optionally their current challenge.
     
     Args:
         topic: AWS service or command to get help for (e.g., "ec2", "s3 cp", "vpc")
         user_level: User's skill level (REQUIRED: 'beginner', 'intermediate', 'advanced', 'expert')
         cert_code: Certification persona ID (REQUIRED)
-        challenge_context: Current challenge for tailored examples (REQUIRED)
+        challenge_context: Current challenge for tailored examples (optional)
         api_key: Optional OpenAI API key
         model: Optional model override
         
@@ -623,11 +651,6 @@ async def get_cli_help(
     # CRITICAL: Validate required parameters
     validate_cli_params(user_level, cert_code)
     
-    if not challenge_context:
-        raise CLIValidationError(
-            "challenge_context is required. CLI help must be tailored to the current challenge."
-        )
-    
     # Get certification context
     if cert_code not in CERTIFICATION_PERSONAS:
         raise CLIValidationError(f"Unknown certification persona: {cert_code}")
@@ -636,12 +659,16 @@ async def get_cli_help(
     cert_name = persona["cert"]
     focus_areas = ", ".join(persona["focus"])
     
-    challenge_str = f"""
+    # Build challenge context string if available
+    if challenge_context:
+        challenge_str = f"""
 The user is working on this challenge:
 - {challenge_context.get('title', '')}
 - {challenge_context.get('description', '')}
 - AWS Services: {', '.join(challenge_context.get('aws_services', []))}
 Tailor examples to this context and their certification focus ({cert_name})."""
+    else:
+        challenge_str = f"Tailor examples to their certification focus ({cert_name})."
 
     system_prompt = f"""You are an AWS CLI tutor. Provide helpful, practical guidance.
 

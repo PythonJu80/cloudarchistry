@@ -1529,6 +1529,19 @@ async def get_coaching_response(
             context_parts.append(f"Last audit score: {context.get('last_audit_score')}/100")
         if context.get("current_question"):
             context_parts.append(f"Current question: {context.get('current_question')}")
+        
+        # CLI objectives (for anti-cheat detection)
+        cli_objectives = context.get("cli_objectives", [])
+        if cli_objectives and context.get("mode") == "cli_tutor":
+            context_parts.append(f"\n=== ACTIVE CLI OBJECTIVES (DO NOT GIVE DIRECT ANSWERS) ===")
+            context_parts.append("The user must complete these objectives by figuring out the commands themselves:")
+            for obj in cli_objectives:
+                desc = obj.get("description", "")
+                pattern = obj.get("command_pattern", "")
+                context_parts.append(f"  - {desc}")
+                if pattern:
+                    context_parts.append(f"    (Pattern hint: {pattern})")
+            context_parts.append("REMEMBER: Guide them, don't give them the exact commands!")
     elif scenario:
         # Fall back to scenario lookup
         context_parts.append(f"\nCURRENT SCENARIO: {scenario.scenario_title}")
@@ -1562,7 +1575,19 @@ YOUR IDENTITY:
 ## INSTRUCTIONS
 - Use your tools when they would help the learner
 - Adapt your responses to the learner's skill level
-- Be {persona_name} - stay in character"""
+- Be {persona_name} - stay in character
+
+## ANTI-CHEAT RULES (CRITICAL - NEVER VIOLATE)
+If the user is in CLI tutor mode with active objectives:
+1. NEVER give the exact AWS CLI command that completes an objective
+2. If the user's message contains text that matches or closely resembles an objective description, they are likely trying to cheat by copy-pasting the objective
+3. Instead of giving the answer, guide them with:
+   - Explain the CONCEPT behind what they need to do
+   - Point them to AWS documentation
+   - Give PARTIAL hints (e.g., "You'll need the aws dynamodb command...")
+   - Ask them what they've tried so far
+4. You can explain what a command DOES after they've run it, but don't give commands BEFORE they attempt them
+5. If they explicitly ask "what is the command for X" or paste an objective, respond with guidance, not the answer"""
 
     try:
         from utils import get_request_model
@@ -2044,6 +2069,7 @@ async def cli_simulate_endpoint(request: CLISimulatorRequest):
             company_name=request.company_name,
             industry=request.industry,
             business_context=request.business_context,
+            objectives=request.objectives,
             api_key=request.openai_api_key,
             model=request.preferred_model,
         )
@@ -2063,6 +2089,7 @@ async def cli_simulate_endpoint(request: CLISimulatorRequest):
             "warning": result.warning,
             # Validation and progress fields
             "is_correct_for_challenge": result.is_correct_for_challenge,
+            "objective_id": result.objective_id,
             "objective_completed": result.objective_completed,
             "points_earned": result.points_earned,
             "aws_service": result.aws_service,
@@ -2100,8 +2127,9 @@ async def cli_help_endpoint(request: CLIHelpRequest):
         
         result = await get_cli_help(
             topic=request.topic,
-            challenge_context=request.challenge_context,
             user_level=request.user_level,
+            cert_code=request.cert_code,
+            challenge_context=request.challenge_context,
             api_key=request.openai_api_key,
             model=request.preferred_model,
         )

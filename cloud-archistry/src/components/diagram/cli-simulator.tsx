@@ -221,8 +221,19 @@ export function CLISimulator({
     }
   }, [lines]);
 
-  // Welcome message
+  // Welcome message - only set on initial mount if no saved history
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
+    // Only initialize welcome message once, and only if we don't have saved history
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+    
+    // Check if we already have lines from localStorage
+    const saved = loadFromStorage();
+    if (saved?.lines && saved.lines.length > 0) {
+      return; // Don't overwrite saved history
+    }
+    
     const welcomeLines: TerminalLine[] = [
       {
         id: "welcome-1",
@@ -285,7 +296,8 @@ export function CLISimulator({
     });
     
     setLines(welcomeLines);
-  }, [challengeContext]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Add a line to the terminal
   const addLine = useCallback((type: TerminalLine["type"], content: string) => {
@@ -576,6 +588,13 @@ export function CLISimulator({
     addLine("info", "Thinking...");
     
     try {
+      // Pass objectives to backend so AI can detect cheating attempts
+      // (e.g., user copying objective text to get the answer)
+      const incompleteObjectives = objectives?.filter(o => !o.completed).map(o => ({
+        description: o.description,
+        command_pattern: o.command_pattern,
+      })) || [];
+      
       const response = await fetch('/api/chat', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -586,6 +605,8 @@ export function CLISimulator({
             challenge_description: challengeContext.description,
             aws_services: challengeContext.aws_services,
             mode: "cli_tutor",
+            // Anti-cheat: pass objectives so AI knows not to give direct answers
+            cli_objectives: incompleteObjectives,
           } : { mode: "cli_tutor" },
           openai_api_key: apiKey,
           preferred_model: preferredModel,

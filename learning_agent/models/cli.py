@@ -15,6 +15,7 @@ class CLISimulatorRequest(BaseModel):
     company_name: str = "Acme Corp"
     industry: str = "Technology"
     business_context: str = ""
+    objectives: Optional[list[Dict[str, Any]]] = None  # CLI objectives to check against
     openai_api_key: Optional[str] = None
     preferred_model: Optional[str] = None
 

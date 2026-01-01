@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 
@@ -17,10 +18,23 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    // Fetch user profile to get skill level and target certification
+    const profile = await prisma.academyUserProfile.findUnique({
+      where: { id: session.user.academyProfileId },
+      select: {
+        skillLevel: true,
+        targetCertification: true,
+      },
+    });
+
     const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/cli-help`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        ...body,
+        user_level: profile?.skillLevel || body.user_level || "intermediate",
+        cert_code: profile?.targetCertification || "SAA-C03",
+      }),
     });
 
     if (!response.ok) {
