@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://localhost:1027";
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
 
 /**
  * POST /api/proficiency-test/start
@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
         aws_services: body.awsServices || [],
         diagram_data: body.diagramData,
         diagram_services: body.diagramServices,
+        diagram_audit: body.diagramAudit,  // Full audit results: score, correct, missing, suggestions, feedback
+        diagram_score: body.diagramScore,  // Placement score breakdown
         question_answers: body.questionAnswers,
         company_name: body.companyName,
         industry: body.industry,

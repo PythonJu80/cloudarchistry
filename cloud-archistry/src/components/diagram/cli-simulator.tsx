@@ -38,6 +38,17 @@ export interface TerminalLine {
   timestamp: Date;
 }
 
+export interface CLIObjective {
+  id: string;
+  description: string;
+  command_pattern: string;
+  example_command: string;
+  hint?: string;
+  points: number;
+  service: string;
+  completed: boolean;
+}
+
 export interface CLISimulatorProps {
   className?: string;
   challengeContext?: {
@@ -52,8 +63,18 @@ export interface CLISimulatorProps {
   businessContext?: string;
   apiKey?: string | null;
   preferredModel?: string | null;
-  onCommandExecuted?: (command: string, output: string) => void;
+  objectives?: CLIObjective[];
+  onCommandExecuted?: (command: string, output: string, objectiveData?: { objective_id: string; points_earned: number } | null) => void;
+  // For localStorage persistence
+  attemptId?: string;
+  challengeId?: string;
+  isCompleted?: boolean; // When true, clear localStorage
+  // Callback to get CLI history for database persistence
+  onHistoryChange?: (history: Array<{ type: string; content: string; timestamp: string }>) => void;
 }
+
+// localStorage key prefix for CLI history
+const CLI_STORAGE_PREFIX = "cli-history:";
 
 // Quick commands for the current context
 const QUICK_COMMANDS = [
@@ -75,14 +96,53 @@ export function CLISimulator({
   businessContext = "",
   apiKey,
   preferredModel,
+  objectives,
   onCommandExecuted,
+  attemptId,
+  challengeId,
+  isCompleted = false,
+  onHistoryChange,
 }: CLISimulatorProps) {
-  const [lines, setLines] = useState<TerminalLine[]>([]);
+  // Generate storage key for this specific challenge attempt
+  const storageKey = attemptId && challengeId ? `${CLI_STORAGE_PREFIX}${attemptId}:${challengeId}` : null;
+  
+  // Load initial state from localStorage
+  const loadFromStorage = useCallback(() => {
+    if (!storageKey || typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          lines: (parsed.lines || []).map((line: TerminalLine & { timestamp: string }) => ({
+            ...line,
+            timestamp: new Date(line.timestamp),
+          })),
+          commandHistory: parsed.commandHistory || [],
+          sessionId: parsed.sessionId || null,
+        };
+      }
+    } catch (e) {
+      console.error("[CLI Simulator] Failed to load from localStorage:", e);
+    }
+    return null;
+  }, [storageKey]);
+
+  const [lines, setLines] = useState<TerminalLine[]>(() => {
+    const saved = loadFromStorage();
+    return saved?.lines || [];
+  });
   const [currentInput, setCurrentInput] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [commandHistory, setCommandHistory] = useState<string[]>(() => {
+    const saved = loadFromStorage();
+    return saved?.commandHistory || [];
+  });
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(() => {
+    const saved = loadFromStorage();
+    return saved?.sessionId || null;
+  });
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
   // Progress tracking
@@ -94,6 +154,62 @@ export function CLISimulator({
     objectivesCompleted: [] as string[],
     totalPoints: 0,
   });
+
+  // Save to localStorage whenever lines, commandHistory, or sessionId changes
+  useEffect(() => {
+    if (!storageKey || typeof window === "undefined" || isCompleted) return;
+    
+    // Don't save if only welcome messages
+    const hasUserContent = lines.some(line => line.type === "input" || line.id.startsWith("chat-"));
+    if (!hasUserContent && lines.length <= 10) return;
+    
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        lines: lines.slice(-100), // Keep last 100 lines to avoid storage bloat
+        commandHistory: commandHistory.slice(-50), // Keep last 50 commands
+        sessionId,
+        savedAt: new Date().toISOString(),
+      }));
+    } catch (e) {
+      console.error("[CLI Simulator] Failed to save to localStorage:", e);
+    }
+  }, [lines, commandHistory, sessionId, storageKey, isCompleted]);
+
+  // Notify parent of history changes for database persistence
+  // Use a ref to track the last sent history to avoid infinite loops
+  const lastHistoryRef = useRef<string>("");
+  useEffect(() => {
+    if (!onHistoryChange) return;
+    
+    // Convert lines to history format for database storage
+    const historyForDb = lines
+      .filter(line => line.type === "input" || line.type === "output" || line.type === "error" || line.id.startsWith("chat-"))
+      .slice(-100)
+      .map(line => ({
+        type: line.type,
+        content: line.content,
+        timestamp: line.timestamp.toISOString(),
+      }));
+    
+    // Only call onHistoryChange if history actually changed
+    const historyKey = JSON.stringify(historyForDb);
+    if (historyKey !== lastHistoryRef.current) {
+      lastHistoryRef.current = historyKey;
+      onHistoryChange(historyForDb);
+    }
+  }, [lines, onHistoryChange]);
+
+  // Clear localStorage when CLI is completed
+  useEffect(() => {
+    if (isCompleted && storageKey && typeof window !== "undefined") {
+      try {
+        localStorage.removeItem(storageKey);
+        console.log("[CLI Simulator] Cleared localStorage on completion");
+      } catch (e) {
+        console.error("[CLI Simulator] Failed to clear localStorage:", e);
+      }
+    }
+  }, [isCompleted, storageKey]);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -270,6 +386,13 @@ export function CLISimulator({
           company_name: companyName,
           industry: industry,
           business_context: businessContext,
+          objectives: objectives?.filter(o => !o.completed).map(o => ({
+            id: o.id,
+            description: o.description,
+            command_pattern: o.command_pattern,
+            hint: o.hint,
+            service: o.service,
+          })),
         }),
       });
       
@@ -349,7 +472,13 @@ export function CLISimulator({
         }
       }
       
-      onCommandExecuted?.(trimmedCmd, data.output || "");
+      // Pass objective completion data if available
+      // The Learning Agent returns objective_completed (description) and objective_id
+      const objectiveData = (data.objective_id || data.objective_completed) ? {
+        objective_id: data.objective_id || data.objective_completed, // Use ID if available, fallback to description
+        points_earned: data.points_earned || 0,
+      } : null;
+      onCommandExecuted?.(trimmedCmd, data.output || "", objectiveData);
       
     } catch (error) {
       addLine("error", `Failed to execute: ${error instanceof Error ? error.message : "Unknown error"}`);

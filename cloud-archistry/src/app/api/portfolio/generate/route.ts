@@ -53,6 +53,34 @@ interface CLIProgressData {
   cliScore?: number;
 }
 
+interface CLIObjective {
+  id: string;
+  description: string;
+  command_pattern: string;
+  example_command: string;
+  hint?: string;
+  points: number;
+  service: string;
+  completed: boolean;
+}
+
+interface CLIObjectivesData {
+  objectives: CLIObjective[];
+  contextMessage: string;
+  totalPoints: number;
+  earnedPoints: number;
+  lastUpdated?: string;
+}
+
+interface ProficiencyTestData {
+  chatHistory: Array<{ role: string; content: string; timestamp: string }>;
+  score: number;
+  summary: string;
+  strengths: string[];
+  areasForImprovement: string[];
+  completedAt: string;
+}
+
 interface GeneratePortfolioRequest {
   attemptId: string;
 }
@@ -148,6 +176,10 @@ export async function POST(request: NextRequest) {
     // Use the most complete diagram (most nodes)
     let bestDiagram: DiagramData | null = null;
     let bestDiagramScore = 0;
+    let bestAuditScore: number | null = null;
+    let bestAuditPassed = false;
+    let aggregatedProficiencyTest: ProficiencyTestData | null = null;
+    let aggregatedCliObjectives: CLIObjectivesData | null = null;
     const totalCLIProgress: CLIProgressData = {
       commandsRun: [],
       totalCommands: 0,
@@ -162,9 +194,14 @@ export async function POST(request: NextRequest) {
       const solution = progress.solution as {
         diagramData?: DiagramData;
         diagramScore?: { total: number };
+        auditScore?: number;
+        auditPassed?: boolean;
+        proficiencyTest?: ProficiencyTestData;
+        cliObjectives?: CLIObjectivesData;
         cliProgress?: CLIProgressData;
       } | null;
 
+      // Get best diagram
       if (solution?.diagramData?.nodes) {
         const nodeCount = solution.diagramData.nodes.length;
         if (nodeCount > bestDiagramScore) {
@@ -173,7 +210,37 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Aggregate CLI progress
+      // Get audit results (use highest score)
+      if (solution?.auditScore !== undefined) {
+        if (bestAuditScore === null || solution.auditScore > bestAuditScore) {
+          bestAuditScore = solution.auditScore;
+          bestAuditPassed = solution.auditPassed || false;
+        }
+      }
+
+      // Get proficiency test results (use the one with highest score)
+      if (solution?.proficiencyTest?.score !== undefined) {
+        if (!aggregatedProficiencyTest || solution.proficiencyTest.score > aggregatedProficiencyTest.score) {
+          aggregatedProficiencyTest = solution.proficiencyTest;
+        }
+      }
+
+      // Get CLI objectives (aggregate all)
+      if (solution?.cliObjectives?.objectives) {
+        if (!aggregatedCliObjectives) {
+          aggregatedCliObjectives = {
+            objectives: [],
+            contextMessage: solution.cliObjectives.contextMessage || "",
+            totalPoints: 0,
+            earnedPoints: 0,
+          };
+        }
+        aggregatedCliObjectives.objectives.push(...solution.cliObjectives.objectives);
+        aggregatedCliObjectives.totalPoints += solution.cliObjectives.totalPoints || 0;
+        aggregatedCliObjectives.earnedPoints += solution.cliObjectives.earnedPoints || 0;
+      }
+
+      // Aggregate legacy CLI progress (for backwards compatibility)
       if (solution?.cliProgress) {
         const cli = solution.cliProgress;
         totalCLIProgress.totalCommands! += cli.totalCommands || 0;
@@ -245,6 +312,24 @@ export async function POST(request: NextRequest) {
           scenarioAttemptId: attemptId,
           challengeProgressId: attempt.challengeProgress[0]?.id,
           diagram: bestDiagram,
+          // Drawing audit results
+          auditScore: bestAuditScore,
+          auditPassed: bestAuditPassed,
+          // Proficiency test results
+          proficiencyTest: aggregatedProficiencyTest ? {
+            score: aggregatedProficiencyTest.score,
+            summary: aggregatedProficiencyTest.summary,
+            strengths: aggregatedProficiencyTest.strengths,
+            areasForImprovement: aggregatedProficiencyTest.areasForImprovement,
+          } : null,
+          // CLI objectives (new format)
+          cliObjectives: aggregatedCliObjectives ? {
+            objectives: aggregatedCliObjectives.objectives,
+            totalPoints: aggregatedCliObjectives.totalPoints,
+            earnedPoints: aggregatedCliObjectives.earnedPoints,
+            completedCount: aggregatedCliObjectives.objectives.filter(o => o.completed).length,
+          } : null,
+          // Legacy CLI progress (for backwards compatibility)
           cliProgress: totalCLIProgress.totalCommands! > 0 ? totalCLIProgress : null,
           scenarioContext,
           locationContext,

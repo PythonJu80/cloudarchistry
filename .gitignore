@@ -63,5 +63,5 @@ __pycache__/
 
 # Test scripts
 load-test.js
-**/test_*.py
-**/*_test.py
+# Test files (prefix pattern only, not suffix)
+

@@ -3724,7 +3724,9 @@ class ProficiencyTestStartRequest(BaseModel):
     aws_services: List[str]
     diagram_data: Optional[Dict[str, Any]] = None
     diagram_services: Optional[List[str]] = None
-    question_answers: Optional[List[Dict]] = None
+    diagram_audit: Optional[Dict[str, Any]] = None  # Full audit results: score, correct, missing, suggestions, feedback
+    diagram_score: Optional[Dict[str, Any]] = None  # Placement score breakdown
+    question_answers: Optional[List[Dict]] = None  # Full question data with user answers
     company_name: str
     industry: str
     business_context: str
@@ -3785,6 +3787,18 @@ async def start_proficiency_test_endpoint(request: ProficiencyTestStartRequest):
         if request.preferred_model:
             set_request_model(request.preferred_model)
         
+        # Build diagram audit if provided
+        diagram_audit = None
+        if request.diagram_audit:
+            from generators.proficiency_test import DiagramAuditResult
+            diagram_audit = DiagramAuditResult(
+                score=request.diagram_audit.get("score", 0),
+                correct=request.diagram_audit.get("correct", []),
+                missing=request.diagram_audit.get("missing", []),
+                suggestions=request.diagram_audit.get("suggestions", []),
+                feedback=request.diagram_audit.get("feedback", ""),
+            )
+        
         context = ProficiencyTestContext(
             challenge_id=request.challenge_id,
             challenge_title=request.challenge_title,
@@ -3794,6 +3808,8 @@ async def start_proficiency_test_endpoint(request: ProficiencyTestStartRequest):
             aws_services=request.aws_services,
             diagram_data=request.diagram_data,
             diagram_services=request.diagram_services or [],
+            diagram_audit=diagram_audit,
+            diagram_score=request.diagram_score,
             question_answers=request.question_answers,
             company_name=request.company_name,
             industry=request.industry,

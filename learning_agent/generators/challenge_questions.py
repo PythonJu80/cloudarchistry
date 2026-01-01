@@ -8,6 +8,7 @@ user skill level, and certification focus.
 
 import json
 import os
+import random
 import uuid
 from typing import List, Optional, Dict
 from pydantic import BaseModel
@@ -325,7 +326,8 @@ Make the questions specific to this business case, not generic AWS questions."""
     for q in result.get("questions", []):
         options = None
         if q.get("options"):
-            options = [
+            # Parse options first
+            parsed_options = [
                 QuestionOption(
                     id=o.get("id", str(uuid.uuid4())[:8]),
                     text=o.get("text", ""),
@@ -333,6 +335,14 @@ Make the questions specific to this business case, not generic AWS questions."""
                 )
                 for o in q["options"]
             ]
+            # Shuffle options so correct answer isn't always A
+            random.shuffle(parsed_options)
+            # Reassign IDs A, B, C, D after shuffling
+            option_ids = ["A", "B", "C", "D"]
+            for i, opt in enumerate(parsed_options):
+                if i < len(option_ids):
+                    opt.id = option_ids[i]
+            options = parsed_options
         
         questions.append(ChallengeQuestion(
             id=q.get("id", str(uuid.uuid4())),

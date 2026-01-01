@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://localhost:1027";
+const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "http://10.121.19.210:1027";
 
 /**
  * POST /api/proficiency-test/chat

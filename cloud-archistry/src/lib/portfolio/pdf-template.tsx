@@ -213,6 +213,22 @@ export interface PortfolioPDFData {
   completionTimeMinutes: number;
   createdAt: string;
   architectureDiagram?: { nodes: DiagramNode[]; edges: DiagramEdge[] } | null;
+  // New fields for stage completion data
+  auditScore?: number | null;
+  auditPassed?: boolean;
+  proficiencyTest?: {
+    score: number;
+    summary: string;
+    strengths: string[];
+    areasForImprovement: string[];
+  } | null;
+  cliObjectives?: {
+    completedCount: number;
+    totalCount: number;
+    earnedPoints: number;
+    totalPoints: number;
+    objectives: Array<{ description: string; completed: boolean; service: string }>;
+  } | null;
 }
 
 // AWS service name to acronym mapping - only abbreviate long names
@@ -518,6 +534,124 @@ export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
           <Text>{new Date(data.createdAt).toLocaleDateString()}</Text>
         </View>
       </Page>
+
+      {/* Page 2: Skills Assessment */}
+      {(data.auditScore !== undefined || data.proficiencyTest || data.cliObjectives) && (
+        <Page size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <Text style={styles.badge}>SKILLS ASSESSMENT</Text>
+            <Text style={styles.title}>Challenge Performance</Text>
+            <Text style={styles.subtitle}>{data.companyName} • {data.industry}</Text>
+          </View>
+
+          {/* Stage Completion Stats */}
+          <View style={styles.statsRow}>
+            {data.auditScore !== undefined && data.auditScore !== null && (
+              <View style={styles.statBox}>
+                <Text style={[styles.statValue, { color: data.auditPassed ? "#16a34a" : "#dc2626" }]}>
+                  {data.auditScore}%
+                </Text>
+                <Text style={styles.statLabel}>Drawing Audit</Text>
+              </View>
+            )}
+            {data.proficiencyTest && (
+              <View style={styles.statBox}>
+                <Text style={[styles.statValue, { color: data.proficiencyTest.score >= 70 ? "#16a34a" : "#dc2626" }]}>
+                  {data.proficiencyTest.score}%
+                </Text>
+                <Text style={styles.statLabel}>Proficiency Test</Text>
+              </View>
+            )}
+            {data.cliObjectives && (
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>
+                  {data.cliObjectives.completedCount}/{data.cliObjectives.totalCount}
+                </Text>
+                <Text style={styles.statLabel}>CLI Objectives</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Drawing Audit Results */}
+          {data.auditScore !== undefined && data.auditScore !== null && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Architecture Drawing Audit</Text>
+              <Text style={styles.paragraph}>
+                The architecture diagram was evaluated against best practices and scenario requirements.
+                {data.auditPassed 
+                  ? " The diagram successfully passed the automated audit, demonstrating solid understanding of AWS architecture patterns."
+                  : " The diagram shows room for improvement in meeting all architectural requirements."}
+              </Text>
+              <View style={[styles.tagContainer, { marginTop: 8 }]}>
+                <Text style={data.auditPassed ? styles.complianceTag : styles.tag}>
+                  {data.auditPassed ? "✓ Audit Passed" : "Needs Improvement"}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Proficiency Test Results */}
+          {data.proficiencyTest && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Proficiency Assessment</Text>
+              <Text style={styles.paragraph}>{data.proficiencyTest.summary}</Text>
+              
+              {data.proficiencyTest.strengths && data.proficiencyTest.strengths.length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6, color: "#166534" }}>Strengths</Text>
+                  {data.proficiencyTest.strengths.map((strength, i) => (
+                    <View key={i} style={styles.listItem}>
+                      <Text style={[styles.bullet, { color: "#16a34a" }]}>✓</Text>
+                      <Text style={styles.listText}>{strength}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              
+              {data.proficiencyTest.areasForImprovement && data.proficiencyTest.areasForImprovement.length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6, color: "#b45309" }}>Areas for Growth</Text>
+                  {data.proficiencyTest.areasForImprovement.map((area, i) => (
+                    <View key={i} style={styles.listItem}>
+                      <Text style={[styles.bullet, { color: "#f59e0b" }]}>→</Text>
+                      <Text style={styles.listText}>{area}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* CLI Objectives */}
+          {data.cliObjectives && data.cliObjectives.objectives && data.cliObjectives.objectives.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>CLI Training Objectives</Text>
+              <Text style={styles.paragraph}>
+                Completed {data.cliObjectives.completedCount} of {data.cliObjectives.totalCount} CLI objectives, 
+                earning {data.cliObjectives.earnedPoints} of {data.cliObjectives.totalPoints} possible points.
+              </Text>
+              <View style={{ marginTop: 8 }}>
+                {data.cliObjectives.objectives.map((obj, i) => (
+                  <View key={i} style={styles.listItem}>
+                    <Text style={[styles.bullet, { color: obj.completed ? "#16a34a" : "#94a3b8" }]}>
+                      {obj.completed ? "✓" : "○"}
+                    </Text>
+                    <Text style={styles.listText}>
+                      {obj.description} ({obj.service})
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text>Generated by Cloud Archistry</Text>
+            <Text>{new Date(data.createdAt).toLocaleDateString()}</Text>
+          </View>
+        </Page>
+      )}
 
       {/* Page 2: Architecture Diagram */}
       {data.architectureDiagram && data.architectureDiagram.nodes.length > 0 && (

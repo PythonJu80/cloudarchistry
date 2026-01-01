@@ -389,6 +389,21 @@ interface ProgressUpdate {
   diagramScore?: DiagramScore;
   auditScore?: number;
   auditPassed?: boolean;
+  auditResult?: {
+    score: number;
+    correct: string[];
+    missing: string[];
+    suggestions: string[];
+    feedback: string;
+  };
+  proficiencyTest?: {
+    chatHistory: Array<{ role: string; content: string; timestamp: string }>;
+    score: number;
+    summary: string;
+    strengths: string[];
+    areasForImprovement: string[];
+    completedAt: string;
+  };
 }
 
 /**
@@ -420,6 +435,8 @@ export async function POST(request: NextRequest) {
       diagramScore,
       auditScore,
       auditPassed,
+      auditResult,
+      proficiencyTest,
     } = body;
 
     if (!attemptId || !challengeId) {
@@ -461,14 +478,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare solution JSON - Prisma needs it as a plain object
+    // Get existing solution data to merge with new data (preserve previously saved fields)
+    const existingSolution = (existingProgress?.solution as Record<string, unknown>) || {};
+
+    // Prepare solution JSON - MERGE with existing data to preserve all fields
+    // Only overwrite fields that are explicitly provided (not undefined)
     const solutionData = JSON.parse(JSON.stringify({
-      answers,
-      questionsData,
-      diagramData,  // Include diagram data in solution
-      diagramScore,
-      auditScore,   // AI audit score (0-100)
-      auditPassed,  // Whether drawing passed audit (>= 70)
+      // Preserve existing data first
+      ...existingSolution,
+      // Then apply new data (only if provided)
+      answers: answers.length > 0 ? answers : existingSolution.answers,
+      questionsData: questionsData ?? existingSolution.questionsData,
+      diagramData: diagramData ?? existingSolution.diagramData,
+      diagramScore: diagramScore ?? existingSolution.diagramScore,
+      auditScore: auditScore ?? existingSolution.auditScore,
+      auditPassed: auditPassed ?? existingSolution.auditPassed,
+      auditResult: auditResult ?? existingSolution.auditResult,
+      proficiencyTest: proficiencyTest ?? existingSolution.proficiencyTest,
       lastUpdated: new Date().toISOString(),
     }));
 

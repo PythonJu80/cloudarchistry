@@ -17,6 +17,10 @@ import {
   Clock,
   Trophy,
   Sparkles,
+  CheckCircle2,
+  Terminal,
+  MessageSquare,
+  PenTool,
 } from "lucide-react";
 
 const DiagramMessage = dynamic(
@@ -75,6 +79,22 @@ interface PortfolioData {
   architectureDiagram?: {
     nodes: DiagramNode[];
     edges: DiagramEdge[];
+  } | null;
+  // Stage completion data
+  auditScore?: number | null;
+  auditPassed?: boolean;
+  proficiencyTest?: {
+    score: number;
+    summary: string;
+    strengths: string[];
+    areasForImprovement: string[];
+  } | null;
+  cliObjectives?: {
+    completedCount: number;
+    totalCount: number;
+    earnedPoints: number;
+    totalPoints: number;
+    objectives: Array<{ description: string; completed: boolean; service: string }>;
   } | null;
 }
 
@@ -250,6 +270,113 @@ export function PortfolioViewer({ portfolio, open, onClose }: PortfolioViewerPro
                       </Badge>
                     ))}
                   </div>
+                </section>
+              )}
+
+              {/* Skills Assessment Section */}
+              {(portfolio.auditScore !== undefined || portfolio.proficiencyTest || portfolio.cliObjectives) && (
+                <section className="border-t border-border/30 pt-6">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-400" />
+                    Skills Assessment
+                  </h2>
+                  
+                  {/* Stage Scores */}
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    {portfolio.auditScore !== undefined && portfolio.auditScore !== null && (
+                      <div className="p-4 bg-slate-900/50 rounded-lg border border-border/30 text-center">
+                        <PenTool className="w-5 h-5 mx-auto mb-2 text-purple-400" />
+                        <div className={`text-2xl font-bold ${portfolio.auditPassed ? "text-green-400" : "text-amber-400"}`}>
+                          {portfolio.auditScore}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">Drawing Audit</div>
+                        {portfolio.auditPassed && (
+                          <Badge className="mt-2 text-[10px] bg-green-500/20 text-green-400 border-green-500/30">
+                            Passed
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    {portfolio.proficiencyTest && (
+                      <div className="p-4 bg-slate-900/50 rounded-lg border border-border/30 text-center">
+                        <MessageSquare className="w-5 h-5 mx-auto mb-2 text-cyan-400" />
+                        <div className={`text-2xl font-bold ${portfolio.proficiencyTest.score >= 70 ? "text-green-400" : "text-amber-400"}`}>
+                          {portfolio.proficiencyTest.score}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">Proficiency Test</div>
+                        {portfolio.proficiencyTest.score >= 70 && (
+                          <Badge className="mt-2 text-[10px] bg-green-500/20 text-green-400 border-green-500/30">
+                            Passed
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    {portfolio.cliObjectives && (
+                      <div className="p-4 bg-slate-900/50 rounded-lg border border-border/30 text-center">
+                        <Terminal className="w-5 h-5 mx-auto mb-2 text-orange-400" />
+                        <div className="text-2xl font-bold text-green-400">
+                          {portfolio.cliObjectives.completedCount}/{portfolio.cliObjectives.totalCount}
+                        </div>
+                        <div className="text-xs text-muted-foreground">CLI Objectives</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {portfolio.cliObjectives.earnedPoints}/{portfolio.cliObjectives.totalPoints} pts
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Proficiency Test Details */}
+                  {portfolio.proficiencyTest && (
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Proficiency Summary</h3>
+                      <p className="text-sm text-muted-foreground mb-3">{portfolio.proficiencyTest.summary}</p>
+                      
+                      {portfolio.proficiencyTest.strengths && portfolio.proficiencyTest.strengths.length > 0 && (
+                        <div className="mb-3">
+                          <h4 className="text-xs font-medium text-green-400 mb-1">Strengths</h4>
+                          <ul className="space-y-1">
+                            {portfolio.proficiencyTest.strengths.map((s, i) => (
+                              <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                <CheckCircle2 className="w-3 h-3 text-green-400 mt-0.5 shrink-0" />
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {portfolio.proficiencyTest.areasForImprovement && portfolio.proficiencyTest.areasForImprovement.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-medium text-amber-400 mb-1">Areas for Growth</h4>
+                          <ul className="space-y-1">
+                            {portfolio.proficiencyTest.areasForImprovement.map((a, i) => (
+                              <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                                <span className="text-amber-400 mt-0.5">→</span>
+                                {a}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* CLI Objectives List */}
+                  {portfolio.cliObjectives && portfolio.cliObjectives.objectives && portfolio.cliObjectives.objectives.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">CLI Objectives Completed</h3>
+                      <ul className="space-y-1">
+                        {portfolio.cliObjectives.objectives.map((obj, i) => (
+                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                            <CheckCircle2 className={`w-3 h-3 mt-0.5 shrink-0 ${obj.completed ? "text-green-400" : "text-slate-500"}`} />
+                            <span className={obj.completed ? "" : "line-through opacity-50"}>
+                              {obj.description} <span className="text-slate-500">({obj.service})</span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </section>
               )}
             </div>

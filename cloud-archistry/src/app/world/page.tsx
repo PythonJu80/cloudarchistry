@@ -1589,10 +1589,13 @@ export default function WorldPage() {
             onClose={() => {
               setShowGenerationModal(false);
               setGenerationTarget(null);
-              // Clear custom form after successful generation
+              // Clear custom form after closing
               setCustomBusinessName("");
               setCustomBusinessAddress("");
               setCustomBusinessIndustry("Technology");
+              // Reset map state
+              setTargetCoords(null);
+              setMapView("globe");
             }}
             businessName={generationTarget.businessName}
             industry={generationTarget.industry}
@@ -1652,6 +1655,7 @@ export default function WorldPage() {
               setNewChallengeData(data);
               // Also reset map state so Back to Globe doesn't show
               setSelectedLocation(null);
+              setTargetCoords(null);
               setMapView("globe");
             }}
           />
