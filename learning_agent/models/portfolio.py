@@ -144,7 +144,7 @@ class PortfolioContent(BaseModel):
     keyDecisions: List[str]
     complianceAchieved: List[str]
     awsServicesUsed: List[str]
-    proficiencyHighlights: List[str] = []  # Highlights from proficiency assessment
+    technicalHighlights: List[str]  # Technical accomplishments demonstrating expertise
 
 
 class GeneratePortfolioResponse(BaseModel):

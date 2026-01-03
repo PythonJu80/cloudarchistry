@@ -39,15 +39,11 @@ interface Portfolio {
   awsServices: string[];
   keyDecisions: string[];
   complianceAchieved: string[];
-  challengeScore: number;
-  maxScore: number;
-  completionTimeMinutes: number;
+  technicalHighlights: string[];
   createdAt: Date;
   isExample: boolean;
   profileId: string | null;
   architectureDiagram: { nodes: DiagramNode[]; edges: DiagramEdge[] } | null;
-  // New fields for stage completion data
-  challengeProgressId: string | null;
 }
 
 /**
@@ -76,14 +72,11 @@ export async function GET(
         "awsServices",
         "keyDecisions",
         "complianceAchieved",
-        "challengeScore",
-        "maxScore",
-        "completionTimeMinutes",
+        "technicalHighlights",
         "createdAt",
         "isExample",
         "profileId",
-        "architectureDiagram",
-        "challengeProgressId"
+        "architectureDiagram"
       FROM "AcademyPortfolio"
       WHERE id = ${id}
       LIMIT 1
@@ -98,94 +91,19 @@ export async function GET(
 
     const portfolio = portfolios[0];
 
-    // Fetch challenge progress data for stage completion info
-    let auditScore: number | null = null;
-    let auditPassed = false;
-    let proficiencyTest: PortfolioPDFData["proficiencyTest"] = null;
-    let cliObjectives: PortfolioPDFData["cliObjectives"] = null;
-
-    // For example portfolios, use hardcoded example data
-    if (portfolio.isExample) {
-      auditScore = 92;
-      auditPassed = true;
-      proficiencyTest = {
-        score: 88,
-        summary: "Demonstrated strong understanding of AWS architecture patterns and best practices for high-availability e-commerce platforms.",
-        strengths: [
-          "Excellent grasp of multi-AZ deployment strategies",
-          "Strong understanding of load balancing and auto-scaling",
-          "Good knowledge of database replication and failover",
-          "Clear articulation of security best practices"
-        ],
-        areasForImprovement: [
-          "Consider exploring AWS Global Accelerator for global traffic management",
-          "Could benefit from deeper knowledge of cost optimization strategies"
-        ]
-      };
-      cliObjectives = {
-        completedCount: 3,
-        totalCount: 3,
-        earnedPoints: 45,
-        totalPoints: 45,
-        objectives: [
-          { description: "Create an Application Load Balancer with health checks", completed: true, service: "ELB" },
-          { description: "Configure Auto Scaling group with scaling policies", completed: true, service: "Auto Scaling" },
-          { description: "Set up RDS Multi-AZ deployment", completed: true, service: "RDS" }
-        ]
-      };
-    } else if (portfolio.challengeProgressId) {
-      const progressData = await prisma.challengeProgress.findUnique({
-        where: { id: portfolio.challengeProgressId },
-        select: { solution: true },
-      });
-
-      if (progressData?.solution) {
-        const solution = progressData.solution as {
-          auditScore?: number;
-          auditPassed?: boolean;
-          proficiencyTest?: {
-            score: number;
-            summary: string;
-            strengths: string[];
-            areasForImprovement: string[];
-          };
-          cliObjectives?: {
-            objectives: Array<{ description: string; completed: boolean; service: string; points: number }>;
-            totalPoints: number;
-            earnedPoints: number;
-          };
-        };
-
-        auditScore = solution.auditScore ?? null;
-        auditPassed = solution.auditPassed ?? false;
-
-        if (solution.proficiencyTest) {
-          proficiencyTest = {
-            score: solution.proficiencyTest.score,
-            summary: solution.proficiencyTest.summary || "",
-            strengths: solution.proficiencyTest.strengths || [],
-            areasForImprovement: solution.proficiencyTest.areasForImprovement || [],
-          };
-        }
-
-        if (solution.cliObjectives?.objectives) {
-          const objectives = solution.cliObjectives.objectives;
-          cliObjectives = {
-            completedCount: objectives.filter(o => o.completed).length,
-            totalCount: objectives.length,
-            earnedPoints: solution.cliObjectives.earnedPoints || 0,
-            totalPoints: solution.cliObjectives.totalPoints || 0,
-            objectives: objectives.map(o => ({
-              description: o.description,
-              completed: o.completed,
-              service: o.service,
-            })),
-          };
-        }
-      }
+    // For example portfolios, add example technical highlights if not in DB
+    let technicalHighlights = portfolio.technicalHighlights || [];
+    if (portfolio.isExample && technicalHighlights.length === 0) {
+      technicalHighlights = [
+        "Implemented multi-AZ Application Load Balancer with custom health checks and connection draining for zero-downtime deployments",
+        "Configured Auto Scaling groups with target tracking policies based on CPU utilization and request count metrics",
+        "Deployed RDS PostgreSQL with Multi-AZ standby, automated backups, and encryption at rest using AWS KMS",
+        "Established VPC architecture with public/private subnet separation and NAT Gateway for secure outbound traffic",
+        "Integrated AWS WAF with CloudFront distribution to protect against common web exploits and DDoS attacks"
+      ];
     }
-
-    // Prepare PDF data - pass raw diagram data directly
+    
+    // Prepare PDF data
     const pdfData: PortfolioPDFData = {
       title: portfolio.title,
       companyName: portfolio.companyName || "Unknown Company",
@@ -196,16 +114,9 @@ export async function GET(
       awsServices: portfolio.awsServices || [],
       keyDecisions: portfolio.keyDecisions || [],
       complianceAchieved: portfolio.complianceAchieved || [],
-      challengeScore: portfolio.challengeScore,
-      maxScore: portfolio.maxScore,
-      completionTimeMinutes: portfolio.completionTimeMinutes,
+      technicalHighlights,
       createdAt: portfolio.createdAt.toISOString(),
       architectureDiagram: portfolio.architectureDiagram,
-      // Stage completion data
-      auditScore,
-      auditPassed,
-      proficiencyTest,
-      cliObjectives,
     };
 
     // Generate PDF

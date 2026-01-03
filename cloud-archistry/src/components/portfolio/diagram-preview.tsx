@@ -14,16 +14,20 @@ interface DiagramNode {
   type: string;
   position: { x: number; y: number };
   data: {
-    serviceId: string;
+    serviceId?: string;
     label: string;
     sublabel?: string;
-    color: string;
+    color?: string;
     subnetType?: "public" | "private";
+    icon?: string;
+    config?: Record<string, unknown>;
   };
   parentId?: string;
   width?: number;
   height?: number;
   style?: React.CSSProperties;
+  zIndex?: number;
+  measured?: { width: number; height: number };
 }
 
 interface DiagramEdge {
@@ -43,17 +47,28 @@ interface DiagramPreviewProps {
 
 export function DiagramPreview({ nodes, edges, className }: DiagramPreviewProps) {
   // Convert nodes to React Flow format with proper styling
-  const flowNodes = nodes.map((node) => ({
-    ...node,
-    // Ensure container nodes have proper dimensions
-    style: node.type === "vpc" 
-      ? { width: node.width || 600, height: node.height || 400 }
-      : node.type === "subnet"
-      ? { width: node.width || 250, height: node.height || 180 }
-      : node.style,
-    // Keep extent for child nodes
-    extent: node.parentId ? "parent" as const : undefined,
-  }));
+  // Clean up extra properties that might interfere with rendering
+  const flowNodes = nodes.map((node) => {
+    const isContainer = node.type === "vpc" || node.type === "subnet";
+    
+    return {
+      id: node.id,
+      type: node.type,
+      position: node.position,
+      data: node.data,
+      parentId: node.parentId,
+      // Set dimensions for container nodes
+      style: isContainer 
+        ? { width: node.width || 600, height: node.height || 400 }
+        : node.width && node.height 
+        ? { width: node.width, height: node.height }
+        : undefined,
+      // Keep extent for child nodes
+      extent: node.parentId ? "parent" as const : undefined,
+      // Ensure proper z-index ordering: containers at back, services on top
+      zIndex: isContainer ? -10 : 10,
+    };
+  });
 
   // Convert edges to React Flow format with styling
   const flowEdges = edges.map((edge) => ({
@@ -72,19 +87,19 @@ export function DiagramPreview({ nodes, edges, className }: DiagramPreviewProps)
           edges={flowEdges}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={{ padding: 0.15 }}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
           panOnDrag={true}
           zoomOnScroll={true}
-          className="bg-slate-100 rounded-lg"
+          className="bg-gradient-to-br from-slate-50 to-white rounded-lg"
         >
           <Background
             variant={BackgroundVariant.Dots}
             gap={20}
             size={1}
-            color="#cbd5e1"
+            color="#94a3b8"
           />
           <Controls 
             showInteractive={false}

@@ -4,12 +4,14 @@ import { authOptions } from "@/lib/auth";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { prisma } from "@/lib/db";
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
+// Use Drawing Agent for Architect Arena (has local AWS service knowledge base)
+const DRAWING_AGENT_URL = process.env.DRAWING_AGENT_URL || process.env.NEXT_PUBLIC_DRAWING_AGENT_URL || "http://localhost:6098";
 
 /**
  * POST /api/gaming/architect-arena/generate - Generate AI puzzle for Architect Arena
  * 
- * Calls /api/architect-arena/generate on the Learning Agent.
+ * Calls /api/architect-arena/generate on the Drawing Agent.
+ * The Drawing Agent has the local AWS service knowledge base for accurate service names.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -50,9 +52,9 @@ export async function POST(req: NextRequest) {
       difficulty: body?.difficulty,
     });
 
-    // Call the Learning Agent endpoint
+    // Call the Drawing Agent endpoint (has AWS service knowledge base)
     const response = await fetch(
-      `${LEARNING_AGENT_URL}/api/architect-arena/generate`,
+      `${DRAWING_AGENT_URL}/api/architect-arena/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Architect Arena] Learning agent error:", errorText);
+      console.error("[Architect Arena] Drawing agent error:", errorText);
       return NextResponse.json(
         { error: "Failed to generate puzzle" },
         { status: 500 }

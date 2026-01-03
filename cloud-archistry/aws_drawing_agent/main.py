@@ -97,6 +97,33 @@ class BugBountyValidateRequest(BaseModel):
     openai_api_key: Optional[str] = None
 
 
+# ============================================
+# ARCHITECT ARENA MODELS
+# ============================================
+
+class ArchitectArenaGenerateRequest(BaseModel):
+    """Request to generate an Architect Arena puzzle."""
+    certification_code: str = "SAA-C03"
+    user_level: str = "intermediate"
+    options: Optional[Dict] = None
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+
+
+class ArchitectArenaAuditRequest(BaseModel):
+    """Request to audit an Architect Arena puzzle submission."""
+    puzzle_title: str
+    puzzle_brief: str
+    expected_hierarchy: Optional[Dict] = None
+    expected_connections: Optional[List[Dict]] = None
+    nodes: List[Dict]
+    connections: List[Dict]
+    openai_api_key: Optional[str] = None
+    preferred_model: Optional[str] = None
+    cert_code: Optional[str] = None
+    user_level: Optional[str] = None
+
+
 @app.on_event("startup")
 async def startup():
     """Initialize database connection on startup."""
@@ -480,6 +507,96 @@ async def delete_challenge(challenge_id: str):
     except Exception as e:
         logger.error(f"Challenge delete failed: {e}")
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+
+
+# ============================================
+# ARCHITECT ARENA ENDPOINTS
+# ============================================
+
+@app.post("/api/architect-arena/generate")
+async def generate_architect_arena(request: ArchitectArenaGenerateRequest):
+    """
+    Generate an Architect Arena puzzle.
+    
+    Returns puzzle pieces (AWS services) that the user must arrange
+    into a correct architecture diagram.
+    """
+    try:
+        from architect_arena import ArchitectArenaGenerator
+        
+        # Use provided API key or fallback to environment
+        api_key = request.openai_api_key or OPENAI_API_KEY
+        if not api_key:
+            raise HTTPException(status_code=400, detail="OpenAI API key required")
+        
+        model = request.preferred_model or "gpt-4.1"
+        generator = ArchitectArenaGenerator(openai_api_key=api_key, model=model)
+        
+        # Get difficulty from options if provided
+        difficulty = None
+        if request.options:
+            difficulty = request.options.get("difficulty")
+        
+        # Generate puzzle
+        puzzle = generator.generate_puzzle(
+            user_level=request.user_level,
+            cert_code=request.certification_code,
+            difficulty=difficulty,
+        )
+        
+        logger.info(f"Generated Architect Arena puzzle: {puzzle.title} with {len(puzzle.pieces)} pieces")
+        
+        return {
+            "success": True,
+            "puzzle": puzzle.model_dump(),
+            "certification": request.certification_code,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Architect Arena generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+
+
+@app.post("/api/architect-arena/audit")
+async def audit_architect_arena(request: ArchitectArenaAuditRequest):
+    """
+    Audit an Architect Arena puzzle submission.
+    
+    Evaluates the user's placement and connections against the expected
+    architecture and returns a score with feedback.
+    """
+    try:
+        from architect_arena import ArchitectArenaGenerator
+        
+        # Use provided API key or fallback to environment
+        api_key = request.openai_api_key or OPENAI_API_KEY
+        if not api_key:
+            raise HTTPException(status_code=400, detail="OpenAI API key required")
+        
+        model = request.preferred_model or "gpt-4.1"
+        generator = ArchitectArenaGenerator(openai_api_key=api_key, model=model)
+        
+        # Audit the submission
+        result = generator.audit_puzzle(
+            puzzle_title=request.puzzle_title,
+            puzzle_brief=request.puzzle_brief,
+            expected_hierarchy=request.expected_hierarchy or {},
+            expected_connections=request.expected_connections or [],
+            nodes=request.nodes,
+            connections=request.connections,
+            cert_code=request.cert_code,
+            user_level=request.user_level,
+        )
+        
+        logger.info(f"Audited Architect Arena puzzle: {request.puzzle_title}, score: {result.get('score', 0)}")
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Architect Arena audit failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Audit failed: {str(e)}")
 
 
 # ============================================

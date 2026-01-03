@@ -238,40 +238,17 @@ async function triggerPortfolioGeneration(attemptId: string): Promise<void> {
       console.error("[Portfolio Generation] Learning Agent call failed:", error);
     }
 
-    // Step 2: Call Drawing Agent to enhance diagram
-    let enhancedDiagram = bestDiagram;
-
-    if (bestDiagram && bestDiagram.nodes.length > 0) {
-      console.log("[Portfolio Generation] Calling Drawing Agent...");
-      try {
-        const drawingResponse = await fetch(`${DRAWING_AGENT_URL}/portfolio/enhance-diagram`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            diagram: bestDiagram,
-            scenario_context: scenarioContext,
-            location_context: locationContext,
-            openai_api_key: aiConfig?.key || "",
-          }),
-        });
-
-        if (drawingResponse.ok) {
-          const data = await drawingResponse.json();
-          if (data.success && data.enhanced_diagram) {
-            enhancedDiagram = data.enhanced_diagram;
-            console.log("[Portfolio Generation] Drawing Agent enhancement received");
-          }
-        } else {
-          console.error("[Portfolio Generation] Drawing Agent error:", await drawingResponse.text());
-        }
-      } catch (error) {
-        console.error("[Portfolio Generation] Drawing Agent call failed:", error);
-      }
-    }
+    // Step 2: Use the user's actual diagram directly (no Drawing Agent enhancement needed)
+    // The user's diagram already has proper positions, nodes, and edges from their work
+    // Drawing Agent was generating a completely new diagram instead of enhancing, losing user's work
+    const finalDiagram = bestDiagram;
+    console.log("[Portfolio Generation] Using user's original diagram with", 
+      finalDiagram?.nodes?.length || 0, "nodes and", 
+      finalDiagram?.edges?.length || 0, "edges");
 
     // Step 3: Extract AWS services from diagram if not from Learning Agent
     const awsServices = learningAgentContent?.awsServicesUsed || 
-      extractServicesFromDiagram(enhancedDiagram) ||
+      extractServicesFromDiagram(finalDiagram) ||
       scenarioContext.awsServices;
 
     // Step 4: Save to AcademyPortfolio
@@ -330,7 +307,7 @@ async function triggerPortfolioGeneration(attemptId: string): Promise<void> {
         ${attemptId},
         ${bestDiagramChallengeProgressId || attempt.challengeProgress[0]?.id || null},
         ${location?.slug || null},
-        ${enhancedDiagram ? JSON.stringify(enhancedDiagram) : null}::jsonb,
+        ${finalDiagram ? JSON.stringify(finalDiagram) : null}::jsonb,
         NOW(),
         NOW(),
         NOW()

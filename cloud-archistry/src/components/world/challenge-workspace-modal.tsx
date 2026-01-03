@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
@@ -154,6 +155,7 @@ export function ChallengeWorkspaceModal({
   attemptId,
 }: ChallengeWorkspaceModalProps) {
   const { toast } = useToast();
+  const router = useRouter();
   
   // Questions state
   const [questionsData, setQuestionsData] = useState<ChallengeQuestionsData | null>(null);
@@ -1430,7 +1432,7 @@ export function ChallengeWorkspaceModal({
                   <>
                     {/* Completed Questions - Show Results Summary */}
                     {questionsData.questions.every(q => answers[q.id]?.isSubmitted) && (
-                      <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
+                      <div className="flex-1 flex flex-col items-center p-8 overflow-y-auto">
                         <div className="max-w-2xl w-full">
                           {/* Success Header */}
                           <div className="text-center mb-8">
@@ -2037,7 +2039,7 @@ export function ChallengeWorkspaceModal({
                   <div className="flex-1 flex flex-col overflow-hidden bg-slate-900/50">
                     {/* Completed Proficiency Test - Full Report View */}
                     {hasChatCompleted && proficiencyResult && (
-                      <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
+                      <div className="flex-1 flex flex-col items-center p-8 overflow-y-auto">
                         <div className="max-w-2xl w-full">
                           {/* Success Header */}
                           <div className="text-center mb-8">
@@ -2363,11 +2365,58 @@ export function ChallengeWorkspaceModal({
                                   <p className="text-xs text-slate-400 mt-1">Ready to generate your portfolio</p>
                                 </div>
                                 <Button
-                                  onClick={() => {/* Portfolio generation handled elsewhere */}}
+                                  onClick={async () => {
+                                    setIsGeneratingPortfolio(true);
+                                    if (attemptId) {
+                                      try {
+                                        const portfolioResponse = await fetch("/api/portfolio/generate", {
+                                          method: "POST",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ attemptId }),
+                                        });
+                                        
+                                        if (portfolioResponse.ok) {
+                                          toast({
+                                            title: "🎓 Portfolio Generated!",
+                                            description: "Redirecting to your profile...",
+                                          });
+                                          // Close modal and redirect to profile page
+                                          onClose();
+                                          router.push("/dashboard/settings");
+                                        } else {
+                                          const errorData = await portfolioResponse.json();
+                                          toast({
+                                            title: "Portfolio Generation Failed",
+                                            description: errorData.error || "Please try again or contact support.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      } catch (err) {
+                                        console.error("Failed to generate portfolio:", err);
+                                        toast({
+                                          title: "Portfolio Generation Failed",
+                                          description: "An error occurred. Please try again.",
+                                          variant: "destructive",
+                                        });
+                                      } finally {
+                                        setIsGeneratingPortfolio(false);
+                                      }
+                                    }
+                                  }}
+                                  disabled={isGeneratingPortfolio}
                                   className="bg-green-500 hover:bg-green-600 gap-2"
                                 >
-                                  <Sparkles className="w-4 h-4" />
-                                  Complete Challenge
+                                  {isGeneratingPortfolio ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                      Generating Portfolio...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="w-4 h-4" />
+                                      Complete & Generate Portfolio
+                                    </>
+                                  )}
                                 </Button>
                               </>
                             ) : (
@@ -2450,56 +2499,43 @@ export function ChallengeWorkspaceModal({
                                 onClick={async () => {
                                   setShowCLICelebration(false);
                                   setIsGeneratingPortfolio(true);
-                                  // Trigger challenge completion to generate portfolio
-                                  if (attemptId && challenge?.id) {
+                                  // Trigger portfolio generation directly
+                                  if (attemptId) {
                                     try {
-                                      const answersArray = Object.entries(answers)
-                                        .filter(([, state]) => state.isSubmitted)
-                                        .map(([questionId, state]) => ({
-                                          questionId,
-                                          selectedOptionId: state.selectedOptionId,
-                                          isCorrect: state.isCorrect || false,
-                                          pointsEarned: state.isCorrect ? 20 : 0,
-                                          hintUsed: revealedQuestionHints.has(questionId),
-                                          answeredAt: new Date().toISOString(),
-                                        }));
-                                      
-                                      await fetch("/api/challenge/progress", {
+                                      const portfolioResponse = await fetch("/api/portfolio/generate", {
                                         method: "POST",
                                         headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify({
                                           attemptId,
-                                          challengeId: challenge.id,
-                                          answers: answersArray,
-                                          totalPointsEarned: earnedPoints,
-                                          hintsUsed: revealedQuestionHints.size,
-                                          isComplete: true,
-                                          diagramData,
-                                          diagramScore,
-                                          auditScore: lastAuditResult?.score,
-                                          auditPassed: hasDrawingPassed,
-                                          questionsData: questionsData ? {
-                                            brief: questionsData.brief,
-                                            questions: questionsData.questions,
-                                            totalPoints: questionsData.total_points,
-                                            estimatedTimeMinutes: questionsData.estimated_time_minutes,
-                                          } : undefined,
                                         }),
                                       });
                                       
-                                      toast({
-                                        title: "🎓 Challenge Complete!",
-                                        description: "Your portfolio is being generated. Check your dashboard soon!",
-                                      });
+                                      if (portfolioResponse.ok) {
+                                        toast({
+                                          title: "🎓 Portfolio Generated!",
+                                          description: "Redirecting to your profile...",
+                                        });
+                                        // Close modal and redirect to profile page
+                                        onClose();
+                                        router.push("/dashboard/settings");
+                                      } else {
+                                        const errorData = await portfolioResponse.json();
+                                        toast({
+                                          title: "Portfolio Generation Failed",
+                                          description: errorData.error || "Please try again or contact support.",
+                                          variant: "destructive",
+                                        });
+                                      }
                                     } catch (err) {
-                                      console.error("Failed to complete challenge:", err);
+                                      console.error("Failed to generate portfolio:", err);
+                                      toast({
+                                        title: "Portfolio Generation Failed",
+                                        description: "An error occurred. Please try again.",
+                                        variant: "destructive",
+                                      });
                                     } finally {
                                       setIsGeneratingPortfolio(false);
                                     }
-                                  }
-                                  
-                                  if (onNextChallenge && challengeIndex < totalChallenges - 1) {
-                                    onNextChallenge();
                                   }
                                 }}
                                 disabled={isGeneratingPortfolio}

@@ -3,14 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { prisma } from "@/lib/db";
-import { recordSoloGame, updateGameModeStats } from "@/lib/gaming/stats";
+import { recordSoloGame } from "@/lib/gaming/stats";
 
-const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
+// Use Drawing Agent for Architect Arena (has local AWS service knowledge base)
+const DRAWING_AGENT_URL = process.env.DRAWING_AGENT_URL || process.env.NEXT_PUBLIC_DRAWING_AGENT_URL || "http://localhost:6098";
 
 /**
  * POST /api/gaming/architect-arena/audit - Submit puzzle for AI audit
  * 
- * Calls /api/learning/audit-diagram on the Learning Agent.
+ * Calls /api/architect-arena/audit on the Drawing Agent.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -26,10 +27,13 @@ export async function POST(req: NextRequest) {
     const aiConfig = await getAiConfigForRequest(profileId);
 
     console.log(`[Architect Arena Audit] Auditing puzzle: ${body.puzzle_title}`);
+    console.log(`[Architect Arena Audit] Nodes received: ${body.nodes?.length || 0}`);
+    console.log(`[Architect Arena Audit] Connections received: ${body.connections?.length || 0}`);
+    console.log(`[Architect Arena Audit] Drawing Agent URL: ${DRAWING_AGENT_URL}`);
 
-    // Call the Architect Arena specific audit endpoint (judges PLACEMENT, not presence)
+    // Call the Drawing Agent audit endpoint (judges PLACEMENT, not presence)
     const response = await fetch(
-      `${LEARNING_AGENT_URL}/api/architect-arena/audit`,
+      `${DRAWING_AGENT_URL}/api/architect-arena/audit`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Architect Arena Audit] Learning agent error:", errorText);
+      console.error("[Architect Arena Audit] Drawing agent error:", errorText);
       return NextResponse.json(
         { error: "Failed to audit puzzle" },
         { status: 500 }
@@ -80,25 +84,31 @@ export async function POST(req: NextRequest) {
         won
       );
 
-      // Update Architect Arena specific stats
+      // Update Architect Arena specific stats (uses arenaStats field in schema)
       const profile = await prisma.gameProfile.findUnique({
         where: { userId: academyUser.id },
       });
 
-      const currentStats = (profile?.architectArenaStats as Record<string, unknown>) || {};
+      const currentStats = (profile?.arenaStats as Record<string, unknown>) || {};
       const gamesPlayed = ((currentStats.gamesPlayed as number) || 0) + 1;
       const gamesWon = ((currentStats.gamesWon as number) || 0) + (won ? 1 : 0);
       const highScore = Math.max((currentStats.highScore as number) || 0, score);
       const totalScore = ((currentStats.totalScore as number) || 0) + score;
 
-      await updateGameModeStats(academyUser.id, "architect_arena", {
-        gamesPlayed,
-        gamesWon,
-        highScore,
-        totalScore,
-        avgScore: Math.round(totalScore / gamesPlayed),
-        lastScore: score,
-        lastPlayed: new Date().toISOString(),
+      // Update using arenaStats field (not architectArenaStats)
+      await prisma.gameProfile.update({
+        where: { userId: academyUser.id },
+        data: {
+          arenaStats: {
+            gamesPlayed,
+            gamesWon,
+            highScore,
+            totalScore,
+            avgScore: Math.round(totalScore / gamesPlayed),
+            lastScore: score,
+            lastPlayed: new Date().toISOString(),
+          },
+        },
       });
     }
 

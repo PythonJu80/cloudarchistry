@@ -1,4 +1,5 @@
 import React from "react";
+import path from "path";
 import {
   Document,
   Page,
@@ -7,10 +8,186 @@ import {
   StyleSheet,
   Svg,
   Rect,
-  Line,
+  Path,
   G,
   Text as SvgText,
+  Image,
 } from "@react-pdf/renderer";
+import { AWS_SERVICES, getServiceById } from "@/lib/aws-services";
+import { applyDynamicLayout, DiagramNode as LayoutDiagramNode } from "@/lib/diagram-layout";
+import fs from "fs";
+
+// Get absolute path to public directory for server-side icon loading
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+const AWS_ICONS_DIR = path.join(PUBLIC_DIR, "aws-icons");
+
+// Cache for programmatically discovered icons
+let iconCache: Map<string, string> | null = null;
+
+// Build icon cache by scanning the aws-icons directory structure
+function buildIconCache(): Map<string, string> {
+  if (iconCache) return iconCache;
+  
+  iconCache = new Map<string, string>();
+  
+  try {
+    // Scan Architecture-Service-Icons (main services) - prefer 64px PNGs
+    const servicesDir = path.join(AWS_ICONS_DIR, "Architecture-Service-Icons_07312025");
+    if (fs.existsSync(servicesDir)) {
+      const folders = fs.readdirSync(servicesDir);
+      for (const folder of folders) {
+        if (folder.startsWith(".")) continue;
+        
+        // Check for 64px PNGs first (better quality for PDF)
+        const size64Dir = path.join(servicesDir, folder, "64");
+        const size48Dir = path.join(servicesDir, folder, "48");
+        
+        const sizeDir = fs.existsSync(size64Dir) ? size64Dir : (fs.existsSync(size48Dir) ? size48Dir : null);
+        const sizeSuffix = fs.existsSync(size64Dir) ? "64" : "48";
+        
+        if (sizeDir) {
+          const files = fs.readdirSync(sizeDir);
+          for (const file of files) {
+            if (!file.endsWith(".png") || file.includes("@5x")) continue;
+            
+            // Extract service name and create multiple lookup keys
+            // e.g., Arch_Amazon-Route-53_64.png -> route53, route-53, amazon-route-53
+            // e.g., Arch_AWS-Key-Management-Service_48.png -> kms, key-management-service
+            const baseName = file.replace(`_${sizeSuffix}.png`, "").replace("Arch_", "");
+            const withHyphens = baseName.toLowerCase().replace(/[^a-z0-9-]/g, "");
+            const withoutHyphens = withHyphens.replace(/-/g, "");
+            const shortWithHyphens = withHyphens.replace("amazon-", "").replace("aws-", "");
+            const shortWithoutHyphens = shortWithHyphens.replace(/-/g, "");
+            
+            const iconPath = `/aws-icons/Architecture-Service-Icons_07312025/${folder}/${sizeSuffix}/${file}`;
+            
+            // Add multiple lookup keys - both with and without hyphens
+            iconCache.set(shortWithoutHyphens, iconPath);  // e.g., "route53", "keymanagementservice"
+            iconCache.set(shortWithHyphens, iconPath);     // e.g., "route-53", "key-management-service"
+            iconCache.set(withoutHyphens, iconPath);       // e.g., "amazonroute53"
+            iconCache.set(withHyphens, iconPath);          // e.g., "amazon-route-53"
+            
+            // Generate abbreviations from hyphenated names (e.g., "key-management-service" -> "kms")
+            const words = shortWithHyphens.split("-");
+            if (words.length > 1) {
+              const abbrev = words.map(w => w[0]).join("");
+              iconCache.set(abbrev, iconPath);  // e.g., "kms", "cw" for cloudwatch
+            }
+          }
+        }
+      }
+    }
+    
+    // Scan Resource-Icons for general icons (users, IGW, ALB, etc.)
+    const resourcesDir = path.join(AWS_ICONS_DIR, "Resource-Icons_07312025");
+    if (fs.existsSync(resourcesDir)) {
+      const folders = fs.readdirSync(resourcesDir);
+      for (const folder of folders) {
+        if (folder.startsWith(".")) continue;
+        const folderPath = path.join(resourcesDir, folder);
+        
+        // Scan files directly in the folder (e.g., Res_Amazon-VPC_Internet-Gateway_48.png)
+        if (fs.statSync(folderPath).isDirectory()) {
+          const files = fs.readdirSync(folderPath);
+          for (const file of files) {
+            if (!file.endsWith("_48.png") || file.includes("@5x")) continue;
+            
+            // e.g., Res_Amazon-VPC_Internet-Gateway_48.png
+            // Pattern: Res_{Service}_{Resource}_48.png
+            const baseName = file.replace("_48.png", "").replace("Res_", "");
+            const parts = baseName.split("_"); // ["Amazon-VPC", "Internet-Gateway"]
+            
+            const iconPath = `/aws-icons/Resource-Icons_07312025/${folder}/${file}`;
+            
+            // Create lookup keys from ALL parts of the filename
+            for (const part of parts) {
+              const withHyphens = part.toLowerCase();
+              const withoutHyphens = withHyphens.replace(/-/g, "");
+              const withoutAmazon = withHyphens.replace("amazon-", "").replace("aws-", "");
+              const withoutAmazonNoHyphens = withoutAmazon.replace(/-/g, "");
+              
+              iconCache.set(withHyphens, iconPath);
+              iconCache.set(withoutHyphens, iconPath);
+              iconCache.set(withoutAmazon, iconPath);
+              iconCache.set(withoutAmazonNoHyphens, iconPath);
+              
+              // Extract abbreviations from hyphenated names (e.g., "Internet-Gateway" -> "IG", "Application-Load-Balancer" -> "ALB")
+              const words = part.split("-");
+              if (words.length > 1) {
+                const abbrev = words.map(w => w[0]).join("").toLowerCase();
+                iconCache.set(abbrev, iconPath);
+              }
+            }
+            
+            // Also create key from full resource name (last part)
+            const resourcePart = parts[parts.length - 1];
+            const fullWithHyphens = resourcePart.toLowerCase();
+            const fullWithoutHyphens = fullWithHyphens.replace(/-/g, "");
+            iconCache.set(fullWithHyphens, iconPath);
+            iconCache.set(fullWithoutHyphens, iconPath);
+          }
+        }
+        
+        // Also check for Res_48_Light subfolder (common structure for other icons)
+        const lightDir = path.join(folderPath, "Res_48_Light");
+        if (fs.existsSync(lightDir)) {
+          const files = fs.readdirSync(lightDir);
+          for (const file of files) {
+            if (!file.endsWith(".png") || file.includes("@5x")) continue;
+            
+            // e.g., Res_Users_48_Light.png -> users, icon-users, iam-user
+            const baseName = file.replace("_48_Light.png", "").replace("Res_", "");
+            const normalized = baseName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            
+            const iconPath = `/aws-icons/Resource-Icons_07312025/${folder}/Res_48_Light/${file}`;
+            
+            iconCache.set(normalized, iconPath);           // e.g., "users"
+            iconCache.set(`icon-${normalized}`, iconPath); // e.g., "icon-users"
+            iconCache.set(`iam-${normalized}`, iconPath);  // e.g., "iam-users"
+            // Handle singular/plural
+            if (normalized.endsWith("s")) {
+              iconCache.set(`iam-${normalized.slice(0, -1)}`, iconPath); // e.g., "iam-user"
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error building icon cache:", error);
+  }
+  
+  return iconCache;
+}
+
+// Get PNG icon path for a service ID by searching the icon directories
+function getAwsIconPngPath(serviceId: string): string | undefined {
+  const cache = buildIconCache();
+  
+  // Try direct lookup
+  if (cache.has(serviceId)) {
+    const iconPath = cache.get(serviceId)!;
+    const fullPath = path.join(PUBLIC_DIR, iconPath);
+    if (fs.existsSync(fullPath)) return iconPath;
+  }
+  
+  // Try normalized version
+  const normalized = serviceId.toLowerCase().replace(/[^a-z0-9]/g, "-");
+  if (cache.has(normalized)) {
+    const iconPath = cache.get(normalized)!;
+    const fullPath = path.join(PUBLIC_DIR, iconPath);
+    if (fs.existsSync(fullPath)) return iconPath;
+  }
+  
+  // Try without common prefixes
+  const withoutPrefix = normalized.replace("amazon-", "").replace("aws-", "").replace("icon-", "").replace("iam-", "");
+  if (cache.has(withoutPrefix)) {
+    const iconPath = cache.get(withoutPrefix)!;
+    const fullPath = path.join(PUBLIC_DIR, iconPath);
+    if (fs.existsSync(fullPath)) return iconPath;
+  }
+  
+  return undefined;
+}
 
 // Using built-in Helvetica font for reliability in Docker/server environments
 const styles = StyleSheet.create({
@@ -182,19 +359,24 @@ interface DiagramNode {
   type: string;
   position: { x: number; y: number };
   data: {
-    serviceId: string;
+    serviceId?: string;
     label: string;
     sublabel?: string;
-    color: string;
+    color?: string;
     subnetType?: "public" | "private";
+    icon?: string;
   };
   parentId?: string;
+  width?: number;
+  height?: number;
 }
 
 interface DiagramEdge {
   id: string;
   source: string;
   target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
   label?: string;
 }
 
@@ -208,86 +390,87 @@ export interface PortfolioPDFData {
   awsServices: string[];
   keyDecisions: string[];
   complianceAchieved: string[];
-  challengeScore: number;
-  maxScore: number;
-  completionTimeMinutes: number;
+  technicalHighlights?: string[];
   createdAt: string;
   architectureDiagram?: { nodes: DiagramNode[]; edges: DiagramEdge[] } | null;
-  // New fields for stage completion data
-  auditScore?: number | null;
-  auditPassed?: boolean;
-  proficiencyTest?: {
-    score: number;
-    summary: string;
-    strengths: string[];
-    areasForImprovement: string[];
-  } | null;
-  cliObjectives?: {
-    completedCount: number;
-    totalCount: number;
-    earnedPoints: number;
-    totalPoints: number;
-    objectives: Array<{ description: string; completed: boolean; service: string }>;
-  } | null;
 }
 
-// AWS service name to acronym mapping - only abbreviate long names
-const SERVICE_ACRONYMS: Record<string, string> = {
-  // Load balancers - always abbreviate
-  "Application Load Balancer": "ALB",
-  "Network Load Balancer": "NLB",
-  "Classic Load Balancer": "CLB",
-  "Elastic Load Balancer": "ELB",
-  // Gateways
-  "NAT Gateway": "NAT GW",
-  "Internet Gateway": "IGW",
-  "API Gateway": "API GW",
-  // Long service names
-  "Virtual Private Cloud": "VPC",
-  "Elastic Compute Cloud": "EC2",
-  "Relational Database Service": "RDS",
-  "Simple Storage Service": "S3",
-  "Elastic Container Service": "ECS",
-  "Elastic Kubernetes Service": "EKS",
-  "Key Management Service": "KMS",
-  "Identity and Access Management": "IAM",
-  "Simple Queue Service": "SQS",
-  "Simple Notification Service": "SNS",
-  "Web Application Firewall": "WAF",
-  "Auto Scaling Group": "ASG",
-  "Systems Manager": "SSM",
-  "Certificate Manager": "ACM",
-  // Keep these readable
-  "CloudFront Distribution": "CloudFront",
-  "S3 Bucket": "S3",
-  "ECS Fargate": "Fargate",
-  "Lambda Function": "Lambda",
-};
+// Build service lookup maps from AWS_SERVICES for efficient label resolution
+const serviceByName = new Map<string, { shortName: string; id: string }>();
+const serviceById = new Map<string, { shortName: string; name: string }>();
+for (const svc of AWS_SERVICES) {
+  serviceByName.set(svc.name.toLowerCase(), { shortName: svc.shortName, id: svc.id });
+  serviceById.set(svc.id, { shortName: svc.shortName, name: svc.name });
+}
 
-// Get abbreviated label for diagram display
-function getAbbreviatedLabel(label: string): string {
-  // Check exact match first
-  if (SERVICE_ACRONYMS[label]) return SERVICE_ACRONYMS[label];
+// Clean label from Draw.io artifacts like "=e"
+function cleanLabel(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#xa;/g, " ")
+    .replace(/&#x[0-9a-fA-F]+;/g, " ")
+    .replace(/^=+[a-zA-Z]?$/g, "")
+    .replace(/=[a-zA-Z](?=\s|$)/g, "")
+    .replace(/^[=\s]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Get abbreviated label for diagram display using aws-services.ts data
+function getAbbreviatedLabel(label: string, serviceId?: string): string {
+  // Clean the label first to remove Draw.io artifacts
+  const cleaned = cleanLabel(label);
   
-  // Check if label contains any key
-  for (const [full, abbrev] of Object.entries(SERVICE_ACRONYMS)) {
-    if (label.toLowerCase().includes(full.toLowerCase())) return abbrev;
+  // First try to get shortName by serviceId (most reliable)
+  if (serviceId) {
+    const svc = getServiceById(serviceId);
+    if (svc) return svc.shortName;
   }
   
-  // Truncate long labels
-  if (label.length > 12) {
-    return label.substring(0, 10) + "..";
+  // Try to match by name
+  const byName = serviceByName.get(cleaned.toLowerCase());
+  if (byName) return byName.shortName;
+  
+  // Try partial match on name
+  for (const [name, svc] of serviceByName) {
+    if (cleaned.toLowerCase().includes(name) || name.includes(cleaned.toLowerCase())) {
+      return svc.shortName;
+    }
   }
-  return label;
+  
+  // Truncate long labels as fallback
+  if (cleaned.length > 12) {
+    return cleaned.substring(0, 10) + "..";
+  }
+  return cleaned;
 }
 
 // Render diagram using react-pdf SVG primitives - matching aws-nodes.tsx styles
 function DiagramRenderer({ diagram }: { diagram: { nodes: DiagramNode[]; edges: DiagramEdge[] } }) {
-  const { nodes, edges } = diagram;
+  // Apply dynamic layout to fix overlapping nodes and resize subnets/VPC dynamically
+  const layoutNodes = applyDynamicLayout(diagram.nodes as LayoutDiagramNode[]) as DiagramNode[];
+  const nodes = layoutNodes;
+  const edges = diagram.edges;
   
   // Build a map of all nodes by ID
   const nodeMap = new Map<string, DiagramNode>();
   nodes.forEach(n => nodeMap.set(n.id, n));
+  
+  // Get node dimensions - use actual width/height if available, otherwise defaults
+  const getNodeDimensions = (node: DiagramNode): { w: number; h: number } => {
+    if (node.type === "vpc") {
+      return { w: node.width || 700, h: node.height || 450 };
+    } else if (node.type === "subnet") {
+      return { w: node.width || 300, h: node.height || 150 };
+    } else {
+      // awsResource, genericIcon - use actual dimensions or default
+      return { w: node.width || 80, h: node.height || 80 };
+    }
+  };
   
   // Calculate absolute position by walking up the parent chain
   const getAbsolutePosition = (node: DiagramNode): { x: number; y: number } => {
@@ -305,140 +488,222 @@ function DiagramRenderer({ diagram }: { diagram: { nodes: DiagramNode[]; edges: 
     return { x, y };
   };
   
-  // Separate node types
+  // Separate node types - include genericIcon with resources
   const vpcNodes = nodes.filter(n => n.type === "vpc");
   const subnetNodes = nodes.filter(n => n.type === "subnet");
-  const resourceNodes = nodes.filter(n => n.type === "awsResource");
+  const resourceNodes = nodes.filter(n => n.type === "awsResource" || n.type === "genericIcon");
   
-  // Calculate bounds from ALL nodes
+  // Calculate bounds from ALL nodes using actual dimensions
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   const absolutePositions = new Map<string, { x: number; y: number }>();
+  const nodeDimensions = new Map<string, { w: number; h: number }>();
   
   nodes.forEach(node => {
     const pos = getAbsolutePosition(node);
+    const dims = getNodeDimensions(node);
     absolutePositions.set(node.id, pos);
-    const w = node.type === "vpc" ? 600 : node.type === "subnet" ? 250 : 70;
-    const h = node.type === "vpc" ? 400 : node.type === "subnet" ? 180 : 40;
+    nodeDimensions.set(node.id, dims);
     minX = Math.min(minX, pos.x);
     minY = Math.min(minY, pos.y);
-    maxX = Math.max(maxX, pos.x + w);
-    maxY = Math.max(maxY, pos.y + h);
+    maxX = Math.max(maxX, pos.x + dims.w);
+    maxY = Math.max(maxY, pos.y + dims.h);
   });
   
   if (nodes.length === 0) {
     return <View style={styles.diagramContainer}><Text>No diagram data</Text></View>;
   }
   
-  const padding = 20;
+  const padding = 30;
   const contentWidth = maxX - minX + padding * 2;
   const contentHeight = maxY - minY + padding * 2;
   
-  // Scale to fit landscape A4
-  const availableWidth = 700;
+  // Scale to fit - use full page width with more space
+  const availableWidth = 540;
   const availableHeight = 400;
-  const scale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight, 0.9);
+  const scale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight, 1);
   
   const transform = (pos: { x: number; y: number }) => ({
     x: (pos.x - minX + padding) * scale,
     y: (pos.y - minY + padding) * scale,
   });
 
+  // Prepare icon data for overlay rendering - track which nodes have icons
+  const iconOverlays: Array<{ x: number; y: number; w: number; h: number; iconPath: string; nodeId: string }> = [];
+  const nodesWithIcons = new Set<string>();
+  resourceNodes.forEach(node => {
+    const pos = absolutePositions.get(node.id);
+    const dims = nodeDimensions.get(node.id);
+    if (!pos || !dims) return;
+    const { x, y } = transform(pos);
+    const w = Math.max(dims.w * scale, 50);
+    const h = Math.max(dims.h * scale, 40);
+    const iconRelPath = node.data.serviceId ? getAwsIconPngPath(node.data.serviceId) : undefined;
+    if (iconRelPath) {
+      const iconPath = path.join(PUBLIC_DIR, iconRelPath);
+      iconOverlays.push({ x, y, w, h, iconPath, nodeId: node.id });
+      nodesWithIcons.add(node.id);
+    }
+  });
+
   return (
     <View style={styles.diagramContainer}>
-      <Svg width={availableWidth} height={availableHeight}>
-        {/* Background */}
-        <Rect x={0} y={0} width={availableWidth} height={availableHeight} fill="#f1f5f9" rx={4} />
+      {/* Wrapper with fixed dimensions to match SVG - icons positioned relative to this */}
+      <View style={{ width: availableWidth, height: availableHeight, position: "relative" }}>
+        <Svg width={availableWidth} height={availableHeight}>
+          {/* Background */}
+          <Rect x={0} y={0} width={availableWidth} height={availableHeight} fill="#f8fafc" rx={6} />
         
         {/* 1. Draw VPC container - subtle light purple, dashed border */}
         {vpcNodes.map(node => {
           const pos = absolutePositions.get(node.id);
-          if (!pos) return null;
+          const dims = nodeDimensions.get(node.id);
+          if (!pos || !dims) return null;
           const { x, y } = transform(pos);
-          const w = 600 * scale;
-          const h = 400 * scale;
+          const w = dims.w * scale;
+          const h = dims.h * scale;
           return (
             <G key={node.id}>
-              <Rect x={x} y={y} width={w} height={h} rx={4} fill="#faf8ff" stroke="#c4b5fd" strokeWidth={1} strokeDasharray="6,3" />
-              <Rect x={x + 8} y={y + 4} width={80} height={14} rx={2} fill="white" stroke="#a78bfa" strokeWidth={0.5} />
-              <SvgText x={x + 48} y={y + 13} fontSize={7} fill="#7c3aed" textAnchor="middle">{node.data.label}</SvgText>
+              <Rect x={x} y={y} width={w} height={h} rx={6} fill="#faf5ff" stroke="#c4b5fd" strokeWidth={1.5} strokeDasharray="8,4" />
+              <Rect x={x + 10} y={y + 6} width={Math.min(100, w * 0.3)} height={16} rx={3} fill="white" stroke="#a78bfa" strokeWidth={0.75} />
+              <SvgText x={x + 10 + Math.min(50, w * 0.15)} y={y + 17} style={{ fontSize: 8 }} fill="#7c3aed" textAnchor="middle">{node.data.label}</SvgText>
             </G>
           );
         })}
         
-        {/* 2. Draw Subnet containers - very subtle backgrounds */}
+        {/* 2. Draw Subnet containers - ensure minimum size */}
         {subnetNodes.map(node => {
           const pos = absolutePositions.get(node.id);
-          if (!pos) return null;
+          const dims = nodeDimensions.get(node.id);
+          if (!pos || !dims) return null;
           const { x, y } = transform(pos);
-          const w = 250 * scale;
-          const h = 180 * scale;
+          const w = Math.max(dims.w * scale, 120);
+          const h = Math.max(dims.h * scale, 80);
           const isPublic = node.data.subnetType === "public";
-          const borderColor = isPublic ? "#86efac" : "#93c5fd";
+          const borderColor = isPublic ? "#4ade80" : "#60a5fa";
           const bgColor = isPublic ? "#f0fdf4" : "#eff6ff";
+          const headerBg = isPublic ? "#bbf7d0" : "#bfdbfe";
           const textColor = isPublic ? "#166534" : "#1e40af";
           return (
             <G key={node.id}>
-              <Rect x={x} y={y} width={w} height={h} rx={3} fill={bgColor} stroke={borderColor} strokeWidth={1} />
-              <Rect x={x + 4} y={y + 4} width={w - 8} height={12} rx={2} fill={isPublic ? "#dcfce7" : "#dbeafe"} />
-              <SvgText x={x + 8} y={y + 12} fontSize={6} fill={textColor}>{node.data.label}</SvgText>
+              <Rect x={x} y={y} width={w} height={h} rx={4} fill={bgColor} stroke={borderColor} strokeWidth={1.5} />
+              <Rect x={x} y={y} width={w} height={18} rx={4} fill={headerBg} />
+              <SvgText x={x + 8} y={y + 13} style={{ fontSize: 8 }} fill={textColor}>{node.data.label}</SvgText>
             </G>
           );
         })}
         
-        {/* 3. Draw edges - orthogonal paths */}
+        {/* 3. Draw edges - smooth step paths with arrows */}
         {edges.map(edge => {
+          const sourceNode = nodeMap.get(edge.source);
+          const targetNode = nodeMap.get(edge.target);
           const sourcePos = absolutePositions.get(edge.source);
           const targetPos = absolutePositions.get(edge.target);
-          if (!sourcePos || !targetPos) return null;
+          const sourceDims = nodeDimensions.get(edge.source);
+          const targetDims = nodeDimensions.get(edge.target);
+          if (!sourcePos || !targetPos || !sourceDims || !targetDims || !sourceNode || !targetNode) return null;
+          
           const src = transform(sourcePos);
           const tgt = transform(targetPos);
-          // Center of nodes (70x40)
-          const x1 = src.x + 35;
-          const y1 = src.y + 20;
-          const x2 = tgt.x + 35;
-          const y2 = tgt.y + 20;
-          const midY = (y1 + y2) / 2;
+          const sw = sourceDims.w * scale;
+          const sh = sourceDims.h * scale;
+          const tw = targetDims.w * scale;
+          const th = targetDims.h * scale;
+          
+          // Determine connection points based on handles or relative positions
+          let x1: number, y1: number, x2: number, y2: number;
+          
+          // Source point
+          if (edge.sourceHandle === "right") {
+            x1 = src.x + sw;
+            y1 = src.y + sh / 2;
+          } else if (edge.sourceHandle === "bottom") {
+            x1 = src.x + sw / 2;
+            y1 = src.y + sh;
+          } else {
+            // Default: right side
+            x1 = src.x + sw;
+            y1 = src.y + sh / 2;
+          }
+          
+          // Target point
+          if (edge.targetHandle === "left") {
+            x2 = tgt.x;
+            y2 = tgt.y + th / 2;
+          } else if (edge.targetHandle === "top") {
+            x2 = tgt.x + tw / 2;
+            y2 = tgt.y;
+          } else {
+            // Default: left side
+            x2 = tgt.x;
+            y2 = tgt.y + th / 2;
+          }
+          
+          // Draw smooth step path
+          const midX = (x1 + x2) / 2;
+          const path = `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+          
           return (
             <G key={edge.id}>
-              <Line x1={x1} y1={y1} x2={x1} y2={midY} stroke="#94a3b8" strokeWidth={1} />
-              <Line x1={x1} y1={midY} x2={x2} y2={midY} stroke="#94a3b8" strokeWidth={1} />
-              <Line x1={x2} y1={midY} x2={x2} y2={y2} stroke="#94a3b8" strokeWidth={1} />
+              <Path d={path} stroke="#22d3ee" strokeWidth={1.5} fill="none" />
+              {/* Arrow head */}
+              <Path d={`M ${x2-6} ${y2-4} L ${x2} ${y2} L ${x2-6} ${y2+4}`} stroke="#22d3ee" strokeWidth={1.5} fill="none" />
             </G>
           );
         })}
         
-        {/* 4. Draw resource nodes - white cards with abbreviated service name */}
+        {/* 4. Draw resource nodes - clean cards with label or icon placeholder */}
         {resourceNodes.map(node => {
           const pos = absolutePositions.get(node.id);
-          if (!pos) return null;
+          const dims = nodeDimensions.get(node.id);
+          if (!pos || !dims) return null;
           const { x, y } = transform(pos);
-          const w = 70;
-          const h = 40;
+          const w = Math.max(dims.w * scale, 55);
+          const h = Math.max(dims.h * scale, 50);
           const color = node.data.color || "#6b7280";
-          const displayLabel = getAbbreviatedLabel(node.data.label);
-          const displaySublabel = node.data.sublabel ? getAbbreviatedLabel(node.data.sublabel) : null;
+          const displayLabel = getAbbreviatedLabel(node.data.label, node.data.serviceId);
+          const hasIcon = nodesWithIcons.has(node.id);
+          
           return (
             <G key={node.id}>
+              {/* Card shadow */}
+              <Rect x={x + 1} y={y + 1} width={w} height={h} rx={4} fill="#e2e8f0" />
               {/* Card background */}
-              <Rect x={x} y={y} width={w} height={h} rx={3} fill="white" stroke="#e5e7eb" strokeWidth={0.75} />
-              {/* Left color accent */}
-              <Rect x={x} y={y} width={3} height={h} rx={1.5} fill={color} />
-              {/* Label */}
-              <SvgText x={x + w/2 + 1} y={y + (displaySublabel ? 15 : 22)} fontSize={7} fill="#1f2937" textAnchor="middle" fontWeight="bold">{displayLabel}</SvgText>
-              {displaySublabel && (
-                <SvgText x={x + w/2 + 1} y={y + 28} fontSize={5} fill="#6b7280" textAnchor="middle">{displaySublabel}</SvgText>
+              <Rect x={x} y={y} width={w} height={h} rx={4} fill="white" stroke="#e2e8f0" strokeWidth={1} />
+              {/* Left color accent bar */}
+              <Rect x={x} y={y} width={4} height={h} rx={2} fill={color} />
+              {/* Show label in center only if no icon */}
+              {!hasIcon && (
+                <SvgText x={x + w/2} y={y + h/2 + 2} style={{ fontSize: 7, fontWeight: "bold" }} fill="#1f2937" textAnchor="middle">{displayLabel}</SvgText>
               )}
+              {/* Service label at bottom - always show */}
+              <SvgText x={x + w/2} y={y + h - 4} style={{ fontSize: 5 }} fill="#6b7280" textAnchor="middle">{displayLabel}</SvgText>
             </G>
           );
         })}
       </Svg>
+      {/* Icon overlay - rendered outside SVG using absolute positioning */}
+      {iconOverlays.map(({ x, y, w, h, iconPath, nodeId }) => {
+        const iconSize = Math.min(w * 0.5, h * 0.5, 24);
+        return (
+          <Image
+            key={`icon-${nodeId}`}
+            src={iconPath}
+            style={{
+              position: "absolute",
+              left: x + (w - iconSize) / 2 + 3,
+              top: y + (h - iconSize) / 2 - 2,
+              width: iconSize,
+              height: iconSize,
+            }}
+          />
+        );
+      })}
+      </View>
     </View>
   );
 }
 
 export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
-  const scorePercentage = Math.round((data.challengeScore / data.maxScore) * 100);
-  
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -449,22 +714,6 @@ export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
           <Text style={styles.subtitle}>
             {data.companyName} • {data.industry}
           </Text>
-        </View>
-
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{scorePercentage}%</Text>
-            <Text style={styles.statLabel}>Score</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{data.challengeScore}</Text>
-            <Text style={styles.statLabel}>Points Earned</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{data.completionTimeMinutes}</Text>
-            <Text style={styles.statLabel}>Minutes</Text>
-          </View>
         </View>
 
         {/* Business Context */}
@@ -535,115 +784,24 @@ export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
         </View>
       </Page>
 
-      {/* Page 2: Skills Assessment */}
-      {(data.auditScore !== undefined || data.proficiencyTest || data.cliObjectives) && (
+      {/* Page 2: Technical Highlights (if available) */}
+      {data.technicalHighlights && data.technicalHighlights.length > 0 && (
         <Page size="A4" style={styles.page}>
           <View style={styles.header}>
-            <Text style={styles.badge}>SKILLS ASSESSMENT</Text>
-            <Text style={styles.title}>Challenge Performance</Text>
+            <Text style={styles.badge}>TECHNICAL EXPERTISE</Text>
+            <Text style={styles.title}>Implementation Highlights</Text>
             <Text style={styles.subtitle}>{data.companyName} • {data.industry}</Text>
           </View>
 
-          {/* Stage Completion Stats */}
-          <View style={styles.statsRow}>
-            {data.auditScore !== undefined && data.auditScore !== null && (
-              <View style={styles.statBox}>
-                <Text style={[styles.statValue, { color: data.auditPassed ? "#16a34a" : "#dc2626" }]}>
-                  {data.auditScore}%
-                </Text>
-                <Text style={styles.statLabel}>Drawing Audit</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Technical Accomplishments</Text>
+            {data.technicalHighlights.map((highlight: string, i: number) => (
+              <View key={i} style={styles.listItem}>
+                <Text style={[styles.bullet, { color: "#16a34a" }]}>✓</Text>
+                <Text style={styles.listText}>{highlight}</Text>
               </View>
-            )}
-            {data.proficiencyTest && (
-              <View style={styles.statBox}>
-                <Text style={[styles.statValue, { color: data.proficiencyTest.score >= 70 ? "#16a34a" : "#dc2626" }]}>
-                  {data.proficiencyTest.score}%
-                </Text>
-                <Text style={styles.statLabel}>Proficiency Test</Text>
-              </View>
-            )}
-            {data.cliObjectives && (
-              <View style={styles.statBox}>
-                <Text style={styles.statValue}>
-                  {data.cliObjectives.completedCount}/{data.cliObjectives.totalCount}
-                </Text>
-                <Text style={styles.statLabel}>CLI Objectives</Text>
-              </View>
-            )}
+            ))}
           </View>
-
-          {/* Drawing Audit Results */}
-          {data.auditScore !== undefined && data.auditScore !== null && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Architecture Drawing Audit</Text>
-              <Text style={styles.paragraph}>
-                The architecture diagram was evaluated against best practices and scenario requirements.
-                {data.auditPassed 
-                  ? " The diagram successfully passed the automated audit, demonstrating solid understanding of AWS architecture patterns."
-                  : " The diagram shows room for improvement in meeting all architectural requirements."}
-              </Text>
-              <View style={[styles.tagContainer, { marginTop: 8 }]}>
-                <Text style={data.auditPassed ? styles.complianceTag : styles.tag}>
-                  {data.auditPassed ? "✓ Audit Passed" : "Needs Improvement"}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Proficiency Test Results */}
-          {data.proficiencyTest && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Proficiency Assessment</Text>
-              <Text style={styles.paragraph}>{data.proficiencyTest.summary}</Text>
-              
-              {data.proficiencyTest.strengths && data.proficiencyTest.strengths.length > 0 && (
-                <View style={{ marginTop: 10 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6, color: "#166534" }}>Strengths</Text>
-                  {data.proficiencyTest.strengths.map((strength, i) => (
-                    <View key={i} style={styles.listItem}>
-                      <Text style={[styles.bullet, { color: "#16a34a" }]}>✓</Text>
-                      <Text style={styles.listText}>{strength}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-              
-              {data.proficiencyTest.areasForImprovement && data.proficiencyTest.areasForImprovement.length > 0 && (
-                <View style={{ marginTop: 10 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6, color: "#b45309" }}>Areas for Growth</Text>
-                  {data.proficiencyTest.areasForImprovement.map((area, i) => (
-                    <View key={i} style={styles.listItem}>
-                      <Text style={[styles.bullet, { color: "#f59e0b" }]}>→</Text>
-                      <Text style={styles.listText}>{area}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* CLI Objectives */}
-          {data.cliObjectives && data.cliObjectives.objectives && data.cliObjectives.objectives.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>CLI Training Objectives</Text>
-              <Text style={styles.paragraph}>
-                Completed {data.cliObjectives.completedCount} of {data.cliObjectives.totalCount} CLI objectives, 
-                earning {data.cliObjectives.earnedPoints} of {data.cliObjectives.totalPoints} possible points.
-              </Text>
-              <View style={{ marginTop: 8 }}>
-                {data.cliObjectives.objectives.map((obj, i) => (
-                  <View key={i} style={styles.listItem}>
-                    <Text style={[styles.bullet, { color: obj.completed ? "#16a34a" : "#94a3b8" }]}>
-                      {obj.completed ? "✓" : "○"}
-                    </Text>
-                    <Text style={styles.listText}>
-                      {obj.description} ({obj.service})
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
 
           {/* Footer */}
           <View style={styles.footer}>
@@ -653,7 +811,7 @@ export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
         </Page>
       )}
 
-      {/* Page 2: Architecture Diagram */}
+      {/* Architecture Diagram Page */}
       {data.architectureDiagram && data.architectureDiagram.nodes.length > 0 && (
         <Page size="A4" orientation="landscape" style={styles.diagramPage}>
           <View style={styles.diagramHeader}>

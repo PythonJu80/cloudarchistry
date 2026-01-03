@@ -159,9 +159,11 @@ function ChatAWSServiceNode({ data }: { data: { label: string; service_id?: stri
 
   return (
     <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-white shadow-sm min-w-[100px] max-w-[140px] border border-gray-100 relative">
-      {/* Connection handles - positioned at edges */}
-      <Handle type="target" position={Position.Left} className="!bg-cyan-500 !w-2.5 !h-2.5 !border-2 !border-white !shadow-sm" />
-      <Handle type="source" position={Position.Right} className="!bg-cyan-500 !w-2.5 !h-2.5 !border-2 !border-white !shadow-sm" />
+      {/* Connection handles - positioned at edges with IDs matching AWSResourceNode */}
+      <Handle type="target" position={Position.Left} id="left" className="!bg-cyan-500 !w-2.5 !h-2.5 !border-2 !border-white !shadow-sm" />
+      <Handle type="target" position={Position.Top} className="!bg-cyan-500 !w-2.5 !h-2.5 !border-2 !border-white !shadow-sm" />
+      <Handle type="source" position={Position.Right} id="right" className="!bg-cyan-500 !w-2.5 !h-2.5 !border-2 !border-white !shadow-sm" />
+      <Handle type="source" position={Position.Bottom} className="!bg-cyan-500 !w-2.5 !h-2.5 !border-2 !border-white !shadow-sm" />
       
       {/* AWS Icon - larger for better visibility */}
       <div className="w-14 h-14 flex items-center justify-center mb-2">

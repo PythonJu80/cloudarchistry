@@ -356,40 +356,17 @@ export async function POST(request: NextRequest) {
       console.error("[Portfolio Generate] Learning Agent call failed:", error);
     }
 
-    // Step 2: Call Drawing Agent to enhance diagram (if we have one)
-    let enhancedDiagram = bestDiagram;
-    
-    if (bestDiagram && bestDiagram.nodes.length > 0) {
-      console.log("[Portfolio Generate] Calling Drawing Agent...");
-      try {
-        const drawingResponse = await fetch(`${DRAWING_AGENT_URL}/portfolio/enhance-diagram`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            diagram: bestDiagram,
-            scenario_context: scenarioContext,
-            location_context: locationContext,
-            openai_api_key: aiConfig?.key || "",
-          }),
-        });
-
-        if (drawingResponse.ok) {
-          const drawingData = await drawingResponse.json();
-          if (drawingData.success && drawingData.enhanced_diagram) {
-            enhancedDiagram = drawingData.enhanced_diagram;
-            console.log("[Portfolio Generate] Drawing Agent enhancement received");
-          }
-        } else {
-          console.error("[Portfolio Generate] Drawing Agent error:", await drawingResponse.text());
-        }
-      } catch (error) {
-        console.error("[Portfolio Generate] Drawing Agent call failed:", error);
-      }
-    }
+    // Step 2: Use the user's actual diagram directly (no Drawing Agent enhancement needed)
+    // The user's diagram already has proper positions, nodes, and edges from their work
+    // Drawing Agent was generating a completely new diagram instead of enhancing, losing user's work
+    const finalDiagram = bestDiagram;
+    console.log("[Portfolio Generate] Using user's original diagram with", 
+      finalDiagram?.nodes?.length || 0, "nodes and", 
+      finalDiagram?.edges?.length || 0, "edges");
 
     // Step 3: Build final portfolio data
     const awsServices = learningAgentContent?.awsServicesUsed || 
-      extractServicesFromDiagram(enhancedDiagram) ||
+      extractServicesFromDiagram(finalDiagram) ||
       scenarioContext.awsServices;
 
     const portfolioData = {
@@ -407,6 +384,7 @@ export async function POST(request: NextRequest) {
       awsServices: JSON.stringify(awsServices),
       keyDecisions: JSON.stringify(learningAgentContent?.keyDecisions || []),
       complianceAchieved: JSON.stringify(learningAgentContent?.complianceAchieved || scenarioContext.complianceRequirements),
+      technicalHighlights: JSON.stringify(learningAgentContent?.technicalHighlights || []),
       challengeScore: attempt.pointsEarned,
       maxScore: attempt.maxPoints || 0,
       completionTimeMinutes,
@@ -414,7 +392,7 @@ export async function POST(request: NextRequest) {
       scenarioAttemptId: attemptId,
       challengeProgressId: attempt.challengeProgress[0]?.id || null,
       locationSlug: location?.slug || null,
-      architectureDiagram: enhancedDiagram ? JSON.stringify(enhancedDiagram) : null,
+      architectureDiagram: finalDiagram ? JSON.stringify(finalDiagram) : null,
       generatedAt: new Date(),
     };
 
@@ -439,6 +417,7 @@ export async function POST(request: NextRequest) {
         "awsServices",
         "keyDecisions",
         "complianceAchieved",
+        "technicalHighlights",
         "challengeScore",
         "maxScore",
         "completionTimeMinutes",
@@ -467,6 +446,7 @@ export async function POST(request: NextRequest) {
         ${portfolioData.awsServices}::jsonb,
         ${portfolioData.keyDecisions}::jsonb,
         ${portfolioData.complianceAchieved}::jsonb,
+        ${portfolioData.technicalHighlights}::jsonb,
         ${portfolioData.challengeScore},
         ${portfolioData.maxScore},
         ${portfolioData.completionTimeMinutes},
@@ -491,7 +471,7 @@ export async function POST(request: NextRequest) {
       portfolioId,
       message: "Portfolio generated successfully",
       hasLearningContent: !!learningAgentContent,
-      hasDiagram: !!enhancedDiagram,
+      hasDiagram: !!finalDiagram,
     });
 
   } catch (error) {

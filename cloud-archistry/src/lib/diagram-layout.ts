@@ -24,6 +24,8 @@
  * 3. VPC sizes to fit all subnet bounding boxes
  */
 
+import { getServiceById, AWSCategory } from "./aws-services";
+
 export interface DiagramNode {
   id: string;
   type: string;
@@ -73,41 +75,47 @@ const DEFAULT_CONFIG: LayoutConfig = {
 };
 
 /**
- * AWS Service Tiers - determines vertical positioning within subnets
+ * Category-to-Tier mapping - determines vertical positioning within subnets
  * Services in the same tier are placed HORIZONTALLY (side by side)
  * Different tiers are stacked VERTICALLY
+ * 
+ * This uses the category from aws-services.ts to dynamically determine tier
+ * for ALL services without hard-coding individual service IDs.
  */
-const SERVICE_TIERS: Record<string, number> = {
-  // Tier 1: Network/Gateway (top of subnet)
-  "internet-gateway": 1,
-  "nat-gateway": 1,
-  "vpn-gateway": 1,
-  "transit-gateway": 1,
-  "bastion": 1,
+const CATEGORY_TIERS: Record<AWSCategory, number> = {
+  // Tier 1: Networking/Gateway (top of subnet)
+  networking: 1,
   
-  // Tier 2: Compute/App (middle)
-  "ec2": 2,
-  "ecs": 2,
-  "fargate": 2,
-  "eks": 2,
-  "lambda": 2,
-  "auto-scaling": 2,
+  // Tier 2: Compute/App (middle-upper)
+  compute: 2,
+  containers: 2,
   
-  // Tier 3: Cache/Session (middle-lower)
-  "elasticache": 3,
-  "memcached": 3,
-  "redis": 3,
+  // Tier 3: Integration/Analytics (middle)
+  integration: 3,
+  analytics: 3,
   
-  // Tier 4: Database (bottom)
-  "rds": 4,
-  "aurora": 4,
-  "dynamodb": 4,
-  "redshift": 4,
-  "neptune": 4,
+  // Tier 4: Database/Storage (bottom)
+  database: 4,
+  storage: 4,
+  
+  // Tier 5: External services (security, management, etc.)
+  security: 5,
+  management: 5,
+  devops: 5,
+  governance: 5,
+  policies: 5,
+  boundaries: 5,
+  icons: 5,
+  text: 5,
+  annotations: 5,
 };
 
 function getServiceTier(serviceId: string): number {
-  return SERVICE_TIERS[serviceId] || 2; // Default to compute tier
+  const service = getServiceById(serviceId);
+  if (service) {
+    return CATEGORY_TIERS[service.category] ?? 2;
+  }
+  return 2; // Default to compute tier if service not found
 }
 
 

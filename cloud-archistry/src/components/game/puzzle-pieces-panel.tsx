@@ -31,6 +31,7 @@ import {
   Activity,
   Settings,
   Boxes,
+  Cloud,
 } from "lucide-react";
 
 // Types matching the backend puzzle
@@ -46,6 +47,10 @@ interface PuzzlePiece {
 
 // Category display info
 const CATEGORY_INFO: Record<string, { name: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
+  // AWS Boundaries & Actors
+  boundaries: { name: "AWS Boundaries", color: "#232F3E", icon: Cloud },
+  actors: { name: "External Actors", color: "#64748b", icon: Users },
+  // Services
   networking: { name: "Networking", color: "#3b82f6", icon: Network },
   compute: { name: "Compute", color: "#f97316", icon: Server },
   containers: { name: "Containers", color: "#8b5cf6", icon: Container },
@@ -60,6 +65,11 @@ const CATEGORY_INFO: Record<string, { name: string; color: string; icon: React.C
 
 // Icon mapping for services
 const serviceIconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  // AWS Boundaries
+  "aws-cloud": Cloud,
+  "region": Globe,
+  "availability-zone": Layers,
+  // Networking
   "vpc": Network,
   "subnet-public": Layers,
   "subnet-private": Layers,
@@ -70,37 +80,60 @@ const serviceIconMap: Record<string, React.ComponentType<{ className?: string; s
   "nlb": Boxes,
   "route53": Globe,
   "cloudfront": Globe,
+  // Compute
   "ec2": Server,
   "auto-scaling": Boxes,
   "lambda": Zap,
   "ebs": HardDrive,
   "efs": HardDrive,
+  // Containers
   "ecs": Container,
   "eks": Container,
   "fargate": Container,
   "ecr": Box,
+  // Database
   "rds": Database,
   "aurora": Database,
   "dynamodb": Database,
   "elasticache": Database,
   "redshift": Database,
+  // Storage
   "s3": HardDrive,
   "glacier": HardDrive,
+  // Security
   "iam": Users,
   "kms": Key,
   "secrets-manager": Key,
   "cognito": Users,
   "waf": Shield,
   "guardduty": Shield,
+  // Integration
   "api-gateway": Workflow,
   "eventbridge": Activity,
   "sns": Bell,
   "sqs": Box,
   "step-functions": Workflow,
+  // Management
   "cloudwatch": BarChart3,
   "cloudtrail": Activity,
   "systems-manager": Settings,
   "config": Settings,
+};
+
+// Emoji icons for general icons (external actors) - rendered as text, not Lucide icons
+const ICON_EMOJIS: Record<string, string> = {
+  "icon-user": "👤",
+  "icon-users": "👥",
+  "icon-mobile": "📱",
+  "icon-laptop": "💻",
+  "icon-desktop": "🖥️",
+  "icon-internet": "🌐",
+  "icon-cloud": "☁️",
+  "icon-corporate": "🏢",
+  "icon-onprem": "🏭",
+  "icon-server": "🗄️",
+  "icon-database": "💾",
+  "icon-security": "🔒",
 };
 
 interface PuzzlePiecesPanelProps {
@@ -196,6 +229,8 @@ export function PuzzlePiecesPanel({ pieces, placedPieceIds, onDragStart }: Puzzl
                   {categoryPieces.map((piece) => {
                     const isPlaced = placedPieceIds.has(piece.id);
                     const ServiceIcon = serviceIconMap[piece.service_id] || Box;
+                    const isEmojiIcon = piece.service_id.startsWith("icon-");
+                    const emojiIcon = isEmojiIcon ? ICON_EMOJIS[piece.service_id] : null;
 
                     return (
                       <div
@@ -219,12 +254,16 @@ export function PuzzlePiecesPanel({ pieces, placedPieceIds, onDragStart }: Puzzl
                           )}
                           style={{ borderLeft: `3px solid ${catInfo.color}` }}
                         >
-                          <ServiceIcon 
-                            className={cn(
-                              "w-4 h-4",
-                              isPlaced ? "text-slate-500" : "text-cyan-400"
-                            )}
-                          />
+                          {emojiIcon ? (
+                            <span className="text-base">{emojiIcon}</span>
+                          ) : (
+                            <ServiceIcon 
+                              className={cn(
+                                "w-4 h-4",
+                                isPlaced ? "text-slate-500" : "text-cyan-400"
+                              )}
+                            />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className={cn(

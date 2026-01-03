@@ -61,6 +61,12 @@ import { getServiceById } from "@/lib/aws-services";
 
 // Types for diagram data
 export interface DiagramNode extends Node {
+  id: string;
+  type: string;
+  position: { x: number; y: number };
+  parentId?: string;
+  zIndex?: number;
+  style?: Record<string, unknown>;
   data: {
     serviceId: string;
     label: string;
@@ -83,6 +89,10 @@ export interface DiagramNode extends Node {
 }
 
 export interface DiagramEdge extends Edge {
+  id: string;
+  source: string;
+  target: string;
+  type?: string;
   data?: {
     dataFlow?: string;
   };
