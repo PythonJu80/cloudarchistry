@@ -186,7 +186,7 @@ export default function ResourcesPage() {
 
   const filteredResources = allResources.filter((r) => {
     if (filter === "video" && r.type !== "video") return false;
-    if (filter === "documentation" && r.type !== "documentation" && r.type !== "course" && r.type !== "whitepaper") return false;
+    if (filter === "documentation" && r.type !== "documentation" && r.type !== "course" && r.type !== "whitepaper" && r.type !== "article") return false;
     if (searchQuery && !r.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });

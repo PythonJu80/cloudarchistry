@@ -318,12 +318,14 @@ function buildStructuredContent(
   const { recommendations, progress, games } = data;
   const weeklyContent = [];
 
-  // ALL PLATFORM FEATURES (not just database content)
-  const allFeatures = [
-    // SERIOUS STUDY FEATURES (prioritize these)
+  // ALL PLATFORM FEATURES - organized by category for better distribution
+  const handsOnFeatures = [
     { type: "world_challenge", title: "World Map Challenge", description: "Real-world scenario challenges from the world map", link: "/world" },
     { type: "drawing_challenge", title: "Architecture Drawing Challenge", description: "Design and draw AWS architectures to solve real problems", link: "/challenges" },
     { type: "cli_practice", title: "CLI Simulator", description: "Practice AWS CLI commands in a safe sandbox environment", link: "/challenges" },
+  ];
+  
+  const studyFeatures = [
     { type: "notes", title: "Study Notes", description: "AI-generated comprehensive study notes on AWS topics", link: "/learn/notes" },
     { type: "learning_center", title: "Learning Center", description: "Comprehensive learning resources and guided paths", link: "/learn" },
     { type: "ai_chat", title: "Chat with AI Tutor", description: "Ask questions and get personalized explanations from the AI tutor", link: "/learn/chat" },
@@ -343,7 +345,7 @@ function buildStructuredContent(
     const maxGamesThisWeek = (isFinalWeek || isMidpoint) ? 1 : 0;
     let gamesAdded = 0;
 
-    // PRIORITY 1: Database challenges (if available)
+    // PRIORITY 1: Database challenges (if available) OR world map challenge
     if (challenges.length > 0 && w <= challenges.length) {
       const challenge = challenges[w - 1];
       weekActions.push({
@@ -353,23 +355,26 @@ function buildStructuredContent(
         description: challenge.description,
         link: `/challenges/${challenge.id}`,
       });
+    } else if (w % 3 === 1) {
+      // Add world challenge every 3rd week starting from week 1
+      weekActions.push(handsOnFeatures[0]); // World Map Challenge
     }
 
-    // PRIORITY 2: Platform features (rotate through ALL of them)
-    const featureIndex = (w - 1) % allFeatures.length;
-    const platformFeature = allFeatures[featureIndex];
-    weekActions.push(platformFeature);
+    // PRIORITY 2: Rotate hands-on features (drawing, CLI) - one per week
+    const handsOnIndex = (w - 1) % handsOnFeatures.length;
+    const handsOnFeature = handsOnFeatures[handsOnIndex];
+    // Don't duplicate world_challenge if already added
+    if (handsOnFeature.type !== "world_challenge" || weekActions.length === 0) {
+      weekActions.push(handsOnFeature);
+    }
     
-    // Add EXTRA drawing/CLI for hands-on/visual learners (in addition to rotation)
-    if ((learningStyles.includes("hands_on") || learningStyles.includes("visual")) && w <= 6) {
-      const extraFeatureIndex = (w - 1 + 3) % allFeatures.length; // Offset by 3
-      const extraFeature = allFeatures[extraFeatureIndex];
-      if (extraFeature.type === "drawing_challenge" || extraFeature.type === "cli_practice") {
-        weekActions.push(extraFeature);
-      }
+    // PRIORITY 3: Add study feature every other week (notes, learning center, AI chat)
+    if (w % 2 === 0 || w === 1) {
+      const studyIndex = Math.floor((w - 1) / 2) % studyFeatures.length;
+      weekActions.push(studyFeatures[studyIndex]);
     }
 
-    // PRIORITY 3: Flashcards (if available)
+    // PRIORITY 4: Flashcards (every week, but with variety)
     if (flashcards.length > 0 && w <= flashcards.length) {
       const deck = flashcards[w - 1];
       weekActions.push({
@@ -380,7 +385,6 @@ function buildStructuredContent(
         link: `/learn/flashcards/${deck.id}`,
       });
     } else {
-      // Add generic flashcard action
       weekActions.push({
         type: "flashcard",
         title: "Flashcard Review",
@@ -389,27 +393,28 @@ function buildStructuredContent(
       });
     }
 
-    // PRIORITY 4: Quizzes (starting week 2)
-    if (w >= 2 && quizzes.length > 0 && (w - 2) < quizzes.length) {
-      const quiz = quizzes[w - 2];
-      weekActions.push({
-        type: "quiz",
-        id: quiz.id,
-        title: quiz.title,
-        description: quiz.description,
-        link: `/learn/quiz/${quiz.id}`,
-      });
-    } else if (w >= 2) {
-      // Add generic quiz action
-      weekActions.push({
-        type: "quiz",
-        title: "Topic Quiz",
-        description: "Test your knowledge on specific AWS topics",
-        link: "/learn/quiz",
-      });
+    // PRIORITY 5: Quizzes (starting week 2, every week)
+    if (w >= 2) {
+      if (quizzes.length > 0 && (w - 2) < quizzes.length) {
+        const quiz = quizzes[w - 2];
+        weekActions.push({
+          type: "quiz",
+          id: quiz.id,
+          title: quiz.title,
+          description: quiz.description,
+          link: `/learn/quiz/${quiz.id}`,
+        });
+      } else {
+        weekActions.push({
+          type: "quiz",
+          title: "Topic Quiz",
+          description: "Test your knowledge on specific AWS topics",
+          link: "/learn/quiz",
+        });
+      }
     }
 
-    // PRIORITY 5: Practice exam (final 2 weeks)
+    // PRIORITY 6: Practice exam (final 2 weeks)
     if (w >= weeks - 1 && recommendations.nextExam) {
       weekActions.push({
         type: "practice_exam",
@@ -420,7 +425,7 @@ function buildStructuredContent(
       });
     }
 
-    // PRIORITY 6: Games (SPARINGLY - max 1 per week, only every 4th week)
+    // PRIORITY 7: Games (SPARINGLY - only midpoint and final week)
     if (gamesAdded < maxGamesThisWeek && games.length > 0) {
       const gameForWeek = selectGameForLearningStyles(games, learningStyles, w);
       if (gameForWeek) {

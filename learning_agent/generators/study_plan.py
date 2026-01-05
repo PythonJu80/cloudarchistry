@@ -66,6 +66,97 @@ CERT_CODE_TO_PERSONA = {
 
 VALID_CERT_CODES = list(CERTIFICATION_PERSONAS.keys()) + list(CERT_CODE_TO_PERSONA.keys())
 
+# Certification exam domains - used to create domain-specific weekly themes
+CERTIFICATION_EXAM_DOMAINS = {
+    "cloud-practitioner": [
+        {"name": "Cloud Concepts", "weight": 24, "topics": ["Cloud value proposition", "AWS Cloud economics", "Cloud architecture design principles"]},
+        {"name": "Security and Compliance", "weight": 30, "topics": ["Shared responsibility model", "IAM", "Security services", "Compliance resources"]},
+        {"name": "Cloud Technology and Services", "weight": 34, "topics": ["Compute", "Storage", "Networking", "Database", "AI/ML services"]},
+        {"name": "Billing, Pricing, and Support", "weight": 12, "topics": ["Pricing models", "Account structures", "Support plans", "Cost management"]},
+    ],
+    "solutions-architect-associate": [
+        {"name": "Design Secure Architectures", "weight": 30, "topics": ["IAM", "VPC security", "Encryption", "Security services"]},
+        {"name": "Design Resilient Architectures", "weight": 26, "topics": ["Multi-AZ", "Auto Scaling", "Disaster recovery", "Decoupling"]},
+        {"name": "Design High-Performing Architectures", "weight": 24, "topics": ["Compute optimization", "Storage performance", "Database scaling", "Caching"]},
+        {"name": "Design Cost-Optimized Architectures", "weight": 20, "topics": ["Cost-effective compute", "Storage tiers", "Data transfer costs", "Right-sizing"]},
+    ],
+    "developer-associate": [
+        {"name": "Development with AWS Services", "weight": 32, "topics": ["Lambda", "API Gateway", "DynamoDB", "S3", "SQS/SNS"]},
+        {"name": "Security", "weight": 26, "topics": ["IAM for developers", "Cognito", "Secrets Manager", "KMS encryption"]},
+        {"name": "Deployment", "weight": 24, "topics": ["CI/CD", "CodePipeline", "CodeBuild", "CodeDeploy", "SAM/CloudFormation"]},
+        {"name": "Troubleshooting and Optimization", "weight": 18, "topics": ["X-Ray", "CloudWatch Logs", "Performance tuning", "Error handling"]},
+    ],
+    "sysops-associate": [
+        {"name": "Monitoring, Logging, and Remediation", "weight": 20, "topics": ["CloudWatch", "EventBridge", "Automated remediation", "Alerting"]},
+        {"name": "Reliability and Business Continuity", "weight": 16, "topics": ["Backup strategies", "Disaster recovery", "High availability"]},
+        {"name": "Deployment, Provisioning, and Automation", "weight": 18, "topics": ["CloudFormation", "Systems Manager", "AMI management"]},
+        {"name": "Security and Compliance", "weight": 16, "topics": ["IAM", "Config", "Inspector", "GuardDuty", "Compliance"]},
+        {"name": "Networking and Content Delivery", "weight": 18, "topics": ["VPC", "Route 53", "CloudFront", "Connectivity options"]},
+        {"name": "Cost and Performance Optimization", "weight": 12, "topics": ["Cost Explorer", "Trusted Advisor", "Performance monitoring"]},
+    ],
+    "data-engineer-associate": [
+        {"name": "Data Ingestion and Transformation", "weight": 34, "topics": ["Kinesis", "Glue ETL", "Data pipelines", "Batch vs streaming"]},
+        {"name": "Data Store Management", "weight": 26, "topics": ["S3 data lakes", "Redshift", "DynamoDB", "Data catalog"]},
+        {"name": "Data Operations and Support", "weight": 22, "topics": ["Data quality", "Monitoring", "Troubleshooting", "Optimization"]},
+        {"name": "Data Security and Governance", "weight": 18, "topics": ["Lake Formation", "Encryption", "Access control", "Compliance"]},
+    ],
+    "machine-learning-engineer-associate": [
+        {"name": "Data Preparation", "weight": 28, "topics": ["Data collection", "Feature engineering", "Data validation", "Preprocessing"]},
+        {"name": "Model Development", "weight": 26, "topics": ["SageMaker", "Algorithm selection", "Training", "Hyperparameter tuning"]},
+        {"name": "Deployment and Orchestration", "weight": 22, "topics": ["Model deployment", "Inference optimization", "MLOps", "Pipelines"]},
+        {"name": "Monitoring and Maintenance", "weight": 24, "topics": ["Model monitoring", "Drift detection", "Retraining", "A/B testing"]},
+    ],
+    "ai-practitioner": [
+        {"name": "Fundamentals of AI and ML", "weight": 20, "topics": ["AI/ML concepts", "Types of ML", "Model lifecycle"]},
+        {"name": "Fundamentals of Generative AI", "weight": 24, "topics": ["Foundation models", "Prompt engineering", "Use cases"]},
+        {"name": "Applications of Foundation Models", "weight": 28, "topics": ["Amazon Bedrock", "Model selection", "RAG", "Fine-tuning"]},
+        {"name": "Responsible AI", "weight": 14, "topics": ["Bias detection", "Fairness", "Transparency", "Governance"]},
+        {"name": "Security and Compliance for AI", "weight": 14, "topics": ["Data privacy", "Model security", "Compliance"]},
+    ],
+    "solutions-architect-professional": [
+        {"name": "Design for Organizational Complexity", "weight": 26, "topics": ["Multi-account", "Cross-region", "Hybrid architectures"]},
+        {"name": "Design for New Solutions", "weight": 29, "topics": ["Business requirements", "Architecture patterns", "Migration strategies"]},
+        {"name": "Continuous Improvement", "weight": 25, "topics": ["Cost optimization", "Performance tuning", "Operational excellence"]},
+        {"name": "Accelerate Workload Migration", "weight": 20, "topics": ["Migration strategies", "Data migration", "Application modernization"]},
+    ],
+    "devops-professional": [
+        {"name": "SDLC Automation", "weight": 22, "topics": ["CI/CD pipelines", "Testing automation", "Artifact management"]},
+        {"name": "Configuration Management and IaC", "weight": 17, "topics": ["CloudFormation", "CDK", "Systems Manager", "Config"]},
+        {"name": "Resilient Cloud Solutions", "weight": 15, "topics": ["High availability", "Fault tolerance", "Disaster recovery"]},
+        {"name": "Monitoring and Logging", "weight": 15, "topics": ["CloudWatch", "X-Ray", "Centralized logging", "Alerting"]},
+        {"name": "Incident and Event Response", "weight": 14, "topics": ["Automated remediation", "Runbooks", "Incident management"]},
+        {"name": "Security and Compliance", "weight": 17, "topics": ["Security automation", "Compliance as code", "Secrets management"]},
+    ],
+    "security-specialty": [
+        {"name": "Threat Detection and Incident Response", "weight": 14, "topics": ["GuardDuty", "Security Hub", "Incident response"]},
+        {"name": "Security Logging and Monitoring", "weight": 18, "topics": ["CloudTrail", "CloudWatch", "VPC Flow Logs", "SIEM"]},
+        {"name": "Infrastructure Security", "weight": 20, "topics": ["VPC security", "Network ACLs", "WAF", "Shield"]},
+        {"name": "Identity and Access Management", "weight": 16, "topics": ["IAM policies", "Organizations", "SSO", "Federation"]},
+        {"name": "Data Protection", "weight": 18, "topics": ["KMS", "Encryption", "Secrets Manager", "Certificate Manager"]},
+        {"name": "Management and Security Governance", "weight": 14, "topics": ["Config", "Control Tower", "Compliance frameworks"]},
+    ],
+    "networking-specialty": [
+        {"name": "Network Design", "weight": 30, "topics": ["VPC design", "Hybrid connectivity", "Multi-region", "IP addressing"]},
+        {"name": "Network Implementation", "weight": 26, "topics": ["VPC peering", "Transit Gateway", "Direct Connect", "VPN"]},
+        {"name": "Network Management and Operations", "weight": 20, "topics": ["Monitoring", "Troubleshooting", "Automation"]},
+        {"name": "Network Security", "weight": 24, "topics": ["Security groups", "NACLs", "WAF", "Firewall Manager"]},
+    ],
+    "machine-learning-specialty": [
+        {"name": "Data Engineering", "weight": 20, "topics": ["Data collection", "Feature engineering", "Data transformation"]},
+        {"name": "Exploratory Data Analysis", "weight": 24, "topics": ["Data visualization", "Statistics", "Data quality"]},
+        {"name": "Modeling", "weight": 36, "topics": ["Algorithm selection", "Training", "Hyperparameter tuning", "Evaluation"]},
+        {"name": "ML Implementation and Operations", "weight": 20, "topics": ["Deployment", "A/B testing", "Monitoring", "MLOps"]},
+    ],
+}
+
+# Default domains for certifications not explicitly mapped
+DEFAULT_EXAM_DOMAINS = [
+    {"name": "Core Services", "weight": 30, "topics": ["Compute", "Storage", "Networking", "Database"]},
+    {"name": "Security", "weight": 25, "topics": ["IAM", "Encryption", "Compliance", "Access control"]},
+    {"name": "Architecture", "weight": 25, "topics": ["High availability", "Scalability", "Cost optimization"]},
+    {"name": "Operations", "weight": 20, "topics": ["Monitoring", "Automation", "Troubleshooting"]},
+]
+
 
 class StudyPlanValidationError(Exception):
     """Raised when study plan generation parameters are invalid"""
@@ -760,14 +851,23 @@ FORMAT_STUDY_GUIDE_PROMPT = """You are an expert AWS certification coach formatt
 - Coach Notes: {coach_notes}
 - Current Progress: {progress_summary}
 
+## CERTIFICATION EXAM DOMAINS (use these for weekly themes!)
+{exam_domains_text}
+
 ## IMPORTANT: Your Role
 You are a FORMATTER, not a decision maker. The content below has already been selected from the database.
 Your job is to:
 1. Add a motivating, personalized summary that acknowledges their exam timeline and learning preferences
-2. Add weekly themes based on the content
-3. Add focus descriptions for each week
-4. Add specific, measurable targets for each action
+2. **Add weekly themes BASED ON THE EXAM DOMAINS above** - distribute domains across weeks proportionally to their weight
+3. Add focus descriptions for each week that mention specific topics from the domain
+4. Add specific, measurable targets for each action (progressive difficulty across weeks)
 5. Add 6-8 deeply personalized accountability reminders with encouragement
+
+**CRITICAL FOR WEEKLY THEMES:**
+- Use the actual exam domain names (e.g., "Security and Compliance", "Design Resilient Architectures")
+- Higher-weight domains should span more weeks
+- For longer plans, revisit important domains with deeper focus
+- Make themes specific to the certification, not generic
 
 DO NOT add, remove, or change the actions. They are pre-selected from real database content.
 
@@ -908,6 +1008,16 @@ async def format_study_guide(
         except:
             exam_date_info = exam_date
 
+    # Get exam domains for this certification
+    exam_domains = CERTIFICATION_EXAM_DOMAINS.get(cert_code, DEFAULT_EXAM_DOMAINS)
+    
+    # Build exam domains text for the prompt
+    exam_domains_lines = []
+    for domain in exam_domains:
+        topics_str = ", ".join(domain["topics"][:4])  # Limit to 4 topics for brevity
+        exam_domains_lines.append(f"- **{domain['name']}** ({domain['weight']}% of exam): {topics_str}")
+    exam_domains_text = "\n".join(exam_domains_lines)
+    
     # Build the prompt with the pre-selected content
     prompt = FORMAT_STUDY_GUIDE_PROMPT.format(
         target_certification=target_certification,
@@ -918,6 +1028,7 @@ async def format_study_guide(
         exam_date_info=exam_date_info,
         coach_notes=coach_notes or "None provided",
         progress_summary=progress_summary,
+        exam_domains_text=exam_domains_text,
         structured_content_json=json.dumps(structured_content, indent=2),
     )
 

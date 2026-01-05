@@ -79,13 +79,25 @@ async def fetch_study_resources(
             elif isinstance(result, Exception):
                 logger.warning(f"Search task failed: {result}")
         
-        # Deduplicate by URL
+        # Deduplicate by URL AND by similar titles
         seen_urls = set()
+        seen_titles = set()
         unique_resources = []
         for r in resources:
-            if r["url"] not in seen_urls:
+            # Normalize title for comparison (lowercase, remove common words)
+            title_normalized = r["title"].lower()
+            for word in ["aws", "certified", "certification", "tutorial", "course", "guide", "-", "|"]:
+                title_normalized = title_normalized.replace(word, "")
+            title_normalized = " ".join(title_normalized.split())[:30]  # First 30 chars after cleanup
+            
+            if r["url"] not in seen_urls and title_normalized not in seen_titles:
                 seen_urls.add(r["url"])
+                seen_titles.add(title_normalized)
                 unique_resources.append(r)
+        
+        # Sort by type priority: video, course, whitepaper, documentation, article, community
+        type_priority = {"video": 0, "course": 1, "whitepaper": 2, "documentation": 3, "article": 4, "community": 5}
+        unique_resources.sort(key=lambda x: type_priority.get(x["type"], 6))
         
         logger.info(f"Total unique resources fetched: {len(unique_resources)}")
         return unique_resources[:max_resources]
@@ -177,9 +189,49 @@ async def _fetch_aws_resources(crawler, config, certification: str, cert_title: 
                     "type": "course",
                     "description": "Free official AWS training courses and learning paths"
                 })
-                
     except Exception as e:
         logger.warning(f"AWS resources fetch failed: {e}")
+    
+    # Add key AWS whitepapers based on certification
+    cert_lower = certification.lower()
+    
+    # Well-Architected Framework - essential for all certs
+    resources.append({
+        "title": "AWS Well-Architected Framework",
+        "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html",
+        "type": "whitepaper",
+        "description": "Essential reading - AWS best practices for cloud architecture"
+    })
+    
+    # Certification-specific whitepapers
+    if "solutions-architect" in cert_lower or "saa" in cert_lower:
+        resources.append({
+            "title": "AWS Security Best Practices",
+            "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/security-reference-architecture/welcome.html",
+            "type": "whitepaper",
+            "description": "Security reference architecture and best practices"
+        })
+    elif "developer" in cert_lower or "dva" in cert_lower:
+        resources.append({
+            "title": "AWS Serverless Applications Lens",
+            "url": "https://docs.aws.amazon.com/wellarchitected/latest/serverless-applications-lens/welcome.html",
+            "type": "whitepaper",
+            "description": "Best practices for serverless application development"
+        })
+    elif "sysops" in cert_lower or "soa" in cert_lower:
+        resources.append({
+            "title": "AWS Operational Excellence Pillar",
+            "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/welcome.html",
+            "type": "whitepaper",
+            "description": "Operational best practices for running workloads"
+        })
+    elif "cloud-practitioner" in cert_lower or "clf" in cert_lower:
+        resources.append({
+            "title": "AWS Overview Whitepaper",
+            "url": "https://docs.aws.amazon.com/whitepapers/latest/aws-overview/introduction.html",
+            "type": "whitepaper",
+            "description": "Introduction to AWS services and cloud concepts"
+        })
     
     return resources
 
