@@ -292,9 +292,10 @@ interface DiagramMessageProps {
   };
   onEdit?: () => void;
   onExpand?: () => void;
+  fullscreen?: boolean;
 }
 
-function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
+function DiagramCanvas({ diagram, onEdit, onExpand, fullscreen }: DiagramMessageProps) {
   // Check if nodes need positioning (new tier-based format)
   const diagramData = useMemo(() => {
     try {
@@ -409,8 +410,8 @@ function DiagramCanvas({ diagram, onEdit, onExpand }: DiagramMessageProps) {
 
   return (
     <div 
-      className="relative w-full rounded-xl overflow-hidden border border-border/50 bg-gradient-to-br from-white to-slate-50"
-      style={{ height: '450px' }}
+      className={`relative w-full overflow-hidden ${fullscreen ? '' : 'rounded-xl border border-border/50'} bg-gradient-to-br from-white to-slate-50`}
+      style={{ height: fullscreen ? '100%' : '450px' }}
     >
       {/* Header bar */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-slate-100 to-transparent">

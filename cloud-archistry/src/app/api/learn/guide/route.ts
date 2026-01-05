@@ -5,6 +5,14 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 import { gatherStudyGuideData, type StudyGuideData } from "@/lib/academy/services/study-guide-data";
+import { 
+  evaluateMilestones, 
+  evaluateActions,
+  parseLegacyMilestones,
+  type MilestoneDefinition,
+  type EvaluatedMilestone,
+  type EvaluatedAction 
+} from "@/lib/academy/services/milestone-evaluator";
 
 const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || process.env.NEXT_PUBLIC_LEARNING_AGENT_URL || "https://cloudarchistry.com";
 
@@ -37,7 +45,7 @@ export async function GET() {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    // Fetch current study plan (most recent)
+    // Fetch current study plan (most recent) - includes all fields for milestone tracking
     const currentPlan = await prisma.studyPlan.findFirst({
       where: { profileId },
       orderBy: { generatedAt: "desc" },
@@ -58,8 +66,11 @@ export async function GET() {
       },
     });
 
-    // Transform plan output to frontend format
-    const transformedPlan = currentPlan ? transformPlanOutput(currentPlan) : null;
+    // Transform plan output to frontend format with auto-evaluated milestones
+    // Cast to StoredPlan - progressData exists in DB but Prisma types may need regeneration
+    const transformedPlan = currentPlan 
+      ? await transformPlanOutputWithMilestones(currentPlan as unknown as StoredPlan, profileId) 
+      : null;
     const transformedHistory = history.map((h: { id: string; generatedAt: Date; planOutput: unknown }) => ({
       id: h.id,
       generatedAt: h.generatedAt.toISOString(),
@@ -139,6 +150,40 @@ export async function POST(request: NextRequest) {
     // Build structured content for the AI to format (not decide)
     const structuredContent = buildStructuredContent(guideData, weeks, hoursPerWeek, normalizedStyles);
 
+    // Fetch most recent plan to extract themes/actions for variation
+    const previousPlan = await prisma.studyPlan.findFirst({
+      where: { profileId },
+      orderBy: { generatedAt: "desc" },
+      select: { planOutput: true },
+    });
+
+    // Extract previous themes and action types to avoid repetition
+    let previousContext = "";
+    if (previousPlan?.planOutput) {
+      const prevOutput = previousPlan.planOutput as Record<string, unknown>;
+      const prevWeeks = (prevOutput.weeks as unknown[]) || [];
+      const themes = prevWeeks.map((w: unknown) => {
+        const week = w as Record<string, unknown>;
+        return week.theme as string;
+      }).filter(Boolean);
+      
+      const actionTypes = new Set<string>();
+      const gameActions: string[] = [];
+      prevWeeks.forEach((w: unknown) => {
+        const week = w as Record<string, unknown>;
+        const actions = (week.actions as unknown[]) || [];
+        actions.forEach((a: unknown) => {
+          const action = a as Record<string, unknown>;
+          const type = action.type as string;
+          const title = action.title as string;
+          if (type) actionTypes.add(type);
+          if (type === "game" && title) gameActions.push(title);
+        });
+      });
+
+      previousContext = `PREVIOUS STUDY PLAN (DO NOT REPEAT):\nThemes used: ${themes.join(", ")}\nGames used: ${gameActions.join(", ")}\nAction types: ${[...actionTypes].join(", ")}`;
+    }
+
     // Call learning agent to FORMAT the plan (not decide what goes in it)
     if (!LEARNING_AGENT_URL) {
       return NextResponse.json({ error: "Learning agent not configured" }, { status: 500 });
@@ -157,6 +202,8 @@ export async function POST(request: NextRequest) {
         coach_notes: coachNotes,
         exam_date: examDate || null,
         progress_summary: `${profile.challengesCompleted || 0} challenges completed, ${profile.totalPoints || 0} points earned, ${profile.currentStreak || 0} day streak`,
+        // Previous plan context for variation
+        previous_plan_context: previousContext,
         // PRE-SELECTED content - AI just formats this
         structured_content: structuredContent,
         // AI config
@@ -182,6 +229,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Delete ALL old plans for this user before creating new one
+    // This ensures clean slate and prevents old progress data from affecting new plan
+    await prisma.studyPlan.deleteMany({
+      where: { profileId },
+    });
+
+    // Also delete old auto-generated content so new content can be created
+    // Only delete AI-generated certification content, not user-created content
+    await Promise.all([
+      prisma.flashcardDeck.deleteMany({
+        where: { profileId, deckType: "certification", generatedBy: "ai" },
+      }),
+      prisma.quiz.deleteMany({
+        where: { profileId, quizType: "certification", generatedBy: "ai" },
+      }),
+      prisma.studyNotes.deleteMany({
+        where: { profileId, generatedBy: "ai" },
+      }),
+    ]);
+
     // Save plan to database
     const planRecord = await prisma.studyPlan.create({
       data: {
@@ -201,8 +268,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Transform and return
-    const transformedPlan = transformPlanOutput(planRecord);
+    // Auto-generate content based on what's in the study plan
+    // This runs in the background - don't block the response
+    autoGenerateStudyPlanContent(
+      profileId,
+      profile.targetCertification,
+      profile.skillLevel || "intermediate",
+      data.plan,
+      aiConfig
+    ).catch((err: unknown) => console.error("Background content generation failed:", err));
+
+    // Transform and return with auto-evaluated milestones
+    const transformedPlan = await transformPlanOutputWithMilestones(
+      planRecord as unknown as StoredPlan, 
+      profileId
+    );
 
     return NextResponse.json({ plan: transformedPlan });
   } catch (error) {
@@ -243,7 +323,7 @@ function buildStructuredContent(
     // SERIOUS STUDY FEATURES (prioritize these)
     { type: "world_challenge", title: "World Map Challenge", description: "Real-world scenario challenges from the world map", link: "/world" },
     { type: "drawing_challenge", title: "Architecture Drawing Challenge", description: "Design and draw AWS architectures to solve real problems", link: "/challenges" },
-    { type: "cli_practice", title: "CLI Simulator", description: "Practice AWS CLI commands in a safe sandbox environment", link: "/learn/cli" },
+    { type: "cli_practice", title: "CLI Simulator", description: "Practice AWS CLI commands in a safe sandbox environment", link: "/challenges" },
     { type: "notes", title: "Study Notes", description: "AI-generated comprehensive study notes on AWS topics", link: "/learn/notes" },
     { type: "learning_center", title: "Learning Center", description: "Comprehensive learning resources and guided paths", link: "/learn" },
     { type: "ai_chat", title: "Chat with AI Tutor", description: "Ask questions and get personalized explanations from the AI tutor", link: "/learn/chat" },
@@ -256,7 +336,11 @@ function buildStructuredContent(
 
   for (let w = 1; w <= weeks; w++) {
     const weekActions = [];
-    const maxGamesThisWeek = w % 4 === 0 ? 1 : 0; // Game every 4th week only
+    // Games: ONLY final week gets a game for stress relief before exam
+    // For longer plans (12+ weeks), also add one at the midpoint
+    const isFinalWeek = w === weeks;
+    const isMidpoint = weeks >= 12 && w === Math.floor(weeks / 2);
+    const maxGamesThisWeek = (isFinalWeek || isMidpoint) ? 1 : 0;
     let gamesAdded = 0;
 
     // PRIORITY 1: Database challenges (if available)
@@ -357,22 +441,38 @@ function buildStructuredContent(
     });
   }
 
-  // Build milestones
+  // Build milestones with machine-readable criteria for auto-completion
+  const passingScore = recommendations.nextExam?.passingScore ?? 75;
   const milestones = [
     {
+      id: `milestone-challenges-${weeks}`,
       weekNumber: Math.ceil(weeks / 3),
       label: "Complete hands-on challenges and architecture drawings",
       metric: "Build 3+ working solutions",
+      criteria: {
+        type: "challenges_completed" as const,
+        threshold: 3,
+      },
     },
     {
+      id: `milestone-flashcards-${weeks}`,
       weekNumber: Math.ceil(weeks / 2),
       label: "Master core AWS concepts through flashcards and notes",
-      metric: "90%+ accuracy on flashcard reviews",
+      metric: "Master 30+ flashcards",
+      criteria: {
+        type: "flashcard_cards_mastered" as const,
+        threshold: 30,
+      },
     },
     {
+      id: `milestone-exam-${weeks}`,
       weekNumber: weeks,
       label: "Pass practice exam with confidence",
-      metric: recommendations.nextExam ? `Score ${recommendations.nextExam.passingScore}%+ on practice exam` : "Score 75%+ on practice exam",
+      metric: `Score ${passingScore}%+ on practice exam`,
+      criteria: {
+        type: "exam_score" as const,
+        threshold: passingScore,
+      },
     },
   ]
 
@@ -394,28 +494,16 @@ function selectGameForLearningStyles(
   learningStyles: string[],
   weekNumber: number
 ) {
-  // Rotate through games, prioritizing based on learning styles
-  // Combine priorities from all selected styles
-  const priorityMap: Record<string, string[]> = {
-    visual: ["cloud-tycoon", "sniper-quiz", "lightning-round"],
-    auditory: ["quiz-battle", "lightning-round", "hot-streak"],
-    reading: ["sniper-quiz", "hot-streak", "lightning-round"],
-    hands_on: ["cloud-tycoon", "sniper-quiz", "hot-streak"],
-  };
-
-  // Merge priorities from all selected styles
-  const allPriorities: string[] = [];
-  for (const style of learningStyles) {
-    const stylePriorities = priorityMap[style] || [];
-    for (const game of stylePriorities) {
-      if (!allPriorities.includes(game)) {
-        allPriorities.push(game);
-      }
-    }
-  }
-  const priority = allPriorities.length > 0 ? allPriorities : priorityMap.hands_on;
-  const gameSlug = priority[weekNumber % priority.length];
-  return games.find(g => g.slug === gameSlug) || games[0];
+  // Rotate through ALL available games to ensure variety
+  // Different games for different weeks - no bias toward any single game
+  const availableGames = games.filter(g => g.slug !== "quiz-battle"); // Exclude non-live games
+  
+  if (availableGames.length === 0) return null;
+  
+  // Simple rotation through all games based on week number
+  // This ensures different games are selected for different weeks
+  const gameIndex = (weekNumber - 1) % availableGames.length;
+  return availableGames[gameIndex];
 }
 
 interface StoredPlan {
@@ -423,11 +511,14 @@ interface StoredPlan {
   planOutput: unknown;
   studyHoursPerWeek: number | null;
   planInputs: unknown;
-  progressData: unknown;
+  progressData?: unknown;  // Optional - may not be in Prisma generated types until regenerated
   generatedAt: Date;
 }
 
-function transformPlanOutput(plan: StoredPlan) {
+/**
+ * Transform plan output with auto-evaluated milestones from database activity
+ */
+async function transformPlanOutputWithMilestones(plan: StoredPlan, profileId: string) {
   const output = plan.planOutput as Record<string, unknown> | null;
   const inputs = plan.planInputs as Record<string, unknown> | null;
   const progressData = (plan.progressData as {
@@ -439,41 +530,94 @@ function transformPlanOutput(plan: StoredPlan) {
     return null;
   }
 
+  // Parse milestones - check if they have criteria (new format) or need parsing (legacy)
+  const rawMilestones = (output.milestones as unknown[]) || [];
+  let milestoneDefinitions: MilestoneDefinition[];
+  
+  // Check if first milestone has criteria (new format)
+  const firstMilestone = rawMilestones[0] as Record<string, unknown> | undefined;
+  if (firstMilestone?.criteria) {
+    // New format with criteria
+    milestoneDefinitions = rawMilestones.map((m: unknown) => {
+      const milestone = m as Record<string, unknown>;
+      return {
+        id: milestone.id as string || `milestone-${milestone.week_number || milestone.weekNumber}`,
+        label: milestone.label as string,
+        weekNumber: (milestone.week_number || milestone.weekNumber) as number,
+        metric: milestone.metric as string,
+        criteria: milestone.criteria as MilestoneDefinition["criteria"],
+      };
+    });
+  } else {
+    // Legacy format - parse and infer criteria
+    milestoneDefinitions = parseLegacyMilestones(
+      rawMilestones.map((m: unknown) => m as { label: string; week_number?: number; weekNumber?: number; metric?: string }),
+      output.total_weeks as number || 6
+    );
+  }
+
+  // Evaluate milestones against real database activity
+  const evaluatedMilestones = await evaluateMilestones(
+    profileId,
+    milestoneDefinitions,
+    progressData.completedMilestones || []
+  );
+
   return {
     id: plan.id,
     summary: output.summary as string || "Your personalized study plan",
     totalWeeks: output.total_weeks as number || 6,
     hoursPerWeek: plan.studyHoursPerWeek || 6,
     learningStyle: inputs?.learningStyle as string || "hands_on",
-    weeks: (output.weeks as unknown[])?.map((week: unknown) => {
+    weeks: await Promise.all((output.weeks as unknown[])?.map(async (week: unknown) => {
       const w = week as Record<string, unknown>;
+      const rawActions = ((w.actions as unknown[]) || []).map((action: unknown) => {
+        const a = action as Record<string, unknown>;
+        return {
+          id: a.id as string,
+          type: a.type as string,
+          title: a.title as string,
+          description: a.description as string,
+          target: a.target as string | undefined,
+          link: a.link as string | undefined,
+        };
+      });
+      
+      // Evaluate actions against real database activity
+      const evaluatedActions = await evaluateActions(
+        profileId,
+        rawActions,
+        progressData.completedActions || []
+      );
+      
       return {
         weekNumber: w.week_number as number,
         theme: w.theme as string,
         focus: w.focus as string,
-        actions: ((w.actions as unknown[]) || []).map((action: unknown) => {
-          const a = action as Record<string, unknown>;
-          return {
-            id: a.id as string,
-            type: a.type as string,
-            title: a.title as string,
-            description: a.description as string,
-            target: a.target as string | undefined,
-            link: a.link as string | undefined,
-            completed: progressData.completedActions?.includes(a.id as string) || false,
-          };
-        }),
+        actions: evaluatedActions.map((a: EvaluatedAction) => ({
+          id: a.id,
+          type: a.type,
+          title: a.title,
+          description: a.description,
+          target: a.target,
+          link: a.link,
+          completed: a.completed,
+          autoDetected: a.autoDetected,
+          currentValue: a.currentValue,
+          targetValue: a.targetValue,
+        })),
       };
-    }) || [],
-    milestones: ((output.milestones as unknown[]) || []).map((m: unknown) => {
-      const milestone = m as Record<string, unknown>;
-      return {
-        label: milestone.label as string,
-        weekNumber: milestone.week_number as number,
-        metric: milestone.metric as string,
-        completed: progressData.completedMilestones?.includes(milestone.label as string) || false,
-      };
-    }),
+    }) || []),
+    milestones: evaluatedMilestones.map((m: EvaluatedMilestone) => ({
+      id: m.id,
+      label: m.label,
+      weekNumber: m.weekNumber,
+      metric: m.metric,
+      completed: m.completed,
+      autoDetected: m.autoDetected,
+      currentValue: m.currentValue,
+      targetValue: m.targetValue,
+    })),
     accountability: (output.accountability as string[]) || [],
     resources: ((output.resources as unknown[]) || []).map((r: unknown) => {
       const resource = r as Record<string, unknown>;
@@ -481,8 +625,295 @@ function transformPlanOutput(plan: StoredPlan) {
         title: resource.title as string,
         url: resource.url as string,
         type: resource.type as string,
+        description: (resource.description as string) || "",
       };
     }),
     generatedAt: plan.generatedAt.toISOString(),
   };
 }
+
+/**
+ * Auto-generate content based on what actions are in the study plan.
+ * Runs in background after plan creation - doesn't block the response.
+ * 
+ * Checks for:
+ * - flashcard actions → generates flashcard deck
+ * - notes actions → generates study notes  
+ * - quiz actions → generates quiz
+ */
+async function autoGenerateStudyPlanContent(
+  profileId: string,
+  targetCertification: string,
+  skillLevel: string,
+  planOutput: Record<string, unknown>,
+  aiConfig: { key?: string; preferredModel?: string } | null
+): Promise<void> {
+  const weeks = (planOutput.weeks as unknown[]) || [];
+  
+  // Collect all action types from the plan
+  const actionTypes = new Set<string>();
+  for (const week of weeks) {
+    const w = week as Record<string, unknown>;
+    const actions = (w.actions as unknown[]) || [];
+    for (const action of actions) {
+      const a = action as Record<string, unknown>;
+      const actionType = a.type as string;
+      if (actionType) {
+        actionTypes.add(actionType);
+      }
+    }
+  }
+
+  console.log(`[Study Plan] Auto-generating content for action types: ${[...actionTypes].join(", ")}`);
+
+  const generatePromises: Promise<unknown>[] = [];
+
+  // Always generate flashcards if action exists (even if user has some)
+  // Study plans should have dedicated flashcard decks
+  if (actionTypes.has("flashcard") || actionTypes.has("flashcards")) {
+    console.log("[Study Plan] Generating flashcards for study plan...");
+    generatePromises.push(
+      generateFlashcardsForPlan(profileId, targetCertification, skillLevel, aiConfig)
+    );
+  }
+
+  // Always generate notes if action exists
+  if (actionTypes.has("notes") || actionTypes.has("study_notes")) {
+    console.log("[Study Plan] Generating study notes for study plan...");
+    generatePromises.push(
+      generateNotesForPlan(profileId, targetCertification, skillLevel, aiConfig)
+    );
+  }
+
+  // Always generate quiz if action exists
+  if (actionTypes.has("quiz")) {
+    console.log("[Study Plan] Generating quiz for study plan...");
+    generatePromises.push(
+      generateQuizForPlan(profileId, targetCertification, skillLevel, aiConfig)
+    );
+  }
+
+  // Run all generations in parallel
+  if (generatePromises.length > 0) {
+    const results = await Promise.allSettled(generatePromises);
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error("[Study Plan] Content generation failed:", result.reason);
+      }
+    }
+    console.log(`[Study Plan] Auto-generated ${generatePromises.length} content items`);
+  }
+}
+
+/**
+ * Generate flashcards for the study plan
+ */
+async function generateFlashcardsForPlan(
+  profileId: string,
+  targetCertification: string,
+  skillLevel: string,
+  aiConfig: { key?: string; preferredModel?: string } | null
+): Promise<void> {
+  try {
+    // Dynamic card count based on skill level
+    const cardCountByLevel: Record<string, number> = {
+      beginner: 20,
+      intermediate: 30,
+      advanced: 40,
+    };
+    const cardCount = cardCountByLevel[skillLevel.toLowerCase()] || 30;
+
+    // Use the same endpoint as the flashcards page - /api/learning/generate-flashcards
+    const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/generate-flashcards`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        certification_code: targetCertification,
+        user_level: skillLevel,
+        card_count: cardCount,
+        openai_api_key: aiConfig?.key,
+        preferred_model: aiConfig?.preferredModel,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Flashcard generation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.success || !data.deck) {
+      throw new Error("Invalid flashcard response");
+    }
+
+    // Save to database
+    await prisma.flashcardDeck.create({
+      data: {
+        profileId,
+        certificationCode: targetCertification,
+        title: data.deck.title || `${targetCertification} Study Flashcards`,
+        description: data.deck.description || "Auto-generated from your study plan",
+        generatedBy: "ai",
+        aiModel: aiConfig?.preferredModel || "gpt-4o",
+        deckType: "certification",
+        totalCards: data.deck.cards?.length || 0,
+        cards: {
+          create: (data.deck.cards || []).map((card: {
+            front: string;
+            back: string;
+            difficulty?: string;
+            tags?: string[];
+            aws_services?: string[];
+          }, index: number) => ({
+            front: card.front,
+            back: card.back,
+            difficulty: card.difficulty || "medium",
+            tags: card.tags || [],
+            awsServices: card.aws_services || [],
+            orderIndex: index,
+          })),
+        },
+      },
+    });
+
+    console.log(`[Study Plan] Created flashcard deck with ${data.deck.cards?.length || 0} cards`);
+  } catch (error) {
+    console.error("[Study Plan] Flashcard generation error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Generate study notes for the study plan
+ */
+async function generateNotesForPlan(
+  profileId: string,
+  targetCertification: string,
+  skillLevel: string,
+  aiConfig: { key?: string; preferredModel?: string } | null
+): Promise<void> {
+  try {
+    const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/generate-notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        certification_code: targetCertification,
+        user_level: skillLevel,
+        openai_api_key: aiConfig?.key,
+        preferred_model: aiConfig?.preferredModel,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Notes generation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.success || !data.notes) {
+      throw new Error("Invalid notes response");
+    }
+
+    // Save to database
+    await prisma.studyNotes.create({
+      data: {
+        profileId,
+        certificationCode: targetCertification,
+        title: data.notes.title || `${targetCertification} Study Notes`,
+        content: data.notes.content || "",
+        generatedBy: "ai",
+        aiModel: aiConfig?.preferredModel || "gpt-4o",
+      },
+    });
+
+    console.log(`[Study Plan] Created study notes: ${data.notes.title}`);
+  } catch (error) {
+    console.error("[Study Plan] Notes generation error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Generate quiz for the study plan
+ */
+async function generateQuizForPlan(
+  profileId: string,
+  targetCertification: string,
+  skillLevel: string,
+  aiConfig: { key?: string; preferredModel?: string } | null
+): Promise<void> {
+  try {
+    const response = await fetch(`${LEARNING_AGENT_URL}/api/learning/generate-quiz`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        certification_code: targetCertification,
+        user_level: skillLevel,
+        question_count: 10,
+        openai_api_key: aiConfig?.key,
+        preferred_model: aiConfig?.preferredModel,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Quiz generation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.success || !data.quiz) {
+      throw new Error("Invalid quiz response");
+    }
+
+    // Save to database
+    await prisma.quiz.create({
+      data: {
+        profileId,
+        certificationCode: targetCertification,
+        title: data.quiz.title || `${targetCertification} Practice Quiz`,
+        description: data.quiz.description || "Auto-generated from your study plan",
+        quizType: "certification",
+        questionCount: data.quiz.questions?.length || 0,
+        generatedBy: "ai",
+        aiModel: aiConfig?.preferredModel || "gpt-4o",
+        questions: {
+          create: (data.quiz.questions || []).map((q: {
+            question: string;
+            options: string[] | Array<{ id: string; text: string; isCorrect: boolean }>;
+            correct_answer?: number;
+            explanation?: string;
+            difficulty?: string;
+          }, index: number) => {
+            // Handle both array of strings and array of option objects
+            let formattedOptions: Array<{ id: string; text: string; isCorrect: boolean }>;
+            if (Array.isArray(q.options) && q.options.length > 0) {
+              if (typeof q.options[0] === "string") {
+                // Convert string array to option objects
+                formattedOptions = (q.options as string[]).map((opt, i) => ({
+                  id: `opt-${i}`,
+                  text: opt,
+                  isCorrect: i === (q.correct_answer ?? 0),
+                }));
+              } else {
+                formattedOptions = q.options as Array<{ id: string; text: string; isCorrect: boolean }>;
+              }
+            } else {
+              formattedOptions = [];
+            }
+            
+            return {
+              question: q.question,
+              options: formattedOptions,
+              explanation: q.explanation || "",
+              difficulty: q.difficulty || "medium",
+              orderIndex: index,
+            };
+          }),
+        },
+      },
+    });
+
+    console.log(`[Study Plan] Created quiz with ${data.quiz.questions?.length || 0} questions`);
+  } catch (error) {
+    console.error("[Study Plan] Quiz generation error:", error);
+    throw error;
+  }
+}
+

@@ -710,7 +710,10 @@ async def format_study_guide_endpoint(request: FormatStudyGuideRequest):
             hours_per_week=request.hours_per_week,
             learning_styles=request.learning_styles,
             coach_notes=request.coach_notes,
+            exam_date=getattr(request, 'exam_date', None),
+            progress_summary=getattr(request, 'progress_summary', ''),
             structured_content=request.structured_content,
+            previous_plan_context=request.previous_plan_context,
         )
         return {"success": True, "plan": plan}
     except ApiKeyRequiredError as key_err:

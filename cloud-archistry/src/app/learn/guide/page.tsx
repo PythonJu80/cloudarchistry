@@ -95,6 +95,9 @@ interface PlanAction {
   target?: string;
   link?: string;
   completed: boolean;
+  autoDetected?: boolean;    // True if completion was auto-detected from DB activity
+  currentValue?: number;     // Current progress value
+  targetValue?: number;      // Target value to complete
 }
 
 interface WeekPlan {
@@ -105,10 +108,14 @@ interface WeekPlan {
 }
 
 interface Milestone {
+  id?: string;
   label: string;
   weekNumber: number;
   metric: string;
   completed: boolean;
+  autoDetected?: boolean;    // True if completion was auto-detected from DB activity
+  currentValue?: number;     // Current progress value
+  targetValue?: number;      // Target value to complete
 }
 
 interface StudyPlanData {
@@ -196,6 +203,8 @@ export default function GuidePage() {
     try {
       setGenerating(true);
       setError(null);
+      // Clear old plan immediately so user sees loading state
+      setPlan(null);
       
       const response = await fetch("/api/learn/guide", {
         method: "POST",
@@ -502,7 +511,24 @@ export default function GuidePage() {
 
         {/* Right: Plan display */}
         <div className="space-y-6">
-          {plan ? (
+          {generating ? (
+            /* Loading state while generating */
+            <Card>
+              <CardContent className="py-16">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Generating Your Study Plan</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Our AI is analyzing your profile, skill level, and learning preferences to create a personalized study plan...
+                  </p>
+                  <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span>This usually takes 10-20 seconds</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : plan ? (
             <>
               {/* Summary */}
               <Card>
@@ -548,14 +574,15 @@ export default function GuidePage() {
                             <div
                               key={action.id}
                               className={cn(
-                                "flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer",
+                                "flex items-start gap-3 p-3 rounded-lg border transition-all",
                                 action.completed 
-                                  ? "bg-muted/50 border-muted" 
-                                  : "hover:border-primary/50"
+                                  ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
+                                  : "hover:border-primary/50",
+                                !action.autoDetected && "cursor-pointer"
                               )}
-                              onClick={() => toggleAction(week.weekNumber, action.id)}
+                              onClick={() => !action.autoDetected && toggleAction(week.weekNumber, action.id)}
                             >
-                              <button className="mt-0.5 flex-shrink-0">
+                              <button className="mt-0.5 flex-shrink-0" disabled={action.autoDetected}>
                                 {action.completed ? (
                                   <CheckCircle2 className="h-5 w-5 text-green-500" />
                                 ) : (
@@ -563,13 +590,13 @@ export default function GuidePage() {
                                 )}
                               </button>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <span className={cn("p-1 rounded", config.bg, config.color)}>
                                     {config.icon}
                                   </span>
                                   <span className={cn(
                                     "font-medium",
-                                    action.completed && "line-through text-muted-foreground"
+                                    action.completed && "text-green-700 dark:text-green-400"
                                   )}>
                                     {action.title}
                                   </span>
@@ -581,6 +608,21 @@ export default function GuidePage() {
                                   <p className="text-xs text-primary mt-1">
                                     Target: {action.target}
                                   </p>
+                                )}
+                                {/* Progress bar for incomplete actions with progress data */}
+                                {!action.completed && action.targetValue !== undefined && action.currentValue !== undefined && action.targetValue > 0 && (
+                                  <div className="mt-2">
+                                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                      <span>Progress: {action.currentValue} / {action.targetValue}</span>
+                                      <span>{Math.min(100, Math.round((action.currentValue / action.targetValue) * 100))}%</span>
+                                    </div>
+                                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full bg-primary rounded-full transition-all duration-500"
+                                        style={{ width: `${Math.min(100, Math.round((action.currentValue / action.targetValue) * 100))}%` }}
+                                      />
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                               {action.link && (
@@ -611,34 +653,58 @@ export default function GuidePage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {plan.milestones.map((milestone, idx) => (
-                        <div 
-                          key={idx}
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer",
-                            milestone.completed 
-                              ? "bg-muted/50 border-muted" 
-                              : "hover:border-primary/50"
-                          )}
-                          onClick={() => toggleMilestone(milestone.label)}
-                        >
-                          <button className="flex-shrink-0">
-                            {milestone.completed ? (
-                              <CheckCircle2 className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <Circle className="h-5 w-5 text-muted-foreground" />
+                      {plan.milestones.map((milestone, idx) => {
+                        const progressPercent = milestone.targetValue && milestone.currentValue !== undefined
+                          ? Math.min(100, Math.round((milestone.currentValue / milestone.targetValue) * 100))
+                          : milestone.completed ? 100 : 0;
+                        
+                        return (
+                          <div 
+                            key={milestone.id || idx}
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border transition-all",
+                              milestone.completed 
+                                ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" 
+                                : "hover:border-primary/50",
+                              !milestone.autoDetected && "cursor-pointer"
                             )}
-                          </button>
-                          <div className="flex-1">
-                            <p className={cn(
-                              "font-medium",
-                              milestone.completed && "line-through text-muted-foreground"
-                            )}>{milestone.label}</p>
-                            <p className="text-sm text-muted-foreground">{milestone.metric}</p>
+                            onClick={() => !milestone.autoDetected && toggleMilestone(milestone.label)}
+                          >
+                            <button className="flex-shrink-0" disabled={milestone.autoDetected}>
+                              {milestone.completed ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className={cn(
+                                  "font-medium",
+                                  milestone.completed && "text-green-700 dark:text-green-400"
+                                )}>{milestone.label}</p>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{milestone.metric}</p>
+                              {/* Progress bar for incomplete milestones */}
+                              {!milestone.completed && milestone.targetValue !== undefined && milestone.currentValue !== undefined && (
+                                <div className="mt-2">
+                                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                    <span>Progress: {milestone.currentValue} / {milestone.targetValue}</span>
+                                    <span>{progressPercent}%</span>
+                                  </div>
+                                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-primary rounded-full transition-all duration-500"
+                                      style={{ width: `${progressPercent}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <Badge variant="outline">Week {milestone.weekNumber}</Badge>
                           </div>
-                          <Badge variant="outline">Week {milestone.weekNumber}</Badge>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>

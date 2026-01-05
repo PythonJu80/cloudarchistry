@@ -11,9 +11,9 @@ import {
   BookOpen,
   Search,
   Filter,
-  X,
   Rss,
   Layers,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,7 @@ const typeConfig: Record<string, { icon: typeof Youtube; color: string; bg: stri
   video: { icon: Youtube, color: "text-red-400", bg: "bg-red-500/10", label: "Video" },
   documentation: { icon: FileText, color: "text-blue-400", bg: "bg-blue-500/10", label: "Docs" },
   course: { icon: BookOpen, color: "text-green-400", bg: "bg-green-500/10", label: "Course" },
+  whitepaper: { icon: FileText, color: "text-amber-400", bg: "bg-amber-500/10", label: "Whitepaper" },
   article: { icon: FileText, color: "text-purple-400", bg: "bg-purple-500/10", label: "Article" },
 };
 
@@ -185,7 +186,7 @@ export default function ResourcesPage() {
 
   const filteredResources = allResources.filter((r) => {
     if (filter === "video" && r.type !== "video") return false;
-    if (filter === "documentation" && r.type !== "documentation" && r.type !== "course") return false;
+    if (filter === "documentation" && r.type !== "documentation" && r.type !== "course" && r.type !== "whitepaper") return false;
     if (searchQuery && !r.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
@@ -376,15 +377,37 @@ export default function ResourcesPage() {
                     >
                       <ExternalLink className="w-4 h-4 text-muted-foreground" />
                     </a>
-                    {isUserAdded && (
-                      <button
-                        onClick={() => removeUserResource(idx - resources.length)}
-                        className="p-2 rounded-lg hover:bg-red-500/10 transition-colors text-red-500"
-                        title="Remove"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={async () => {
+                        if (isUserAdded) {
+                          removeUserResource(idx - resources.length);
+                        } else {
+                          // Remove from guide resources - persist to database
+                          try {
+                            const response = await fetch("/api/learn/resources", {
+                              method: "DELETE",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ url: resource.url }),
+                            });
+                            
+                            if (response.ok) {
+                              const updated = resources.filter((_, i) => i !== idx);
+                              setResources(updated);
+                              toast.success("Resource removed");
+                            } else {
+                              toast.error("Failed to remove resource");
+                            }
+                          } catch (error) {
+                            console.error("Failed to delete resource:", error);
+                            toast.error("Failed to remove resource");
+                          }
+                        }
+                      }}
+                      className="p-2 rounded-lg hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-500"
+                      title="Remove"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>

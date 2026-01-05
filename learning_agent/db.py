@@ -278,6 +278,66 @@ async def get_flashcard_deck(deck_id: str) -> Optional[dict]:
         }
 
 
+async def get_active_platform_content() -> Dict[str, Any]:
+    """
+    Fetch all active platform content for study plan generation.
+    Returns games, exams, scenarios, flashcards, and quizzes.
+    """
+    pool = await get_pool()
+    
+    async with pool.acquire() as conn:
+        # Fetch active game modes
+        games = await conn.fetch("""
+            SELECT slug, name, description, icon, "minPlayers", "maxPlayers"
+            FROM "GameType"
+            WHERE "isActive" = true
+            ORDER BY name
+        """)
+        
+        # Fetch active practice exams
+        exams = await conn.fetch("""
+            SELECT slug, title, "certificationCode", description, "questionCount"
+            FROM "PracticeExam"
+            WHERE "isActive" = true
+            ORDER BY "certificationCode"
+        """)
+        
+        # Fetch active scenarios (world challenges)
+        scenarios = await conn.fetch("""
+            SELECT id, title, description, difficulty
+            FROM "AcademyScenario"
+            WHERE "isActive" = true
+            ORDER BY "createdAt" DESC
+            LIMIT 20
+        """)
+        
+        # Fetch active flashcard decks
+        flashcard_decks = await conn.fetch("""
+            SELECT id, title, description, "totalCards"
+            FROM "FlashcardDeck"
+            WHERE "isActive" = true
+            ORDER BY "createdAt" DESC
+            LIMIT 20
+        """)
+        
+        # Fetch active quizzes
+        quizzes = await conn.fetch("""
+            SELECT id, title, description
+            FROM "Quiz"
+            WHERE "isActive" = true
+            ORDER BY "createdAt" DESC
+            LIMIT 20
+        """)
+        
+        return {
+            "games": [dict(row) for row in games],
+            "exams": [dict(row) for row in exams],
+            "scenarios": [dict(row) for row in scenarios],
+            "flashcard_decks": [dict(row) for row in flashcard_decks],
+            "quizzes": [dict(row) for row in quizzes],
+        }
+
+
 async def get_existing_flashcard_topics(certification_code: str = None, limit: int = 50) -> List[str]:
     """Get existing flashcard front questions to avoid duplicates."""
     pool = await get_pool()

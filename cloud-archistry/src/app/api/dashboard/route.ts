@@ -234,21 +234,23 @@ export async function GET() {
 
     // Format challenge details
     const challengeDetails = scenarioAttempts.flatMap((attempt) =>
-      attempt.challengeProgress.map((cp) => ({
-        id: cp.id,
-        challengeId: cp.challengeId,
-        challengeTitle: cp.challenge.title,
-        challengeDescription: cp.challenge.description,
-        scenarioTitle: attempt.scenario.title,
-        locationName: attempt.scenario.location.name,
-        status: cp.status,
-        pointsEarned: cp.pointsEarned,
-        maxPoints: cp.challenge.points,
-        hintsUsed: cp.hintsUsed,
-        startedAt: cp.startedAt,
-        completedAt: cp.completedAt,
-        difficulty: cp.challenge.difficulty,
-      }))
+      attempt.challengeProgress
+        .filter((cp) => cp.challenge)
+        .map((cp) => ({
+          id: cp.id,
+          challengeId: cp.challengeId,
+          challengeTitle: cp.challenge.title,
+          challengeDescription: cp.challenge.description,
+          scenarioTitle: attempt.scenario.title,
+          locationName: attempt.scenario.location?.name || "Unknown Location",
+          status: cp.status,
+          pointsEarned: cp.pointsEarned,
+          maxPoints: cp.challenge.points,
+          hintsUsed: cp.hintsUsed,
+          startedAt: cp.startedAt,
+          completedAt: cp.completedAt,
+          difficulty: cp.challenge.difficulty,
+        }))
     );
 
     return NextResponse.json({
@@ -308,16 +310,18 @@ export async function GET() {
         data: a.data,
         createdAt: a.createdAt,
       })),
-      flashcardProgress: flashcardProgress.map((fp) => ({
-        id: fp.id,
-        deckTitle: fp.deck.title,
-        scenarioTitle: fp.deck.scenario.title,
-        locationName: fp.deck.scenario.location.name,
-        cardsStudied: fp.cardsStudied,
-        cardsMastered: fp.cardsMastered,
-        totalCards: fp.deck.totalCards,
-        lastStudiedAt: fp.lastStudiedAt,
-      })),
+      flashcardProgress: flashcardProgress
+        .filter((fp) => fp.deck?.scenario)
+        .map((fp) => ({
+          id: fp.id,
+          deckTitle: fp.deck.title,
+          scenarioTitle: fp.deck.scenario?.title || "Unknown Scenario",
+          locationName: fp.deck.scenario?.location?.name || "Unknown Location",
+          cardsStudied: fp.cardsStudied,
+          cardsMastered: fp.cardsMastered,
+          totalCards: fp.deck.totalCards,
+          lastStudiedAt: fp.lastStudiedAt,
+        })),
       quizAttempts: quizAttempts.map((qa) => ({
         id: qa.id,
         quizTitle: qa.quiz.title,

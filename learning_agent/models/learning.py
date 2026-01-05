@@ -132,6 +132,7 @@ class FormatStudyGuideRequest(BaseModel):
     The tool has already decided what content goes in - AI just formats it nicely.
     """
     target_certification: str
+    previous_plan_context: Optional[str] = None
     skill_level: str = "intermediate"
     time_horizon_weeks: int = 6
     hours_per_week: int = 6

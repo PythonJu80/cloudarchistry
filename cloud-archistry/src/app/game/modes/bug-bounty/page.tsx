@@ -965,6 +965,7 @@ export default function BugBountyPage() {
           <div className="flex-1 overflow-hidden">
             <DiagramMessage 
               diagram={challenge.diagram}
+              fullscreen
             />
           </div>
           

@@ -146,7 +146,7 @@ PLATFORM_ACTIONS = {
         "cli_simulator": {
             "title": "CLI Simulator",
             "description": "Practice AWS CLI commands in a safe sandbox environment",
-            "link": "/learn/cli",
+            "link": "/challenges",
         },
     },
     "flashcard": {
@@ -263,6 +263,166 @@ class StudyPlanContext(BaseModel):
     telemetry_summary: Optional[str] = None
 
 
+def build_platform_features_text(platform_content: Dict[str, Any]) -> str:
+    """Build dynamic platform features text from database content."""
+    lines = []
+    
+    lines.append("\n**CONTENT THAT WILL BE AUTO-GENERATED FOR THIS STUDY PLAN:**")
+    lines.append("When you include these action types, the system will automatically generate the content:")
+    
+    lines.append("\n**Flashcards (type: \"flashcard\")**")
+    lines.append("- System will AUTO-GENERATE a custom flashcard deck (30 cards)")
+    lines.append("- Tailored to certification and skill level")
+    lines.append("- Spaced repetition review")
+    lines.append("- **INCLUDE 1-2 flashcard actions per week**")
+    
+    lines.append("\n**Study Notes (type: \"notes\")**")
+    lines.append("- System will AUTO-GENERATE comprehensive study notes")
+    lines.append("- Covers key exam topics and AWS services")
+    lines.append("- Markdown formatted with examples")
+    lines.append("- **INCLUDE 1 notes action in the plan**")
+    
+    lines.append("\n**Quizzes (type: \"quiz\")**")
+    lines.append("- System will AUTO-GENERATE a practice quiz (10-15 questions)")
+    lines.append("- Multiple choice questions with explanations")
+    lines.append("- Certification-specific content")
+    lines.append("- **INCLUDE 1-2 quiz actions in the plan**")
+    
+    lines.append("\n**EXISTING PLATFORM FEATURES:**")
+    
+    # Practice Exams
+    exams = platform_content.get("exams", [])
+    if exams:
+        lines.append("\n**Practice Exams (type: \"practice_exam\")**")
+        lines.append(f"- {len(exams)} full-length certification practice exams available")
+        lines.append("- Real exam conditions and scoring")
+        lines.append("- **CRITICAL: Include at least 1 practice exam in final weeks**")
+    
+    # World Map Challenges (Scenarios)
+    scenarios = platform_content.get("scenarios", [])
+    if scenarios:
+        lines.append("\n**World Map Challenges (type: \"world_challenge\")**")
+        lines.append(f"- Unlimited scenario generation capability")
+        lines.append("- Real-world architecture challenges")
+        lines.append("- Hands-on problem-solving")
+        lines.append("- **INCLUDE 2-3 world challenges throughout the plan**")
+    
+    lines.append("\n**Architecture Drawing (type: \"drawing_challenge\")**")
+    lines.append("- Design and draw AWS architectures")
+    lines.append("- Visual learning and hands-on practice")
+    
+    lines.append("\n**CLI Practice (type: \"cli_practice\")**")
+    lines.append("- Practice AWS CLI commands in sandbox")
+    lines.append("- Safe environment for experimentation")
+    
+    lines.append("\n**Learning Center (type: \"learning_center\")**")
+    lines.append("- Comprehensive learning resources and guided paths")
+    
+    lines.append("\n**AI Chat (type: \"ai_chat\")**")
+    lines.append("- Ask questions and get personalized explanations")
+    
+    lines.append("\n**Resources (type: \"resources\")**")
+    lines.append("- Curated AWS docs, videos, materials")
+    
+    # Games (dynamic from DB)
+    games = platform_content.get("games", [])
+    if games:
+        lines.append("\n**GAMES (type: \"game\")** - Use ONLY in final week as stress relief before exam")
+        lines.append("- **LIMIT: Only 1 game in the FINAL week of the plan**")
+        lines.append("- **ROTATE**: Pick different games each time - do NOT always use cloud_tycoon")
+        for game in games[:5]:  # Show top 5 games
+            icon = game.get("icon", "🎮")
+            name = game.get("name", "")
+            lines.append(f"- {icon} {name}")
+    
+    return "\n".join(lines)
+
+
+STUDY_GUIDE_PROMPT_DYNAMIC = """You are an expert AWS certification coach creating a personalized study plan.
+
+## Learner Profile
+- Target Certification: {target_certification}
+- Current Skill Level: {skill_level}
+- Time Available: {time_horizon_weeks} weeks, {hours_per_week} hours/week
+- Learning Style: {learning_style}
+- Additional Notes: {coach_notes}
+- Progress Summary: {telemetry_summary}
+
+## Platform Features Available
+You MUST recommend actions from these specific platform features.
+
+**PRIORITY: SERIOUS STUDY FEATURES (Use these as primary learning methods)**
+{platform_features}
+
+## Learning Style Recommendations
+- visual: Prioritize architecture_drawing, world_map_challenge, study_notes with diagrams
+- auditory: Prioritize ai_chat (discussion), external_resources (videos)
+- reading: Prioritize study_notes, flashcard_deck, external_resources (documentation)
+- hands_on: Prioritize world_map_challenge, architecture_drawing, cli_simulator, practice_exam
+
+## Output Format
+Return a JSON object with this exact structure:
+{{
+  "summary": "Brief 1-2 sentence personalized summary of the plan",
+  "total_weeks": {time_horizon_weeks},
+  "weeks": [
+    {{
+      "week_number": 1,
+      "theme": "Week theme (e.g., 'Compute Foundations')",
+      "focus": "What to focus on this week",
+      "actions": [
+        {{
+          "id": "unique-id-1",
+          "type": "game|exam|quiz|challenge|flashcard",
+          "title": "Action title",
+          "description": "What to do",
+          "target": "Specific target (e.g., 'Score 80%' or 'Complete 3 rounds')",
+          "link": "/path/to/feature",
+          "completed": false
+        }}
+      ]
+    }}
+  ],
+  "milestones": [
+    {{
+      "label": "Milestone name",
+      "week_number": 2,
+      "metric": "How to measure success",
+      "completed": false
+    }}
+  ],
+  "accountability": [
+    "Daily reminder or accountability tip"
+  ],
+  "resources": [
+    {{
+      "title": "Resource name",
+      "url": "https://...",
+      "type": "video|whitepaper|documentation|course"
+    }}
+  ]
+}}
+
+## Guidelines
+1. Create {time_horizon_weeks} weeks of content
+2. Each week should have 4-6 specific actions
+3. **CRITICAL**: 70-80% of actions should be SERIOUS STUDY features (practice exams, world challenges, drawing, CLI, flashcards, quizzes, notes, learning center, AI chat)
+4. **CRITICAL**: Maximum 1-2 games per week, positioned as breaks/reinforcement only
+5. Include at least one practice exam in the final 2 weeks
+6. For hands-on/visual learners: Heavy emphasis on world_map_challenge, architecture_drawing, cli_simulator
+7. For reading learners: Heavy emphasis on study_notes, flashcard_deck, external_resources
+8. Add 3-4 meaningful milestones tied to exam domains
+9. Include 2-3 accountability reminders
+10. Recommend 2-4 external resources based on learning style (YouTube for visual, AWS docs for reading, etc.)
+11. Make targets specific and measurable
+12. Progress from fundamentals to advanced topics
+13. For {target_certification}, focus on the key exam domains
+14. Utilize the full breadth of platform features - don't just repeat the same actions
+
+Generate the study plan JSON now. Output ONLY valid JSON, no prose."""
+
+
+# Legacy prompt kept for backward compatibility
 STUDY_GUIDE_PROMPT = """You are an expert AWS certification coach creating a personalized study plan.
 
 ## Learner Profile
@@ -308,17 +468,14 @@ You MUST recommend actions from these specific platform features.
 **Resources (type: "resources")**
 - external_resources: Curated AWS docs, videos, materials (supplement your learning)
 
-**SECONDARY: GAMES (Use sparingly as reinforcement/breaks, NOT primary learning)**
+**SECONDARY: GAMES (Use ONLY in final week as stress relief before exam)**
 
-**Game Zone (type: "game")** - Limit to 1-2 per week maximum
+**Game Zone (type: "game")** - ONLY include in final week, rotate through different games
 - sniper_quiz: High-stakes single-shot questions
 - lightning_round: 60-second speed challenges
 - hot_streak: Build multiplier streaks
-- quiz_battle: 1v1 battles
 - cloud_tycoon: Build infrastructure simulation
-- survival_mode: Answer under pressure
-- time_attack: Race against the clock
-- perfect_run: Aim for perfect score
+- IMPORTANT: Rotate through different games - do NOT always pick cloud_tycoon
 
 ## Learning Style Recommendations
 - visual: Prioritize architecture_drawing, world_map_challenge, study_notes with diagrams
@@ -474,6 +631,10 @@ async def generate_study_guide(
     if not key:
         raise ApiKeyRequiredError("OpenAI API key required. Set OPENAI_API_KEY in .env file.")
     
+    # Fetch active platform content from database
+    from db import get_active_platform_content
+    platform_content = await get_active_platform_content()
+    
     # Fetch current AWS knowledge from database
     from utils import fetch_knowledge_for_generation
     knowledge_context = await fetch_knowledge_for_generation(
@@ -489,8 +650,11 @@ async def generate_study_guide(
     persona = CERTIFICATION_PERSONAS[cert_code]
     target_certification = persona["cert"]
 
-    # Build the prompt
-    prompt = STUDY_GUIDE_PROMPT.format(
+    # Build dynamic platform features list from DB
+    platform_features_text = build_platform_features_text(platform_content)
+    
+    # Build the prompt with dynamic content
+    prompt = STUDY_GUIDE_PROMPT_DYNAMIC.format(
         target_certification=target_certification,
         skill_level=context.skill_level,
         time_horizon_weeks=context.time_horizon_weeks,
@@ -498,6 +662,7 @@ async def generate_study_guide(
         learning_style=context.learning_style,
         coach_notes=context.coach_notes or "None provided",
         telemetry_summary=context.telemetry_summary or "New learner, no activity yet",
+        platform_features=platform_features_text,
     )
 
     messages = [
@@ -523,13 +688,41 @@ async def generate_study_guide(
         raise ValueError("Agent returned invalid study guide JSON") from err
 
     # Ensure all actions have unique IDs and correct links
-    plan = enrich_plan_with_platform_data(plan)
+    plan = enrich_plan_with_platform_data(plan, platform_content)
 
     return plan
 
 
-def enrich_plan_with_platform_data(plan: Dict[str, Any]) -> Dict[str, Any]:
-    """Ensure all actions have proper IDs and links from platform data."""
+def enrich_plan_with_platform_data(plan: Dict[str, Any], platform_content: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure all actions have proper IDs and links from dynamic platform data."""
+    
+    # Build link mapping from platform content
+    link_map = {
+        "practice_exam": "/learn/exams",
+        "exam": "/learn/exams",
+        "world_challenge": "/world",
+        "scenario": "/world",
+        "drawing_challenge": "/challenges",
+        "architecture": "/challenges",
+        "cli_practice": "/challenges",
+        "cli": "/challenges",
+        "flashcard": "/learn/flashcards",
+        "flashcards": "/learn/flashcards",
+        "quiz": "/learn/quiz",
+        "notes": "/learn/notes",
+        "study_notes": "/learn/notes",
+        "learning_center": "/learn",
+        "ai_chat": "/learn/chat",
+        "chat": "/learn/chat",
+        "resources": "/learn/resources",
+    }
+    
+    # Add game links dynamically from DB
+    for game in platform_content.get("games", []):
+        slug = game.get("slug")
+        if slug:
+            link_map[slug] = f"/game/modes/{slug.replace('_', '-')}"
+            link_map["game"] = "/game"  # Generic game link
     
     for week in plan.get("weeks", []):
         for action in week.get("actions", []):
@@ -540,15 +733,10 @@ def enrich_plan_with_platform_data(plan: Dict[str, Any]) -> Dict[str, Any]:
             # Ensure completed is boolean
             action["completed"] = bool(action.get("completed", False))
             
-            # Get correct link from platform data
+            # Get correct link from dynamic platform data
             action_type = action.get("type", "")
-            if action_type in PLATFORM_ACTIONS:
-                # Find the first matching action in this type
-                type_actions = PLATFORM_ACTIONS[action_type]
-                if type_actions:
-                    first_action = list(type_actions.values())[0]
-                    if not action.get("link"):
-                        action["link"] = first_action["link"]
+            if action_type in link_map and not action.get("link"):
+                action["link"] = link_map[action_type]
     
     # Ensure milestones have completed field
     for milestone in plan.get("milestones", []):
@@ -580,7 +768,6 @@ Your job is to:
 3. Add focus descriptions for each week
 4. Add specific, measurable targets for each action
 5. Add 6-8 deeply personalized accountability reminders with encouragement
-6. Suggest 2-3 external resources (YouTube, AWS docs) based on learning style
 
 DO NOT add, remove, or change the actions. They are pre-selected from real database content.
 
@@ -602,8 +789,9 @@ The pre-selected content uses these platform feature types:
 - ai_chat: AI tutor chat → Target: "Clarify 3 concepts" or "Ask 5 questions"
 - resources: External resources → Target: "Watch video" or "Read documentation"
 
-**GAMES** (use sparingly as breaks):
+**GAMES (type: "game")** - Use ONLY in final week as stress relief:
 - game: Game zone → Target: "10-minute break" or "Quick reinforcement"
+- IMPORTANT: Games should rotate (sniper-quiz, lightning-round, hot-streak, cloud-tycoon) - do NOT always pick the same game
 
 ## Output Format
 Return a JSON object with this structure:
@@ -635,13 +823,6 @@ Return a JSON object with this structure:
     "- Offer recovery strategies for when falling behind",
     "- Celebrate effort, not just results",
     "- Build confidence for exam day"
-  ],
-  "resources": [
-    {{
-      "title": "Resource name",
-      "url": "https://...",
-      "type": "video|documentation|course|whitepaper"
-    }}
   ]
 }}
 
@@ -667,10 +848,11 @@ async def format_study_guide(
     hours_per_week: int,
     learning_styles: List[str],
     coach_notes: Optional[str],
+    exam_date: Optional[str],
+    progress_summary: str,
     structured_content: Dict[str, Any],
+    previous_plan_context: Optional[str] = None,
     *,
-    exam_date: Optional[str] = None,
-    progress_summary: Optional[str] = None,
     model: Optional[str] = None,
     api_key: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -686,9 +868,10 @@ async def format_study_guide(
         hours_per_week: Hours available per week
         learning_styles: List of learning style preferences
         coach_notes: Optional coach notes
-        structured_content: Pre-selected content to format
         exam_date: Optional exam date for countdown awareness
         progress_summary: Optional user progress summary
+        structured_content: Pre-selected content to format
+        previous_plan_context: Optional previous plan context for variation
         model: Optional model override
         api_key: Optional OpenAI API key
     
@@ -734,13 +917,18 @@ async def format_study_guide(
         learning_styles=", ".join(learning_styles),
         exam_date_info=exam_date_info,
         coach_notes=coach_notes or "None provided",
-        progress_summary=progress_summary or "New learner starting their journey",
+        progress_summary=progress_summary,
         structured_content_json=json.dumps(structured_content, indent=2),
     )
 
+    # Add previous plan context if available for variation
+    user_message = "Format my study guide now. Remember: DO NOT change the actions, just add themes, targets, and formatting."
+    if previous_plan_context:
+        user_message += f"\n\n{previous_plan_context}\n\nIMPORTANT: Generate DIFFERENT themes and vary the game selections. Do not repeat the exact same content as the previous plan."
+
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": "Format my study guide now. Remember: DO NOT change the actions, just add themes, targets, and formatting."},
+        {"role": "user", "content": user_message},
     ]
 
     client = AsyncOpenAI(api_key=key)
@@ -763,23 +951,21 @@ async def format_study_guide(
     # Validate that actions weren't changed (safety check)
     plan = validate_and_fix_actions(plan, structured_content)
 
-    # Fetch real resources using Brave Search (validated YouTube + AWS docs)
+    # Fetch real resources in parallel using crawler
     try:
         from generators.resource_fetcher import fetch_study_resources
-        real_resources = await fetch_study_resources(
+        resources = await fetch_study_resources(
             certification=cert_code,
             skill_level=skill_level,
             learning_styles=learning_styles,
-            max_youtube=3,
-            max_docs=2
+            max_resources=8
         )
-        if real_resources:
-            plan["resources"] = real_resources
-            logger.info(f"Fetched {len(real_resources)} validated resources for {cert_code} ({skill_level} level)")
+        plan["resources"] = resources
+        logger.info(f"Added {len(resources)} resources to plan")
     except Exception as e:
-        logger.warning(f"Failed to fetch validated resources, using AI-generated: {e}")
-        # Keep AI-generated resources as fallback
-
+        logger.error(f"Failed to fetch resources: {e}")
+        plan["resources"] = []
+    
     return plan
 
 
@@ -792,6 +978,12 @@ def validate_and_fix_actions(
     original_weeks = original_content.get("weeks", [])
     formatted_weeks = formatted_plan.get("weeks", [])
     
+    # Safety check: ensure formatted_weeks is a list of dicts
+    if not isinstance(formatted_weeks, list):
+        logger.warning("AI returned invalid weeks format, using original structure")
+        formatted_plan["weeks"] = original_weeks
+        return formatted_plan
+    
     # If AI messed up the weeks, use original structure
     if len(formatted_weeks) != len(original_weeks):
         logger.warning("AI changed week count, using original structure")
@@ -800,8 +992,20 @@ def validate_and_fix_actions(
     
     # For each week, ensure actions match
     for i, (orig_week, fmt_week) in enumerate(zip(original_weeks, formatted_weeks)):
+        # Safety check: ensure fmt_week is a dict
+        if not isinstance(fmt_week, dict):
+            logger.warning(f"Week {i+1}: AI returned invalid week format, using original")
+            formatted_weeks[i] = orig_week
+            continue
+            
         orig_actions = orig_week.get("actions", [])
         fmt_actions = fmt_week.get("actions", [])
+        
+        # Safety check: ensure fmt_actions is a list
+        if not isinstance(fmt_actions, list):
+            logger.warning(f"Week {i+1}: AI returned invalid actions format, using original")
+            fmt_week["actions"] = orig_actions
+            continue
         
         # If action count doesn't match, use original
         if len(fmt_actions) != len(orig_actions):
@@ -811,6 +1015,12 @@ def validate_and_fix_actions(
         
         # Ensure each action has the original ID and link
         for j, (orig_action, fmt_action) in enumerate(zip(orig_actions, fmt_actions)):
+            # Safety check: ensure fmt_action is a dict
+            if not isinstance(fmt_action, dict):
+                logger.warning(f"Week {i+1}, Action {j+1}: AI returned invalid action format, using original")
+                fmt_actions[j] = orig_action
+                continue
+            
             # Preserve original fields, allow AI to add target
             fmt_action["id"] = orig_action.get("id", str(uuid.uuid4())[:8])
             fmt_action["type"] = orig_action.get("type")
@@ -823,8 +1033,13 @@ def validate_and_fix_actions(
                 fmt_action["description"] = orig_action.get("description", "")
     
     # Preserve original milestones
-    formatted_plan["milestones"] = original_content.get("milestones", [])
-    for m in formatted_plan["milestones"]:
-        m["completed"] = False
+    original_milestones = original_content.get("milestones", [])
+    formatted_plan["milestones"] = []
+    for m in original_milestones:
+        if isinstance(m, dict):
+            m["completed"] = False
+            formatted_plan["milestones"].append(m)
+        else:
+            logger.warning(f"Invalid milestone format, skipping: {m}")
     
     return formatted_plan

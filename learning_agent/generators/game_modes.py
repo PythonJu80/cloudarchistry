@@ -7,6 +7,7 @@ based on user's target certification, skill level, and study needs.
 
 import json
 import os
+import random
 import uuid
 from typing import List, Optional, Dict
 from pydantic import BaseModel
@@ -306,11 +307,25 @@ Make them challenging but fair, matching the real exam style."""
         position_bonus = (idx + 1)  # Later questions worth more
         points = base_points + position_bonus
         
+        # Shuffle options to ensure correct answer isn't always in same position
+        options = q.get("options", ["A", "B", "C", "D"])
+        original_correct_index = q.get("correct_index", 0)
+        
+        if 0 <= original_correct_index < len(options):
+            correct_answer = options[original_correct_index]
+            indexed_options = list(enumerate(options))
+            random.shuffle(indexed_options)
+            shuffled_options = [opt for _, opt in indexed_options]
+            new_correct_index = shuffled_options.index(correct_answer)
+        else:
+            shuffled_options = options
+            new_correct_index = 0
+        
         questions.append(GameQuestion(
             id=q.get("id", f"sniper_{uuid.uuid4().hex[:8]}"),
             question=q.get("question", ""),
-            options=q.get("options", ["A", "B", "C", "D"]),
-            correct_index=q.get("correct_index", 0),
+            options=shuffled_options,
+            correct_index=new_correct_index,
             topic=q.get("topic", "AWS"),
             difficulty=q.get("difficulty", "medium"),
             explanation=q.get("explanation", ""),
@@ -410,11 +425,25 @@ id, question, options (4), correct_index (0-3), topic, difficulty, explanation""
     
     questions = []
     for idx, q in enumerate(result.get("questions", [])):
+        # Shuffle options to ensure correct answer isn't always in same position
+        options = q.get("options", ["A", "B", "C", "D"])
+        original_correct_index = q.get("correct_index", 0)
+        
+        if 0 <= original_correct_index < len(options):
+            correct_answer = options[original_correct_index]
+            indexed_options = list(enumerate(options))
+            random.shuffle(indexed_options)
+            shuffled_options = [opt for _, opt in indexed_options]
+            new_correct_index = shuffled_options.index(correct_answer)
+        else:
+            shuffled_options = options
+            new_correct_index = 0
+        
         questions.append(GameQuestion(
             id=q.get("id", f"speed_{uuid.uuid4().hex[:8]}"),
             question=q.get("question", ""),
-            options=q.get("options", ["A", "B", "C", "D"]),
-            correct_index=q.get("correct_index", 0),
+            options=shuffled_options,
+            correct_index=new_correct_index,
             topic=q.get("topic", "AWS"),
             difficulty=q.get("difficulty", "medium"),
             explanation=q.get("explanation", ""),
@@ -583,11 +612,25 @@ Make them quick to read and answer - this is a 60-second timed game!{exclude_not
     for idx, q in enumerate(result.get("questions", [])):
         base_points = {"easy": 10, "medium": 15, "hard": 20}.get(q.get("difficulty", "medium"), 10)
         
+        # Shuffle options to ensure correct answer isn't always in same position
+        options = q.get("options", ["A", "B", "C", "D"])
+        original_correct_index = q.get("correct_index", 0)
+        
+        if 0 <= original_correct_index < len(options):
+            correct_answer = options[original_correct_index]
+            indexed_options = list(enumerate(options))
+            random.shuffle(indexed_options)
+            shuffled_options = [opt for _, opt in indexed_options]
+            new_correct_index = shuffled_options.index(correct_answer)
+        else:
+            shuffled_options = options
+            new_correct_index = 0
+        
         questions.append(GameQuestion(
             id=q.get("id", f"hotstreak_{uuid.uuid4().hex[:8]}"),
             question=q.get("question", ""),
-            options=q.get("options", ["A", "B", "C", "D"]),
-            correct_index=q.get("correct_index", 0),
+            options=shuffled_options,
+            correct_index=new_correct_index,
             topic=q.get("topic", "AWS"),
             difficulty=q.get("difficulty", "medium"),
             explanation=q.get("explanation", ""),
@@ -755,11 +798,26 @@ Players need to read and answer in seconds."""
     for idx, q in enumerate(result.get("questions", [])):
         base_points = {"easy": 10, "medium": 15, "hard": 20}.get(q.get("difficulty", "medium"), 10)
         
+        # Shuffle options to ensure correct answer isn't always in same position
+        options = q.get("options", ["A", "B", "C", "D"])
+        original_correct_index = q.get("correct_index", 0)
+        
+        # Create list of (option, is_correct) tuples and shuffle
+        if 0 <= original_correct_index < len(options):
+            correct_answer = options[original_correct_index]
+            indexed_options = list(enumerate(options))
+            random.shuffle(indexed_options)
+            shuffled_options = [opt for _, opt in indexed_options]
+            new_correct_index = shuffled_options.index(correct_answer)
+        else:
+            shuffled_options = options
+            new_correct_index = 0
+        
         questions.append(GameQuestion(
             id=q.get("id", f"bomb_{uuid.uuid4().hex[:8]}"),
             question=q.get("question", ""),
-            options=q.get("options", ["A", "B", "C", "D"]),
-            correct_index=q.get("correct_index", 0),
+            options=shuffled_options,
+            correct_index=new_correct_index,
             topic=q.get("topic", "AWS"),
             difficulty=q.get("difficulty", "medium"),
             explanation=q.get("explanation", ""),

@@ -15,13 +15,18 @@ RUN pip install uv
 # Copy the MCP server files
 COPY . .
 
-# Install packages directly to the system (no virtual environment)
-# Combining commands to reduce Docker layers
-RUN uv pip install --system -e . && \
-    crawl4ai-setup
-
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+
+# Install packages directly to the system (no virtual environment)
+RUN uv pip install --system -e .
+
+# Run crawl4ai-setup as root but set PLAYWRIGHT_BROWSERS_PATH so browsers go to shared location
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+RUN mkdir -p /opt/playwright-browsers && \
+    crawl4ai-setup && \
+    chmod -R 755 /opt/playwright-browsers
+
 USER appuser
 
 EXPOSE ${PORT}
