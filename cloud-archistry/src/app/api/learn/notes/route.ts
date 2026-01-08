@@ -90,7 +90,7 @@ export async function GET() {
  * POST /api/learn/notes
  * Generate new study notes from user's certification/telemetry (same pattern as flashcards)
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.academyProfileId) {

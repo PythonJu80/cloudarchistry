@@ -81,12 +81,12 @@ export async function GET() {
 
     // Get user's API key, fall back to platform key from .env
     let apiKey = await getDecryptedApiKey(profileId);
-    let keySource = "user";
+    let _keySource = "user";
     
     if (!apiKey) {
       // Fall back to platform's API key
       apiKey = process.env.OPENAI_API_KEY || null;
-      keySource = "platform";
+      _keySource = "platform";
     }
     
     if (!apiKey) {

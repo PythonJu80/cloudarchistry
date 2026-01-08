@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { score, hits, misses, accuracy, timeElapsed } = body;
+    const { score, hits, misses, accuracy, timeElapsed: _timeElapsed } = body;
 
     // Get academy user
     const academyUser = await prisma.academyUser.findFirst({

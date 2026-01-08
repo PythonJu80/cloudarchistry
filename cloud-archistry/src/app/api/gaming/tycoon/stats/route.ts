@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 /**
  * GET /api/gaming/tycoon/stats - Get Cloud Tycoon stats from database
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {

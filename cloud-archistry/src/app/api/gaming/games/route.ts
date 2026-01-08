@@ -105,7 +105,7 @@ export async function GET() {
     });
 
     // Get online player counts (simplified - just count recent matches)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const _fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     
     const gamesWithStats = await Promise.all(
       gameTypes.map(async (game) => {

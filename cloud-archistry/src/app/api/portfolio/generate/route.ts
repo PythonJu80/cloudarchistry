@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getAiConfigForRequest } from "@/lib/academy/services/api-keys";
 
 const LEARNING_AGENT_URL = process.env.LEARNING_AGENT_URL || "https://cloudarchistry.com";
-const DRAWING_AGENT_URL = process.env.DRAWING_AGENT_URL || "https://cloudarchistry.com";
+const _DRAWING_AGENT_URL = process.env.DRAWING_AGENT_URL || "https://cloudarchistry.com";
 
 interface DiagramNode {
   id: string;

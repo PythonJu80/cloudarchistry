@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     
     const type = searchParams.get("type") || "global";
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-    const gameType = searchParams.get("gameType");
+    const _gameType = searchParams.get("gameType");
 
     // Get current user for "friends" type and to show their rank
     let currentUserId: string | null = null;

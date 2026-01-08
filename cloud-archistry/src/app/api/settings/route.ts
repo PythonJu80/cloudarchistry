@@ -29,7 +29,7 @@ function encrypt(text: string): string {
   return `${salt.toString("hex")}:${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
 }
 
-function decrypt(encryptedData: string): string {
+function _decrypt(encryptedData: string): string {
   const parts = encryptedData.split(":");
   
   // Support both new format (4 parts with salt) and legacy format (3 parts without salt)
