@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const DIAGRAM_API_URL = process.env.DIAGRAM_API_URL || "http://diagram-api:8002";
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const [statsResponse, categoriesResponse] = await Promise.all([
       fetch(`${DIAGRAM_API_URL}/stats`),

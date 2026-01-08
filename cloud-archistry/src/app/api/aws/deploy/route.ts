@@ -116,7 +116,7 @@ const RESOURCE_HANDLERS: Record<string, (
   },
 
   // S3 Bucket
-  "AWS::S3::Bucket": async (creds, name, params) => {
+  "AWS::S3::Bucket": async (creds, name, _params) => {
     const { S3Client, CreateBucketCommand, PutBucketTaggingCommand } = await import("@aws-sdk/client-s3");
     const client = new S3Client({
       region: creds.region,
@@ -195,7 +195,7 @@ const RESOURCE_HANDLERS: Record<string, (
   },
 
   // SQS Queue
-  "AWS::SQS::Queue": async (creds, name, params) => {
+  "AWS::SQS::Queue": async (creds, name, _params) => {
     const { SQSClient, CreateQueueCommand } = await import("@aws-sdk/client-sqs");
     const client = new SQSClient({
       region: creds.region,
@@ -222,7 +222,7 @@ const RESOURCE_HANDLERS: Record<string, (
   },
 
   // SNS Topic
-  "AWS::SNS::Topic": async (creds, name, params) => {
+  "AWS::SNS::Topic": async (creds, name, _params) => {
     const { SNSClient, CreateTopicCommand } = await import("@aws-sdk/client-sns");
     const client = new SNSClient({
       region: creds.region,

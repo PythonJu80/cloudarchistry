@@ -12,7 +12,23 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Custom server uses CommonJS
+    "server.js",
+    // Scripts directory
+    "scripts/**",
   ]),
+  // Custom rules
+  {
+    rules: {
+      // Allow 'any' for Prisma JSON fields and dynamic objects
+      "@typescript-eslint/no-explicit-any": "off",
+      // Allow unused vars with underscore prefix
+      "@typescript-eslint/no-unused-vars": ["error", { 
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }],
+    },
+  },
 ]);
 
 export default eslintConfig;
