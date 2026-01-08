@@ -9,6 +9,8 @@
     "start": "NODE_ENV=production node server.js",
     "start:next": "next start -p 6060",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:generate": "cd .. && npx prisma generate",
     "db:migrate": "cd .. && npx prisma migrate dev",
     "db:seed": "cd .. && npx ts-node prisma/seed-academy.ts"

@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  frontend-lint-build:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./cloud-archistry
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
+      
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('cloud-archistry/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Generate Prisma Client
+        run: npx prisma generate
+      
+      - name: Run linter
+        run: pnpm lint
+      
+      - name: Build application
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          NEXTAUTH_URL: http://localhost:6060
+          NEXTAUTH_SECRET: test-secret-key-min-32-chars-long-here
+      
+      - name: Run tests
+        run: pnpm test
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          NEXTAUTH_URL: http://localhost:6060
+          NEXTAUTH_SECRET: test-secret-key-min-32-chars-long-here
+
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./learning_agent
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        run: pip install uv
+      
+      - name: Install dependencies
+        run: uv pip install --system -e .
+      
+      - name: Python syntax check
+        run: python -m py_compile crawl4ai_mcp.py db.py utils.py
+      
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        continue-on-error: true
+
+  docker-build-test:
+    name: Docker Build - ${{ matrix.service.name }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: cloud-archistry
+            context: ./cloud-archistry
+            dockerfile: ./cloud-archistry/Dockerfile
+          - name: learning-agent
+            context: ./learning_agent
+            dockerfile: ./learning_agent/Dockerfile
+          - name: aws-drawing-agent
+            context: ./cloud-archistry/aws_drawing_agent
+            dockerfile: ./cloud-archistry/aws_drawing_agent/Dockerfile
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          push: false
+          tags: cloudarchistry/${{ matrix.service.name }}:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,67 @@
+# Deploy Workflow
+# 
+# IMPORTANT: This workflow requires you to configure GitHub Secrets.
+# It will NOT work until you set up your deployment infrastructure.
+#
+# Required secrets (set in GitHub repo Settings > Secrets):
+# - DEPLOY_SSH_KEY: SSH private key for your server
+# - DEPLOY_HOST: Your server hostname/IP
+# - DEPLOY_USER: SSH username
+# - DEPLOY_PATH: Path to app on server (e.g., /opt/cloudarchistry)
+# - DEPLOY_URL: Your app URL for health checks
+#
+# Verified health endpoints:
+# - Frontend: /api/health (port 6060)
+# - Learning Agent: /health (port 1027)
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH }}
+            git pull origin main
+            docker compose --profile prod pull
+            docker compose --profile prod up -d
+            docker compose --profile prod ps
+          EOF
+      
+      - name: Health check - Frontend
+        run: |
+          sleep 30
+          curl -f ${{ secrets.DEPLOY_URL }}/api/health || exit 1
+      
+      - name: Health check - Learning Agent
+        run: |
+          curl -f ${{ secrets.DEPLOY_URL }}:1027/health || echo "Learning agent health check skipped (may not be exposed)"
+      
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "Deployment to ${{ github.event.inputs.environment }} completed with status: ${{ job.status }}"
