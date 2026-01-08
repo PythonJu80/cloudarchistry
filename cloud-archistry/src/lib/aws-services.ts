@@ -53,7 +53,11 @@ export const AWS_CATEGORY_COLORS: Record<AWSCategory, string> = {
   management: "#E7157B",
   devops: "#3F8624",
   governance: "#232F3E",
-  policies: "#7C3AED", // Purple for policies
+  policies: "#7C3AED",
+  boundaries: "#232F3E",
+  icons: "#6B7280",
+  text: "#9CA3AF",
+  annotations: "#9CA3AF",
 };
 
 // Category metadata for the service picker
@@ -1227,12 +1231,12 @@ export const AWS_SERVICES: AWSService[] = [
   },
 
   // ============ AWS BOUNDARIES (3) ============
-  // Container elements for organizing architecture
+  // Container elements for organizing architecture - now in Networking
   {
     id: "aws-cloud",
     name: "AWS Cloud",
     shortName: "AWS Cloud",
-    category: "boundaries",
+    category: "networking",
     color: "#232F3E",
     description: "AWS Cloud boundary - top-level container for all AWS resources",
     isContainer: true,
@@ -1241,7 +1245,7 @@ export const AWS_SERVICES: AWSService[] = [
     id: "region",
     name: "Region",
     shortName: "Region",
-    category: "boundaries",
+    category: "networking",
     color: "#147EBA",
     description: "AWS Region boundary - contains availability zones and resources",
     isContainer: true,
@@ -1251,7 +1255,7 @@ export const AWS_SERVICES: AWSService[] = [
     id: "availability-zone",
     name: "Availability Zone",
     shortName: "AZ",
-    category: "boundaries",
+    category: "networking",
     color: "#147EBA",
     description: "Availability Zone boundary - isolated location within a region",
     isContainer: true,

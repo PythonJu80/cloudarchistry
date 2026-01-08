@@ -616,7 +616,7 @@ function DiagramCanvasInner({
   const findContainerAtPosition = useCallback(
     (pos: { x: number; y: number }, excludeId?: string) => {
       // Container types that can have children
-      const containerTypes = ["vpc", "subnet", "securityGroup", "autoScaling"];
+      const containerTypes = ["awsCloud", "region", "availabilityZone", "vpc", "subnet", "securityGroup", "autoScaling"];
       
       // Find containers that contain this position (check from smallest to largest)
       const containers = nodes
@@ -836,6 +836,9 @@ function DiagramCanvasInner({
       else if (service.id.startsWith("subnet")) nodeType = "subnet";
       else if (service.id === "security-group") nodeType = "securityGroup";
       else if (service.id === "auto-scaling") nodeType = "autoScaling";
+      else if (service.id === "aws-cloud") nodeType = "awsCloud";
+      else if (service.id === "region") nodeType = "region";
+      else if (service.id === "availability-zone") nodeType = "availabilityZone";
 
       // Default sizes for containers
       const containerSizes: Record<string, { width: number; height: number }> = {
@@ -843,6 +846,9 @@ function DiagramCanvasInner({
         subnet: { width: 250, height: 180 },
         securityGroup: { width: 180, height: 120 },
         autoScaling: { width: 150, height: 100 },
+        awsCloud: { width: 500, height: 350 },
+        region: { width: 400, height: 280 },
+        availabilityZone: { width: 220, height: 160 },
       };
       
       // Z-index hierarchy for proper layering (lower = further back)
@@ -850,6 +856,9 @@ function DiagramCanvasInner({
       // Services containers: VPC(-50) < Subnet(-40) < Security Group(-30) < Auto Scaling(-20)
       // Regular services: 10
       const containerZIndex: Record<string, number> = {
+        awsCloud: -80,
+        region: -70,
+        availabilityZone: -60,
         vpc: -50,
         subnet: -40,
         securityGroup: -30,

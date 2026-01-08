@@ -657,45 +657,6 @@ export function ServicePicker({
         <p className="text-[10px] text-slate-500 mt-1">Drag to add to canvas</p>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        {/* AWS Boundaries - Only items NOT in Services */}
-        <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider">AWS Boundaries</p>
-          <p className="text-[9px] text-slate-600 -mt-1">VPC, Subnets, Security Groups are in Services → Networking</p>
-          <div className="space-y-1.5">
-            {[
-              { label: "AWS Cloud", color: "#232F3E", icon: "☁️", dashed: true },
-              { label: "Region", color: "#147EBA", icon: "🌍", dashed: true },
-              { label: "Availability Zone", color: "#147EBA", icon: "📍", dashed: false },
-            ].map(({ label, color, icon, dashed }) => (
-              <div
-                key={label}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("application/diagram-shape", JSON.stringify({
-                    type: "boundary",
-                    label,
-                    color,
-                    icon,
-                    dashed,
-                  }));
-                  e.dataTransfer.effectAllowed = "move";
-                }}
-                className="w-full h-10 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center gap-2 px-3 text-slate-300 hover:text-slate-100 transition-colors text-xs cursor-grab active:cursor-grabbing"
-                title={`Drag to add ${label} boundary`}
-              >
-                <div 
-                  className={cn("w-5 h-5 rounded flex items-center justify-center text-[10px]", dashed && "border-dashed")}
-                  style={{ borderColor: color, borderWidth: 2 }}
-                >
-                  {icon}
-                </div>
-                <span className="flex-1 text-left">{label}</span>
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
-              </div>
-            ))}
-          </div>
-        </div>
-        
         {/* General Icons - Users, Devices, etc. */}
         <div className="space-y-2">
           <p className="text-[10px] text-slate-500 uppercase tracking-wider">General Icons</p>
