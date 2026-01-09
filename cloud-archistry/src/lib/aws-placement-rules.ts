@@ -538,13 +538,26 @@ function classifyRejectionSeverity(
 /**
  * Validate if a service can be placed in a target container
  */
+// Normalize hyphenated IDs to camelCase to match PLACEMENT_RULES keys
+function normalizeServiceId(id: string): string {
+  const mapping: Record<string, string> = {
+    "availability-zone": "availabilityZone",
+    "aws-cloud": "awsCloud",
+    "security-group": "securityGroup",
+    "auto-scaling": "autoScaling",
+  };
+  return mapping[id] || id;
+}
+
 export function validatePlacement(
   serviceId: string,
   targetType: string | null,  // null = canvas root
   targetSubnetType?: "public" | "private"
 ): PlacementValidation {
-  const metadata = SERVICE_METADATA[serviceId];
-  const targetKey = targetType || "canvas";
+  // Normalize IDs to match PLACEMENT_RULES keys
+  const normalizedServiceId = normalizeServiceId(serviceId);
+  const metadata = SERVICE_METADATA[normalizedServiceId] || SERVICE_METADATA[serviceId];
+  const targetKey = normalizeServiceId(targetType || "canvas");
   
   // Determine the actual target (use subnet type if available)
   let effectiveTarget = targetKey;
@@ -1896,14 +1909,18 @@ export function auditDiagram(
     const serviceId = node.data?.serviceId;
     if (!serviceId) continue;
     
-    const metadata = SERVICE_METADATA[serviceId];
+    // Normalize serviceId to match PLACEMENT_RULES keys
+    const normalizedServiceId = normalizeServiceId(serviceId);
+    const metadata = SERVICE_METADATA[normalizedServiceId] || SERVICE_METADATA[serviceId];
     if (!metadata) continue;
     
     maxScore += metadata.basePoints;
     
     // Find parent container
     const parentNode = node.parentId ? nodes.find(n => n.id === node.parentId) : null;
-    const parentType = parentNode?.type || "canvas";
+    // Normalize parent type - use serviceId if available, fall back to node type
+    const parentServiceId = parentNode?.data?.serviceId || parentNode?.type || "canvas";
+    const parentType = normalizeServiceId(parentServiceId);
     
     // Handle subnet type
     let effectiveParentType = parentType;
@@ -1912,7 +1929,7 @@ export function auditDiagram(
     }
     
     // Validate placement
-    const validation = validatePlacement(serviceId, effectiveParentType);
+    const validation = validatePlacement(normalizedServiceId, effectiveParentType);
     
     if (validation.isValid) {
       score += validation.pointsAwarded;

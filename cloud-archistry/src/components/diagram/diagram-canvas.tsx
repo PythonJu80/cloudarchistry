@@ -833,22 +833,22 @@ function DiagramCanvasInner({
           // AWS boundary containers - ONLY the ones not in Services
           // VPC, Subnet, Security Group come from Services > Networking
           // Z-index will be calculated by calculateZIndex based on hierarchy
-          const boundaryConfig: Record<string, { width: number; height: number; nodeType: string }> = {
-            "AWS Cloud": { width: 500, height: 350, nodeType: "awsCloud" },
-            "Region": { width: 400, height: 280, nodeType: "region" },
-            "Availability Zone": { width: 220, height: 160, nodeType: "availabilityZone" },
+          const boundaryConfig: Record<string, { width: number; height: number; nodeType: string; serviceId: string }> = {
+            "AWS Cloud": { width: 500, height: 350, nodeType: "awsCloud", serviceId: "awsCloud" },
+            "Region": { width: 400, height: 280, nodeType: "region", serviceId: "region" },
+            "Availability Zone": { width: 220, height: 160, nodeType: "availabilityZone", serviceId: "availabilityZone" },
           };
           
           const config = boundaryConfig[shape.label];
           if (!config) return; // Unknown boundary type
           
           const newNode: DiagramNode = {
-            id: `${shape.label.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+            id: `${config.serviceId}-${Date.now()}`,
             type: config.nodeType,
             position,
             style: { width: config.width, height: config.height },
             data: {
-              serviceId: shape.label.toLowerCase().replace(/\s+/g, "-"),
+              serviceId: config.serviceId,  // Use camelCase to match PLACEMENT_RULES
               label: shape.label,
               color: shape.color,
             },
