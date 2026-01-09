@@ -6,35 +6,27 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Globe,
-  Key,
-  Eye,
-  EyeOff,
   Check,
   X,
   Loader2,
   ArrowLeft,
-  Brain,
   Sparkles,
   Shield,
   AlertTriangle,
   Trash2,
-  Cloud,
   RefreshCw,
   User,
   Award,
   BarChart3,
   Camera,
   Trophy,
-  FileText,
-  Download,
-  ExternalLink,
   Users,
   UserPlus,
   Crown,
   Link2,
+  HelpCircle,
   CheckCircle2,
   XCircle,
-  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -161,16 +153,10 @@ interface PortfolioData {
 // No fallback - models must come from OpenAI API
 
 // Team types imported from shared location
-import type { 
-  TeamResponse, 
-  TeamMemberResponse, 
-  TeamInviteResponse 
-} from "@/lib/academy/types/team";
+import type { TeamResponse } from "@/lib/academy/types/team";
 
 // Alias for backward compatibility in this file
 type TeamData = TeamResponse;
-type TeamMember = TeamMemberResponse;
-type TeamInvite = TeamInviteResponse;
 
 export default function SettingsPage() {
   const { status } = useSession();
@@ -1040,268 +1026,6 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* OpenAI API Key Section - Commented out
-          <Card className="bg-card/50 border-border/50 mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-amber-400" />
-                OpenAI API Key
-              </CardTitle>
-              <CardDescription>
-                Add your own OpenAI API key to unlock AI-powered features like coaching,
-                flashcard generation, and solution feedback.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">
-                    {settings?.hasOpenAiKey ? "Replace API Key" : "API Key"}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="apiKey"
-                      type={showApiKey ? "text" : "password"}
-                      placeholder="sk-..."
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                    >
-                      {showApiKey ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Get your API key from{" "}
-                    <a
-                      href="https://platform.openai.com/api-keys"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      platform.openai.com
-                    </a>
-                  </p>
-                </div>
-
-                <Button
-                  onClick={handleSaveApiKey}
-                  disabled={saving || !apiKey.trim()}
-                  className="gap-2"
-                >
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Key className="w-4 h-4" />
-                  )}
-                  {settings?.hasOpenAiKey ? "Update API Key" : "Save API Key"}
-                </Button>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
-                <Shield className="w-5 h-5 text-blue-400 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium">Your key is encrypted</p>
-                  <p className="text-muted-foreground">
-                    We encrypt your API key using AES-256-GCM before storing it. 
-                    Only the last 4 characters are visible for identification.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          */}
-
-          {/* Model Selection - Compact - Commented out
-          {settings?.hasOpenAiKey && (
-            <Card className="bg-card/50 border-border/50 mb-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Brain className="w-4 h-4 text-purple-400" />
-                  Preferred Model
-                  <span className="text-xs text-muted-foreground font-normal">
-                    {modelsLoading ? "Loading..." : `${availableModels.length} available`}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {modelsLoading ? (
-                  <div className="flex items-center gap-2 py-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Fetching models...</span>
-                  </div>
-                ) : availableModels.length === 0 ? (
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">Could not fetch models</span>
-                    <Button variant="outline" size="sm" onClick={() => fetchModels()}>Retry</Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid gap-2 max-h-[200px] overflow-y-auto">
-                      {availableModels.map((model) => (
-                        <div
-                          key={model.id}
-                          className={`p-2 rounded-md border cursor-pointer transition-all text-sm ${
-                            selectedModel === model.id
-                              ? "bg-primary/10 border-primary"
-                              : "bg-background/50 border-border/50 hover:border-primary/50"
-                          }`}
-                          onClick={() => setSelectedModel(model.id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">{model.name}</span>
-                            {selectedModel === model.id && <Check className="w-4 h-4 text-primary" />}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {settings?.preferredModel !== selectedModel && (
-                      <Button onClick={handleUpdateModel} disabled={saving} size="sm" className="gap-2">
-                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                        Save
-                      </Button>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
-          */}
-
-          {/* AWS Credentials Section - Commented out
-          <Card className="bg-card/50 border-border/50 mb-6">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Cloud className="w-4 h-4 text-orange-400" />
-                AWS Credentials
-              </CardTitle>
-              <CardDescription className="text-sm">
-                {awsCredentials?.hasCredentials 
-                  ? `Key: ...${awsCredentials.accessKeyLastFour} • Region: ${awsCredentials.region}`
-                  : "Add credentials to deploy to AWS"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="awsAccessKeyId" className="text-sm">
-                    {awsCredentials?.hasCredentials ? "Replace Access Key ID" : "Access Key ID"}
-                  </Label>
-                  <Input
-                    id="awsAccessKeyId"
-                    type="text"
-                    placeholder="AKIA..."
-                    value={awsAccessKeyId}
-                    onChange={(e) => setAwsAccessKeyId(e.target.value.toUpperCase())}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    20 characters, starts with AKIA (user) or ASIA (temporary)
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="awsSecretAccessKey">
-                    {awsCredentials?.hasCredentials ? "Replace Secret Access Key" : "Secret Access Key"}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="awsSecretAccessKey"
-                      type={showAwsSecret ? "text" : "password"}
-                      placeholder="Your secret access key"
-                      value={awsSecretAccessKey}
-                      onChange={(e) => setAwsSecretAccessKey(e.target.value)}
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full"
-                      onClick={() => setShowAwsSecret(!showAwsSecret)}
-                    >
-                      {showAwsSecret ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    40 characters
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="awsRegion">AWS Region</Label>
-                  <Select value={awsRegion} onValueChange={setAwsRegion}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(awsCredentials?.availableRegions || [
-                        "us-east-1", "us-east-2", "us-west-1", "us-west-2",
-                        "eu-west-1", "eu-west-2", "eu-west-3", "eu-central-1", "eu-north-1",
-                        "ap-south-1", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ap-northeast-2", "ap-northeast-3",
-                        "sa-east-1", "ca-central-1", "me-south-1", "af-south-1",
-                      ]).map((region) => (
-                        <SelectItem key={region} value={region}>
-                          {region}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button
-                  onClick={handleSaveAwsCredentials}
-                  disabled={awsSaving || !awsAccessKeyId.trim() || !awsSecretAccessKey.trim()}
-                  className="gap-2"
-                >
-                  {awsSaving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Cloud className="w-4 h-4" />
-                  )}
-                  {awsCredentials?.hasCredentials ? "Update AWS Credentials" : "Save AWS Credentials"}
-                </Button>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
-                <Shield className="w-5 h-5 text-blue-400 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium">Your credentials are encrypted</p>
-                  <p className="text-muted-foreground">
-                    We encrypt your AWS credentials using AES-256-GCM before storing them.
-                    Only the last 4 characters of your Access Key ID are visible.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
-                <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium">Recommended IAM Permissions</p>
-                  <p className="text-muted-foreground">
-                    For diagram deployment, your IAM user should have permissions for:
-                    EC2, VPC, RDS, S3, Lambda, API Gateway, and CloudFormation.
-                    We recommend creating a dedicated IAM user with least-privilege access.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          */}
 
           {/* Cohort Section - Show for learners (can view) and tutors (can create/manage) */}
           {settings?.subscriptionTier && ["learner", "tutor"].includes(settings.subscriptionTier) && (

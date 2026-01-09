@@ -141,7 +141,9 @@ export const AWS_SERVICES: AWSService[] = [
     category: "networking",
     color: "#DD344C",
     description: "Security Group",
-    isContainer: true,
+    // NOTE: Security Groups are NOT containers - they are attachments/bindings to ENIs
+    // Synced with aws-placement-rules.ts
+    isContainer: false,
     mustBeInside: ["vpc"],
   },
   {
@@ -188,7 +190,9 @@ export const AWS_SERVICES: AWSService[] = [
     category: "networking",
     color: "#8C4FFF",
     description: "Application Load Balancer",
-    mustBeInside: ["subnet-public"],
+    // NOTE: ALB is a VPC-level resource that spans subnets (creates ENIs per AZ)
+    // Synced with aws-placement-rules.ts
+    mustBeInside: ["vpc"],
     canConnectTo: ["ec2", "ecs", "eks", "lambda", "auto-scaling"],
   },
   {
@@ -198,7 +202,9 @@ export const AWS_SERVICES: AWSService[] = [
     category: "networking",
     color: "#8C4FFF",
     description: "Network Load Balancer",
-    mustBeInside: ["subnet-public"],
+    // NOTE: NLB is a VPC-level resource that spans subnets (creates ENIs per AZ)
+    // Synced with aws-placement-rules.ts
+    mustBeInside: ["vpc"],
     canConnectTo: ["ec2", "ecs", "eks", "auto-scaling"],
   },
 
@@ -248,10 +254,12 @@ export const AWS_SERVICES: AWSService[] = [
     id: "efs",
     name: "Amazon EFS",
     shortName: "EFS",
-    category: "compute",
-    color: "#ED7100",
+    category: "storage",
+    color: "#3F8624",
     description: "Amazon EFS",
-    mustBeInside: ["vpc"],
+    // NOTE: EFS is a Regional service - mount targets are in subnets
+    // Synced with aws-placement-rules.ts
+    mustBeInside: [],  // Regional service, not inside VPC
     canConnectTo: ["ec2", "ecs", "eks", "lambda"],
   },
 

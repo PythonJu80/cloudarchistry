@@ -26,6 +26,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { nodeTypes, SERVICE_FULL_NAMES } from "./aws-nodes";
 import { ServicePicker, type NodeStyleUpdate, type SelectedNodeInfo } from "./service-picker";
+import { DiagramHierarchyPanel } from "./diagram-hierarchy-panel";
 import { type AWSService } from "@/lib/aws-services";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,8 @@ import {
   Trash2 as TrashIcon,
   Maximize2,
   Minimize2,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -54,6 +57,8 @@ import {
   createInitialScore,
   detectHAPattern,
   detectSecurityPattern,
+  validateEdge,
+  getENIInfo,
   type DiagramScore,
   type ConnectionValidation,
 } from "@/lib/aws-placement-rules";
@@ -250,6 +255,10 @@ function DiagramCanvasInner({
   // 🖥️ FULLSCREEN STATE
   const [isFullscreen, setIsFullscreen] = useState(false);
   
+  // 📊 HIERARCHY PANEL STATE
+  const [showHierarchyPanel, setShowHierarchyPanel] = useState(true);
+  const [hierarchyNeedsRecalc, setHierarchyNeedsRecalc] = useState(true);
+  
   // Get viewport for zoom level
   const { zoom } = useViewport();
   const zoomLevel = Math.round(zoom * 100);
@@ -291,6 +300,8 @@ function DiagramCanvasInner({
   // Calculate proper z-index for a node based on its hierarchy
   const calculateZIndex = useCallback((node: DiagramNode, allNodes: DiagramNode[]): number => {
     // Base z-index by node type (lower = further back)
+    // Note: securityGroup removed - SGs are regular nodes (awsResource)
+    // Note: auto-scaling uses hyphenated ID for consistency
     const baseZIndex: Record<string, number> = {
       // Organizational boundaries (furthest back) - use very low values
       orgNode: -100,
@@ -301,8 +312,7 @@ function DiagramCanvasInner({
       // Service containers (should be behind their children but above boundaries)
       vpc: -50,
       subnet: -40,
-      securityGroup: -30,
-      autoScaling: -20,
+      "auto-scaling": -20,
       // Regular services and elements
       awsResource: 10,
       genericIcon: 10,
@@ -431,23 +441,30 @@ function DiagramCanvasInner({
     }
   }, [nodes, checkPatternBonuses]);
 
-  // Handle new connections with validation
+  // Handle new connections with validation (using edge-based relationship model)
   const onConnect = useCallback(
     (params: Connection) => {
       if (!params.source || !params.target) return;
       
       // Find source and target nodes to get their service IDs
-      const sourceNode = nodes.find(n => n.id === params.source);
-      const targetNode = nodes.find(n => n.id === params.target);
+      const sourceNode = nodes.find((n: DiagramNode) => n.id === params.source);
+      const targetNode = nodes.find((n: DiagramNode) => n.id === params.target);
       
       if (sourceNode && targetNode) {
         const sourceServiceId = sourceNode.data?.serviceId;
         const targetServiceId = targetNode.data?.serviceId;
         
-        // Get the source service's connection rules
+        // 🔌 NEW: Validate using edge-based relationship model
+        const edgeValidation = validateEdge(sourceServiceId, targetServiceId);
+        
+        // Get ENI info for educational feedback
+        const sourceENI = getENIInfo(sourceServiceId);
+        const targetENI = getENIInfo(targetServiceId);
+        
+        // Get the source service's connection rules (legacy validation)
         const sourceService = getServiceById(sourceServiceId);
         
-        // Validate the connection
+        // Validate the connection (legacy)
         const validation: ConnectionValidation = validateConnection(
           sourceServiceId,
           targetServiceId,
@@ -463,8 +480,20 @@ function DiagramCanvasInner({
           }));
         }
         
-        // Show feedback for invalid connections (but still allow them)
-        if (!validation.isValid && validation.proTip) {
+        // Show feedback based on edge validation
+        if (edgeValidation.isValid && edgeValidation.edgeType) {
+          // Valid edge with known type - show educational info
+          const edgeInfo = edgeValidation.edgeType;
+          if (sourceENI && targetENI) {
+            showProTip(`🔌 ${edgeInfo.name}: Traffic flows via ENIs. ${sourceENI.description}`, false);
+          } else {
+            showProTip(`✅ ${edgeInfo.name}: ${edgeInfo.description}`, false);
+          }
+        } else if (edgeValidation.proTip) {
+          // Edge validation has specific feedback
+          showProTip(edgeValidation.proTip, !edgeValidation.isValid);
+        } else if (!validation.isValid && validation.proTip) {
+          // Fall back to legacy validation feedback
           showProTip(validation.proTip, true);
         } else if (validation.isValid && validation.pointsAwarded > 0) {
           showProTip(`✅ +${validation.pointsAwarded} pts for valid connection!`, false);
@@ -612,23 +641,47 @@ function DiagramCanvasInner({
     event.dataTransfer.dropEffect = "move";
   }, []);
 
+  // Helper to get absolute position of a node (accounting for parent chain)
+  const getAbsolutePosition = useCallback((node: DiagramNode, allNodes: DiagramNode[]): { x: number; y: number } => {
+    let x = node.position.x;
+    let y = node.position.y;
+    let currentParentId = node.parentId;
+    
+    while (currentParentId) {
+      const parent = allNodes.find(n => n.id === currentParentId);
+      if (parent) {
+        x += parent.position.x;
+        y += parent.position.y;
+        currentParentId = parent.parentId;
+      } else {
+        break;
+      }
+    }
+    
+    return { x, y };
+  }, []);
+
   // Find which container node contains a given position
   const findContainerAtPosition = useCallback(
     (pos: { x: number; y: number }, excludeId?: string) => {
       // Container types that can have children
-      const containerTypes = ["awsCloud", "region", "availabilityZone", "vpc", "subnet", "securityGroup", "autoScaling"];
+      // Note: securityGroup removed - SGs are attachments/bindings, not containers per AWS standards
+      // Note: auto-scaling uses hyphenated ID for consistency
+      const containerTypes = ["awsCloud", "region", "availabilityZone", "vpc", "subnet", "auto-scaling"];
       
       // Find containers that contain this position (check from smallest to largest)
       const containers = nodes
         .filter((n) => containerTypes.includes(n.type || "") && n.id !== excludeId)
         .filter((n) => {
+          // Get absolute position of container
+          const absPos = getAbsolutePosition(n as DiagramNode, nodes as DiagramNode[]);
           const nodeWidth = n.measured?.width || n.width || 200;
           const nodeHeight = n.measured?.height || n.height || 150;
           return (
-            pos.x >= n.position.x &&
-            pos.x <= n.position.x + nodeWidth &&
-            pos.y >= n.position.y &&
-            pos.y <= n.position.y + nodeHeight
+            pos.x >= absPos.x &&
+            pos.x <= absPos.x + nodeWidth &&
+            pos.y >= absPos.y &&
+            pos.y <= absPos.y + nodeHeight
           );
         })
         // Sort by area (smallest first - most specific container)
@@ -640,8 +693,126 @@ function DiagramCanvasInner({
       
       return containers[0] || null;
     },
-    [nodes]
+    [nodes, getAbsolutePosition]
   );
+
+  // 🔄 Handle node drag stop - update parentId when node is moved into a container
+  const onNodeDragStop = useCallback((_: React.MouseEvent, node: Node) => {
+    // Get the node's absolute position (accounting for current parent)
+    const draggedNode = nodes.find((n: DiagramNode) => n.id === node.id) as DiagramNode | undefined;
+    const nodeAbsPos = draggedNode 
+      ? getAbsolutePosition({ ...draggedNode, position: node.position }, nodes as DiagramNode[])
+      : node.position;
+    
+    // Find the container at this position (excluding the node itself)
+    const container = findContainerAtPosition(nodeAbsPos, node.id);
+    
+    // Get current parentId
+    const currentParentId = draggedNode?.parentId;
+    const newParentId = container?.id || undefined;
+    
+    // If parentId changed, update the node
+    if (currentParentId !== newParentId) {
+      setNodes((nds: DiagramNode[]) => nds.map((n: DiagramNode) => {
+        if (n.id === node.id) {
+          // Calculate new relative position if moving into a container
+          let newPosition = nodeAbsPos;
+          if (container) {
+            const containerAbsPos = getAbsolutePosition(container as DiagramNode, nodes as DiagramNode[]);
+            newPosition = {
+              x: nodeAbsPos.x - containerAbsPos.x,
+              y: nodeAbsPos.y - containerAbsPos.y,
+            };
+          }
+          return {
+            ...n,
+            parentId: newParentId,
+            position: newPosition,
+          };
+        }
+        return n;
+      }));
+      
+      // Recalculate z-indices after parent change
+      setTimeout(() => recalculateZIndices(), 50);
+    }
+  }, [nodes, findContainerAtPosition, setNodes, recalculateZIndices, getAbsolutePosition]);
+
+  // 🔄 Recalculate ALL parentIds based on visual containment
+  // This fixes nodes that were placed before the drag-stop handler was added
+  const recalculateAllParentIds = useCallback(() => {
+    const containerTypes = ["awsCloud", "region", "availabilityZone", "vpc", "subnet", "auto-scaling"];
+    
+    // Get all containers sorted by area (largest first - so we process outer containers first)
+    // Using 'any' because React Flow nodes have measured/width/height that aren't in our DiagramNode type
+    const containers = nodes
+      .filter((n: { type?: string }) => containerTypes.includes(n.type || ""))
+      .map((n: { id: string; type?: string; parentId?: string; position: { x: number; y: number }; measured?: { width?: number; height?: number }; width?: number; height?: number }) => ({
+        node: n,
+        absPos: getAbsolutePosition(n as DiagramNode, nodes as DiagramNode[]),
+        area: (n.measured?.width || n.width || 200) * (n.measured?.height || n.height || 150),
+        width: n.measured?.width || n.width || 200,
+        height: n.measured?.height || n.height || 150,
+      }))
+      .sort((a: { area: number }, b: { area: number }) => b.area - a.area); // Largest first
+    
+    let hasChanges = false;
+    const updatedNodes = nodes.map((n: DiagramNode) => {
+      // Get node's absolute position
+      const nodeAbsPos = getAbsolutePosition(n, nodes as DiagramNode[]);
+      
+      // Find the smallest container that contains this node
+      let newParentId: string | undefined = undefined;
+      for (const container of containers) {
+        if (container.node.id === n.id) continue; // Skip self
+        
+        if (
+          nodeAbsPos.x >= container.absPos.x &&
+          nodeAbsPos.x <= container.absPos.x + container.width &&
+          nodeAbsPos.y >= container.absPos.y &&
+          nodeAbsPos.y <= container.absPos.y + container.height
+        ) {
+          // This container contains the node - but we want the smallest one
+          // Since containers are sorted largest first, keep checking for smaller ones
+          newParentId = container.node.id;
+        }
+      }
+      
+      if (n.parentId !== newParentId) {
+        hasChanges = true;
+        // Calculate new relative position
+        let newPosition = nodeAbsPos;
+        if (newParentId) {
+          const parentContainer = containers.find((c: { node: { id: string } }) => c.node.id === newParentId);
+          if (parentContainer) {
+            newPosition = {
+              x: nodeAbsPos.x - parentContainer.absPos.x,
+              y: nodeAbsPos.y - parentContainer.absPos.y,
+            };
+          }
+        }
+        return { ...n, parentId: newParentId, position: newPosition };
+      }
+      return n;
+    });
+    
+    if (hasChanges) {
+      setNodes(updatedNodes);
+      setTimeout(() => recalculateZIndices(), 50);
+    }
+  }, [nodes, setNodes, getAbsolutePosition, recalculateZIndices]);
+
+  // 🔄 Recalculate hierarchy when panel is shown or nodes change significantly
+  useEffect(() => {
+    if (showHierarchyPanel && hierarchyNeedsRecalc && nodes.length > 0) {
+      // Delay to ensure node measurements are available
+      const timer = setTimeout(() => {
+        recalculateAllParentIds();
+        setHierarchyNeedsRecalc(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [showHierarchyPanel, hierarchyNeedsRecalc, nodes.length, recalculateAllParentIds]);
 
   // Handle drop - create new node with VALIDATION
   const onDrop = useCallback(
@@ -834,18 +1005,18 @@ function DiagramCanvasInner({
       let nodeType = "awsResource";
       if (service.id === "vpc") nodeType = "vpc";
       else if (service.id.startsWith("subnet")) nodeType = "subnet";
-      else if (service.id === "security-group") nodeType = "securityGroup";
-      else if (service.id === "auto-scaling") nodeType = "autoScaling";
+      else if (service.id === "security-group") nodeType = "awsResource";  // SGs are regular nodes, not containers
+      else if (service.id === "auto-scaling") nodeType = "auto-scaling";
       else if (service.id === "aws-cloud") nodeType = "awsCloud";
       else if (service.id === "region") nodeType = "region";
       else if (service.id === "availability-zone") nodeType = "availabilityZone";
 
       // Default sizes for containers
+      // Note: securityGroup removed - SGs are regular nodes, not containers
       const containerSizes: Record<string, { width: number; height: number }> = {
         vpc: { width: 600, height: 400 },
         subnet: { width: 250, height: 180 },
-        securityGroup: { width: 180, height: 120 },
-        autoScaling: { width: 150, height: 100 },
+        "auto-scaling": { width: 150, height: 100 },
         awsCloud: { width: 500, height: 350 },
         region: { width: 400, height: 280 },
         availabilityZone: { width: 220, height: 160 },
@@ -853,7 +1024,8 @@ function DiagramCanvasInner({
       
       // Z-index hierarchy for proper layering (lower = further back)
       // Shapes & Elements: Org(-100) < Account(-90) < AWS Cloud(-80) < Region(-70) < AZ(-60)
-      // Services containers: VPC(-50) < Subnet(-40) < Security Group(-30) < Auto Scaling(-20)
+      // Services containers: VPC(-50) < Subnet(-40) < Auto Scaling(-20)
+      // Note: securityGroup removed - SGs are regular nodes (z-index 10)
       // Regular services: 10
       const containerZIndex: Record<string, number> = {
         awsCloud: -80,
@@ -861,8 +1033,7 @@ function DiagramCanvasInner({
         availabilityZone: -60,
         vpc: -50,
         subnet: -40,
-        securityGroup: -30,
-        autoScaling: -20,
+        "auto-scaling": -20,
       };
 
       // Check if dropping inside a container
@@ -886,15 +1057,20 @@ function DiagramCanvasInner({
         const validation = validatePlacement(service.id, targetType, targetSubnetType);
         
         if (!validation.isValid) {
-          // ❌ REJECTED! Show pro-tip and animate rejection
-          showProTip(validation.proTip || "This service cannot be placed here.", true);
-          animateScore(validation.pointsAwarded);
-          
-          // Update score (negative points)
-          setDiagramScore(prev => updateScore(prev, validation, service.id, targetType));
-          
-          // Don't add the node - it's rejected!
-          return;
+          // Check severity - only ERRORS block placement
+          // WARNINGS and NOTES allow placement but show feedback
+          if (validation.severity === "error") {
+            // ❌ HARD ERROR - Block placement
+            showProTip(validation.proTip || "This service cannot be placed here.", true);
+            animateScore(validation.pointsAwarded);
+            setDiagramScore(prev => updateScore(prev, validation, service.id, targetType));
+            return; // Don't add the node
+          } else if (validation.severity === "warning") {
+            // ⚠️ WARNING - Allow placement but show warning
+            showProTip(`⚠️ ${validation.proTip}`, true);
+            // No negative points for warnings, but no positive either
+          }
+          // NOTE severity - allow silently (diagram abstraction)
         }
         
         // ✅ Valid placement inside container
@@ -918,15 +1094,21 @@ function DiagramCanvasInner({
         const validation = validatePlacement(service.id, "canvas", undefined);
         
         if (!validation.isValid) {
-          showProTip(validation.proTip || "This service cannot be placed here.", true);
+          // Check severity - only ERRORS block placement
+          if (validation.severity === "error") {
+            showProTip(validation.proTip || "This service cannot be placed here.", true);
+            animateScore(validation.pointsAwarded);
+            setDiagramScore(prev => updateScore(prev, validation, service.id, "canvas"));
+            return;
+          } else if (validation.severity === "warning") {
+            showProTip(`⚠️ ${validation.proTip}`, true);
+          }
+          // NOTE severity - allow silently
+        } else {
+          // Award points for valid placement
           animateScore(validation.pointsAwarded);
           setDiagramScore(prev => updateScore(prev, validation, service.id, "canvas"));
-          return;
         }
-        
-        // Award points
-        animateScore(validation.pointsAwarded);
-        setDiagramScore(prev => updateScore(prev, validation, service.id, "canvas"));
       }
 
       // Get size for this node type
@@ -1444,7 +1626,7 @@ function DiagramCanvasInner({
       <div className="flex flex-col flex-1">
         {/* Toolbar */}
         <div className="h-10 flex items-center justify-between px-3 border-b border-slate-800 bg-slate-900/80">
-          {/* Left side - Fullscreen toggle */}
+          {/* Left side - Fullscreen toggle + Hierarchy panel toggle */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
@@ -1452,6 +1634,16 @@ function DiagramCanvasInner({
               title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
             >
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setShowHierarchyPanel(!showHierarchyPanel)}
+              className={cn(
+                "p-1.5 rounded hover:bg-slate-800 transition-colors",
+                showHierarchyPanel ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+              )}
+              title={showHierarchyPanel ? "Hide hierarchy panel" : "Show hierarchy panel"}
+            >
+              {showHierarchyPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
             </button>
             {isFullscreen && (
               <span className="text-xs text-slate-500">Press ESC to exit</span>
@@ -1574,8 +1766,10 @@ function DiagramCanvasInner({
           </div>
         </div>
 
-        {/* React Flow Canvas */}
-        <div ref={reactFlowWrapper} className="flex-1 bg-slate-950 relative">
+        {/* Canvas + Hierarchy Panel Container */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* React Flow Canvas */}
+          <div ref={reactFlowWrapper} className="flex-1 bg-slate-950 relative">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -1586,6 +1780,7 @@ function DiagramCanvasInner({
             onPaneClick={onPaneClick}
             onDragOver={onDragOver}
             onDrop={onDrop}
+            onNodeDragStop={onNodeDragStop}
             onNodeContextMenu={(e, node) => handleContextMenu(e, node)}
             onPaneContextMenu={(e) => handleContextMenu(e)}
             nodeTypes={nodeTypes}
@@ -1748,6 +1943,28 @@ function DiagramCanvasInner({
                 </button>
               </div>
             </div>
+          )}
+        </div>
+
+          {/* 📊 HIERARCHY PANEL - Right side tree view */}
+          {showHierarchyPanel && (
+            <DiagramHierarchyPanel
+              nodes={nodes as DiagramNode[]}
+              selectedNodeId={selectedNode?.id || null}
+              onNodeSelect={(nodeId) => {
+                const node = nodes.find(n => n.id === nodeId);
+                if (node) setSelectedNode(node);
+              }}
+              onNodeFocus={(nodeId) => {
+                const node = nodes.find(n => n.id === nodeId);
+                if (node) {
+                  setSelectedNode(node);
+                  // Center view on node
+                  fitView({ nodes: [node], duration: 300, padding: 0.5 });
+                }
+              }}
+              className="w-64 flex-shrink-0"
+            />
           )}
         </div>
 

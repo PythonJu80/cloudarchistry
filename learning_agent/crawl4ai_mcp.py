@@ -1782,20 +1782,51 @@ The learner can ONLY use these services. This is the COMPLETE list of what exist
 {available_services_list}
 
 ## ⚠️ CRITICAL: CONNECTION & PLACEMENT RULES ⚠️
-These are the VALID connection and placement rules. You MUST validate the user's diagram against these:
+These are the VALID connection and placement rules from aws-placement-rules.ts (SINGLE SOURCE OF TRUTH):
 {service_rules}
 
-### Validation Requirements:
-1. **Placement Validation**: If a service has "must_be_inside", verify it is placed inside one of those container types
-2. **Connection Validation**: If a service has "can_connect_to", only those connections are architecturally valid
-3. **Container Validation**: Only services with "is_container: true" can contain other services
+## AWS Service Scope Reference
+- **global**: IAM, Route 53, CloudFront - exist outside regions
+- **edge**: CloudFront, Global Accelerator, WAF - edge locations
+- **regional**: Most services - exist in a region but outside VPCs
+- **az**: Subnets, EBS - scoped to a single Availability Zone
+- **vpc**: EC2, RDS, ALB - require VPC placement
 
-### Audit Behavior:
-- **You MUST NOT suggest any service that is not in the system registry above**
-- **Flag placement errors**: e.g., "EC2 should be inside a subnet, not floating freely"
-- **Flag invalid connections**: e.g., "This connection between X and Y isn't architecturally valid"
-- **Only suggest services the user CAN actually add**
-- If an ideal service isn't available in the registry, do NOT mention it
+## Valid Relationship Types (Edge Types)
+{edge_types}
+
+## Client-Side Audit Results (Already Validated)
+{local_audit}
+
+## ⚠️ CRITICAL: ISSUE SEVERITY CLASSIFICATION ⚠️
+
+### ERROR (severity: "error") — CAN fail the diagram
+Only these placement violations are hard failures:
+- Global/edge service inside VPC (CloudFront, Route53, IAM in VPC)
+- Regional service inside subnet (S3, DynamoDB in subnet)
+- VPC resource in wrong container (RDS in public subnet, EC2 in Security Group)
+- Non-container used as container (EC2 inside Security Group)
+
+### WARNING (severity: "warning") — NEVER fails, only suggests
+Architectural improvements that should NOT block completion:
+- Single NAT Gateway (HA suggestion)
+- Single-AZ database or cache (resilience suggestion)
+- Missing Auto Scaling (scalability suggestion)
+- ASG shown in one subnet (ASG logically spans subnets)
+
+### NOTE (severity: "note") — Informational only, NO penalty
+Diagram abstraction nuances that are ALLOWED:
+- IGW → ALB connection (visually implies IGW → VPC → ALB ENIs)
+- RDS primary → standby edge (replication is managed internally, but diagram shows intent)
+- CloudWatch → resource edges (monitoring relationship, not data flow)
+- PrivateLink at VPC level (ENIs are in subnets, but VPC-level abstraction is valid)
+
+## ⚠️ THE GOLDEN RULE ⚠️
+**Only placement ERRORS can invalidate a diagram.**
+**Connectivity and resilience issues can NEVER fail it — only suggest improvements.**
+
+If ASG exists AND multiple subnets exist → assume HA intent, do NOT penalize.
+If diagram shows logical relationships → accept the abstraction, add a note at most.
 
 ## ⚠️ COMPLETION CRITERIA (75% = PASS) ⚠️
 **A diagram is COMPLETE when it meets the challenge brief requirements.**
@@ -1808,7 +1839,8 @@ Scoring guide:
 - **0-49%**: NEEDS WORK - Significant gaps relative to the challenge brief
 
 **DO NOT keep finding issues once the challenge brief is satisfied.**
-If the diagram fulfills what the brief asked for with valid placements/connections, give 75%+ and mark complete.
+If the diagram fulfills what the brief asked for with valid placements, give 75%+ and mark complete.
+Warnings and notes should NOT reduce the score below passing.
 
 ## ⚠️ ABSOLUTE RULE: NEVER GIVE AWAY THE ANSWER ⚠️
 You are a COACH helping someone LEARN, not a cheat sheet giving answers.
@@ -1825,7 +1857,8 @@ Return ONLY valid JSON:
   "score": <0-100>,
   "is_complete": <true if score >= 75 and challenge brief is satisfied>,
   "correct": ["what they got right - valid placements, good connections, etc."],
-  "missing": ["describe RISK not solution - include placement/connection issues"],
+  "incorrect": ["ONLY severity:error issues - hard placement violations"],
+  "missing": ["warnings and notes - describe RISK not solution"],
   "suggestions": ["discovery questions about architecture decisions"],
   "feedback": "encouraging message - if complete, congratulate them!"
 }}"""
@@ -1873,28 +1906,64 @@ async def audit_diagram_endpoint(request: AuditDiagramRequest):
         # Build available services list for the prompt (compact format)
         available_services_text = "Not specified - use your best judgment"
         service_rules_text = "No rules specified"
+        edge_types_text = "No edge types specified"
+        local_audit_text = "No local audit provided"
         
         if request.available_services:
-            # Compact list of available service IDs and names
+            # Compact list of available service IDs and names with scope
             available_services_text = ", ".join([
-                f"{s.id} ({s.name})"
+                f"{s.id} ({s.name}, scope={s.scope or 'regional'})"
                 for s in request.available_services
             ])
             
             # Detailed rules for services that have constraints
+            # Enhanced with scope, is_vpc_resource, and eni_info
             rules_list = []
             for s in request.available_services:
                 rules = []
+                if s.scope and s.scope != "regional":
+                    rules.append(f"scope: {s.scope}")
+                if s.is_vpc_resource:
+                    rules.append("is_vpc_resource: true")
                 if s.can_connect_to:
                     rules.append(f"can_connect_to: [{', '.join(s.can_connect_to)}]")
                 if s.must_be_inside:
                     rules.append(f"must_be_inside: [{', '.join(s.must_be_inside)}]")
                 if s.is_container:
                     rules.append("is_container: true")
+                if s.eni_info:
+                    rules.append(f"creates_eni: {s.eni_info.eni_count} ({s.eni_info.description})")
                 if rules:
                     rules_list.append(f"- {s.id}: {'; '.join(rules)}")
             
             service_rules_text = "\n".join(rules_list) if rules_list else "No placement/connection constraints defined"
+        
+        # Include edge types if provided
+        if request.edge_types:
+            edge_list = []
+            if request.edge_types.attachment:
+                for e in request.edge_types.attachment:
+                    edge_list.append(f"- ATTACHMENT: {e.name} ({e.id}): {', '.join(e.valid_sources)} → {', '.join(e.valid_targets)}")
+            if request.edge_types.endpoint:
+                for e in request.edge_types.endpoint:
+                    edge_list.append(f"- ENDPOINT: {e.name} ({e.id}): {', '.join(e.valid_sources)} → {', '.join(e.valid_targets)}")
+            if request.edge_types.data_flow:
+                for e in request.edge_types.data_flow:
+                    edge_list.append(f"- DATA_FLOW: {e.name} ({e.id}): {', '.join(e.valid_sources)} → {', '.join(e.valid_targets)}")
+            edge_types_text = "\n".join(edge_list[:20]) if edge_list else "No edge types defined"  # Limit to 20 to avoid token overflow
+        
+        # Include local audit results if provided (already validated client-side)
+        if request.local_audit:
+            la = request.local_audit
+            local_audit_text = f"Score: {la.score}/{la.max_score}"
+            if la.placement_issues:
+                local_audit_text += f"\nPlacement Issues ({len(la.placement_issues)}):"
+                for issue in la.placement_issues[:5]:
+                    local_audit_text += f"\n  - {issue.service_id}: {issue.issue}"
+            if la.connection_issues:
+                local_audit_text += f"\nConnection Issues ({len(la.connection_issues)}):"
+                for issue in la.connection_issues[:5]:
+                    local_audit_text += f"\n  - {issue.source_id} → {issue.target_id}: {issue.issue}"
         
         system_prompt = DIAGRAM_AUDIT_PROMPT.format(
             challenge_title=request.challenge_title or "AWS Architecture Challenge",
@@ -1903,6 +1972,8 @@ async def audit_diagram_endpoint(request: AuditDiagramRequest):
             diagram_json=json.dumps(diagram_data, indent=2),
             available_services_list=available_services_text,
             service_rules=service_rules_text,
+            edge_types=edge_types_text,
+            local_audit=local_audit_text,
         )
         
         # Use get_async_openai() which checks: request context -> .env -> error
@@ -1915,12 +1986,34 @@ async def audit_diagram_endpoint(request: AuditDiagramRequest):
         
         result = json.loads(response.choices[0].message.content)
         score = result.get("score", 50)
+        
+        # Include local audit data in response if available
+        max_score = 100
+        placement_issues = []
+        connection_issues = []
+        is_valid = True
+        
+        if request.local_audit:
+            max_score = request.local_audit.max_score
+            placement_issues = request.local_audit.placement_issues or []
+            connection_issues = request.local_audit.connection_issues or []
+            # GOLDEN RULE: Only severity="error" issues can invalidate a diagram
+            # Warnings and notes should NEVER fail the diagram
+            error_placements = [p for p in placement_issues if getattr(p, 'severity', 'error') == 'error']
+            error_connections = [c for c in connection_issues if getattr(c, 'severity', 'warning') == 'error']
+            is_valid = len(error_placements) == 0 and len(error_connections) == 0
+        
         return AuditDiagramResponse(
-            score=score, 
+            score=score,
+            max_score=max_score,
             is_complete=result.get("is_complete", score >= 75),
+            is_valid=is_valid,
             correct=result.get("correct", []),
+            incorrect=result.get("incorrect", []),
             missing=result.get("missing", []), 
             suggestions=result.get("suggestions", []),
+            placement_issues=placement_issues,
+            connection_issues=connection_issues,
             feedback=result.get("feedback", ""), 
             session_id=request.session_id,
         )
