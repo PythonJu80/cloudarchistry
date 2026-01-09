@@ -99,6 +99,51 @@ class LocationContext(BaseModel):
     compliance: List[str] = []
 
 
+class PlacementHistoryEntry(BaseModel):
+    """A single placement attempt during diagram building"""
+    timestamp: int
+    serviceId: str
+    targetType: Optional[str] = None
+    isValid: bool
+    pointsAwarded: int
+    proTip: Optional[str] = None  # The educational tip shown to the user
+
+
+class PlacementIssue(BaseModel):
+    """A placement issue from the final audit"""
+    nodeId: str
+    serviceId: str
+    issue: str  # The error/warning message
+    suggestion: str
+    severity: str  # 'error', 'warning', 'note'
+
+
+class ConnectionIssue(BaseModel):
+    """A connection issue from the final audit"""
+    sourceId: str
+    targetId: str
+    issue: str
+    suggestion: str
+    severity: str
+
+
+class PlacementJourneyStats(BaseModel):
+    """Summary statistics of the placement journey"""
+    totalPlacements: int = 0
+    correctPlacements: int = 0
+    incorrectAttempts: int = 0
+    finalPlacementIssues: int = 0
+    finalConnectionIssues: int = 0
+
+
+class PlacementJourney(BaseModel):
+    """The user's learning journey through diagram building - captures all pro tips and corrections"""
+    placementHistory: Optional[List[PlacementHistoryEntry]] = None
+    placementIssues: Optional[List[PlacementIssue]] = None
+    connectionIssues: Optional[List[ConnectionIssue]] = None
+    stats: Optional[PlacementJourneyStats] = None
+
+
 class GeneratePortfolioRequest(BaseModel):
     """Request to generate portfolio content from completed challenge"""
     profileId: str
@@ -122,6 +167,9 @@ class GeneratePortfolioRequest(BaseModel):
     scenarioContext: Optional[ScenarioContext] = None
     locationContext: Optional[LocationContext] = None
     
+    # Placement learning journey - pro tips and corrections made during building
+    placementJourney: Optional[PlacementJourney] = None
+    
     # Scoring
     challengeScore: int = 0
     maxScore: int = 0
@@ -137,6 +185,24 @@ class GeneratePortfolioRequest(BaseModel):
     preferred_model: Optional[str] = None
 
 
+class PitchDeckSlide(BaseModel):
+    """A single slide in the pitch deck"""
+    badge: str
+    title: str
+    subtitle: str
+    content1: str
+    content2: str
+    content3: str
+    footer: str
+
+
+class PitchDeckData(BaseModel):
+    """AI-generated pitch deck for business presentations"""
+    authorName: str
+    date: str
+    slides: List[PitchDeckSlide]
+
+
 class PortfolioContent(BaseModel):
     """AI-generated portfolio content"""
     title: str
@@ -145,6 +211,7 @@ class PortfolioContent(BaseModel):
     complianceAchieved: List[str]
     awsServicesUsed: List[str]
     technicalHighlights: List[str]  # Technical accomplishments demonstrating expertise
+    pitchDeck: Optional[PitchDeckData] = None  # Business presentation slides
 
 
 class GeneratePortfolioResponse(BaseModel):

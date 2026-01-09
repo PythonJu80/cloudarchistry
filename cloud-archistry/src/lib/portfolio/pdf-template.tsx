@@ -352,6 +352,217 @@ const styles = StyleSheet.create({
     maxHeight: 650,
     objectFit: "contain",
   },
+  // Pitch Deck Styles (landscape slides for business presentation)
+  pitchSlide: {
+    padding: 40,
+    fontFamily: "Helvetica",
+    backgroundColor: "#ffffff",
+    position: "relative" as const,
+  },
+  pitchBadge: {
+    padding: "4 12",
+    borderRadius: 4,
+    fontSize: 10,
+    fontWeight: "bold" as const,
+    marginBottom: 15,
+    alignSelf: "flex-start" as const,
+  },
+  pitchTitle: {
+    fontSize: 26,
+    fontWeight: "bold" as const,
+    color: "#0f172a",
+    marginBottom: 15,
+  },
+  pitchSubtitle: {
+    fontSize: 14,
+    color: "#475569",
+    marginBottom: 20,
+    lineHeight: 1.5,
+  },
+  pitchCard: {
+    backgroundColor: "#fafafa",
+    padding: 14,
+    borderRadius: 6,
+    marginBottom: 10,
+    borderLeft: "3px solid #dc2626",
+  },
+  pitchCardText: {
+    fontSize: 11,
+    color: "#334155",
+    lineHeight: 1.4,
+  },
+  pitchImpactBox: {
+    backgroundColor: "#fef2f2",
+    padding: 14,
+    borderRadius: 6,
+    marginTop: 12,
+  },
+  pitchImpactText: {
+    fontSize: 12,
+    color: "#dc2626",
+    fontWeight: "bold" as const,
+    textAlign: "center" as const,
+  },
+  pitchServicesRow: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 6,
+    marginBottom: 15,
+  },
+  pitchServiceTag: {
+    backgroundColor: "#fff7ed",
+    color: "#ea580c",
+    padding: "5 10",
+    borderRadius: 4,
+    fontSize: 9,
+    fontWeight: "bold" as const,
+  },
+  pitchBenefitRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    marginBottom: 8,
+  },
+  pitchBenefitCheck: {
+    width: 16,
+    height: 16,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+    marginRight: 8,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  pitchBenefitText: {
+    flex: 1,
+    fontSize: 11,
+    color: "#334155",
+  },
+  pitchPhaseRow: {
+    flexDirection: "row" as const,
+    gap: 15,
+    marginTop: 10,
+  },
+  pitchPhaseCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 6,
+  },
+  pitchPhaseNumber: {
+    fontSize: 9,
+    fontWeight: "bold" as const,
+    marginBottom: 4,
+  },
+  pitchPhaseTitle: {
+    fontSize: 12,
+    fontWeight: "bold" as const,
+    color: "#0f172a",
+    marginBottom: 6,
+  },
+  pitchPhaseDesc: {
+    fontSize: 9,
+    color: "#475569",
+    lineHeight: 1.3,
+  },
+  pitchTimelineBox: {
+    backgroundColor: "#eff6ff",
+    padding: 12,
+    borderRadius: 6,
+    marginTop: 15,
+    alignItems: "center" as const,
+  },
+  pitchTimelineText: {
+    fontSize: 14,
+    fontWeight: "bold" as const,
+    color: "#2563eb",
+  },
+  pitchCostRow: {
+    flexDirection: "row" as const,
+    gap: 20,
+    marginTop: 15,
+    marginBottom: 15,
+  },
+  pitchCostCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center" as const,
+  },
+  pitchCostLabel: {
+    fontSize: 10,
+    color: "#64748b",
+    marginBottom: 6,
+  },
+  pitchCostValue: {
+    fontSize: 24,
+    fontWeight: "bold" as const,
+  },
+  pitchRoiBox: {
+    backgroundColor: "#f0fdf4",
+    padding: 14,
+    borderRadius: 6,
+    alignItems: "center" as const,
+    marginBottom: 15,
+  },
+  pitchRoiText: {
+    fontSize: 14,
+    fontWeight: "bold" as const,
+    color: "#16a34a",
+  },
+  pitchNextStepRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    marginBottom: 8,
+  },
+  pitchNextStepNum: {
+    width: 20,
+    height: 20,
+    backgroundColor: "#7c3aed",
+    borderRadius: 10,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    marginRight: 10,
+  },
+  pitchNextStepNumText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "bold" as const,
+  },
+  pitchNextStepText: {
+    flex: 1,
+    fontSize: 11,
+    color: "#334155",
+    paddingTop: 2,
+  },
+  pitchCtaBox: {
+    backgroundColor: "#7c3aed",
+    padding: 14,
+    borderRadius: 6,
+    marginTop: 12,
+    alignItems: "center" as const,
+  },
+  pitchCtaText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "bold" as const,
+  },
+  pitchFooter: {
+    position: "absolute" as const,
+    bottom: 20,
+    left: 40,
+    right: 40,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    borderTop: "1px solid #e2e8f0",
+    paddingTop: 8,
+  },
+  pitchFooterText: {
+    fontSize: 8,
+    color: "#64748b",
+  },
+  pitchFooterPage: {
+    fontSize: 8,
+    color: "#7c3aed",
+    fontWeight: "bold" as const,
+  },
 });
 
 interface DiagramNode {
@@ -393,6 +604,25 @@ export interface PortfolioPDFData {
   technicalHighlights?: string[];
   createdAt: string;
   architectureDiagram?: { nodes: DiagramNode[]; edges: DiagramEdge[] } | null;
+  // Pitch deck data (optional - for lead generation)
+  pitchDeck?: PitchDeckData | null;
+}
+
+// Pitch Deck types for business presentation slides
+export interface PitchDeckSlide {
+  badge: string;
+  title: string;
+  subtitle: string;
+  content1: string;
+  content2: string;
+  content3: string;
+  footer: string;
+}
+
+export interface PitchDeckData {
+  authorName: string;
+  date: string;
+  slides: PitchDeckSlide[];
 }
 
 // Build service lookup maps from AWS_SERVICES for efficient label resolution
@@ -824,6 +1054,181 @@ export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
             <Text>{new Date(data.createdAt).toLocaleDateString()}</Text>
           </View>
         </Page>
+      )}
+
+      {/* ========== PITCH DECK SECTION (Business Presentation) ========== */}
+      {data.pitchDeck && data.pitchDeck.slides.length >= 5 && (
+        <>
+          {/* Pitch Slide 1: Title */}
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+              <Text style={[styles.pitchBadge, { backgroundColor: "#f3e8ff", color: "#7c3aed" }]}>
+                {data.pitchDeck.slides[0].badge}
+              </Text>
+              <Text style={[styles.pitchTitle, { fontSize: 32, textAlign: "center", marginBottom: 10 }]}>
+                {data.pitchDeck.slides[0].title}
+              </Text>
+              <Text style={[styles.pitchSubtitle, { textAlign: "center", marginBottom: 25 }]}>
+                {data.pitchDeck.slides[0].subtitle}
+              </Text>
+              <Text style={{ fontSize: 18, color: "#7c3aed", fontWeight: "bold", marginBottom: 30 }}>
+                {data.companyName}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 20 }}>
+                <Text style={{ fontSize: 10, color: "#64748b" }}>Prepared by {data.pitchDeck.authorName}</Text>
+                <Text style={{ fontSize: 10, color: "#64748b" }}>•</Text>
+                <Text style={{ fontSize: 10, color: "#64748b" }}>{data.pitchDeck.date}</Text>
+              </View>
+            </View>
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>Confidential</Text>
+              <Text style={styles.pitchFooterPage}>1 / 5</Text>
+            </View>
+          </Page>
+
+          {/* Pitch Slide 2: The Challenge */}
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#fef2f2", color: "#dc2626" }]}>
+              {data.pitchDeck.slides[1].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck.slides[1].title}</Text>
+            <View>
+              <View style={styles.pitchCard}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck.slides[1].content1}</Text>
+              </View>
+              <View style={styles.pitchCard}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck.slides[1].content2}</Text>
+              </View>
+              <View style={styles.pitchCard}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck.slides[1].content3}</Text>
+              </View>
+            </View>
+            <View style={styles.pitchImpactBox}>
+              <Text style={styles.pitchImpactText}>{data.pitchDeck.slides[1].footer}</Text>
+            </View>
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>2 / 5</Text>
+            </View>
+          </Page>
+
+          {/* Pitch Slide 3: The Solution */}
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#f0fdf4", color: "#16a34a" }]}>
+              {data.pitchDeck.slides[2].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck.slides[2].title}</Text>
+            <Text style={styles.pitchSubtitle}>{data.pitchDeck.slides[2].subtitle}</Text>
+            <View style={{ flexDirection: "row", gap: 30 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>AWS Services</Text>
+                <View style={styles.pitchServicesRow}>
+                  {data.awsServices.slice(0, 8).map((svc, i) => (
+                    <Text key={i} style={styles.pitchServiceTag}>{svc}</Text>
+                  ))}
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Key Benefits</Text>
+                <View style={styles.pitchBenefitRow}>
+                  <View style={styles.pitchBenefitCheck}>
+                    <Text style={{ color: "#16a34a", fontSize: 10 }}>✓</Text>
+                  </View>
+                  <Text style={styles.pitchBenefitText}>{data.pitchDeck.slides[2].content2}</Text>
+                </View>
+                <View style={styles.pitchBenefitRow}>
+                  <View style={styles.pitchBenefitCheck}>
+                    <Text style={{ color: "#16a34a", fontSize: 10 }}>✓</Text>
+                  </View>
+                  <Text style={styles.pitchBenefitText}>{data.pitchDeck.slides[2].content3}</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>3 / 5</Text>
+            </View>
+          </Page>
+
+          {/* Pitch Slide 4: Implementation */}
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#eff6ff", color: "#2563eb" }]}>
+              {data.pitchDeck.slides[3].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck.slides[3].title}</Text>
+            <View style={styles.pitchPhaseRow}>
+              <View style={[styles.pitchPhaseCard, { backgroundColor: "#eff6ff" }]}>
+                <Text style={[styles.pitchPhaseNumber, { color: "#2563eb" }]}>PHASE 1</Text>
+                <Text style={styles.pitchPhaseTitle}>Foundation</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck.slides[3].subtitle}</Text>
+              </View>
+              <View style={[styles.pitchPhaseCard, { backgroundColor: "#f3e8ff" }]}>
+                <Text style={[styles.pitchPhaseNumber, { color: "#7c3aed" }]}>PHASE 2</Text>
+                <Text style={styles.pitchPhaseTitle}>Migration</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck.slides[3].content1}</Text>
+              </View>
+              <View style={[styles.pitchPhaseCard, { backgroundColor: "#f0fdf4" }]}>
+                <Text style={[styles.pitchPhaseNumber, { color: "#16a34a" }]}>PHASE 3</Text>
+                <Text style={styles.pitchPhaseTitle}>Optimization</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck.slides[3].content2}</Text>
+              </View>
+            </View>
+            <View style={styles.pitchTimelineBox}>
+              <Text style={styles.pitchTimelineText}>{data.pitchDeck.slides[3].footer}</Text>
+            </View>
+            <View style={{ marginTop: 15 }}>
+              <Text style={{ fontSize: 11, fontWeight: "bold", color: "#0f172a", marginBottom: 8 }}>Quick Wins</Text>
+              <Text style={{ fontSize: 10, color: "#475569" }}>{data.pitchDeck.slides[3].content3}</Text>
+            </View>
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>4 / 5</Text>
+            </View>
+          </Page>
+
+          {/* Pitch Slide 5: Investment & Next Steps */}
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#f3e8ff", color: "#7c3aed" }]}>
+              {data.pitchDeck.slides[4].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck.slides[4].title}</Text>
+            <View style={styles.pitchCostRow}>
+              <View style={[styles.pitchCostCard, { backgroundColor: "#f8fafc" }]}>
+                <Text style={styles.pitchCostLabel}>Estimated Monthly</Text>
+                <Text style={[styles.pitchCostValue, { color: "#0f172a" }]}>
+                  {data.pitchDeck.slides[4].subtitle.split("|")[0]?.replace("Monthly:", "").trim() || "$5,000"}
+                </Text>
+              </View>
+              <View style={[styles.pitchCostCard, { backgroundColor: "#f0fdf4" }]}>
+                <Text style={styles.pitchCostLabel}>Estimated Yearly</Text>
+                <Text style={[styles.pitchCostValue, { color: "#16a34a" }]}>
+                  {data.pitchDeck.slides[4].subtitle.split("|")[1]?.replace("Yearly:", "").trim() || "$60,000"}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.pitchRoiBox}>
+              <Text style={styles.pitchRoiText}>{data.pitchDeck.slides[4].content1}</Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: "bold", color: "#0f172a", marginBottom: 10 }}>Next Steps</Text>
+              {["Schedule technical discovery call", "Finalize project scope", "Begin Phase 1 implementation"].map((step, i) => (
+                <View key={i} style={styles.pitchNextStepRow}>
+                  <View style={styles.pitchNextStepNum}>
+                    <Text style={styles.pitchNextStepNumText}>{i + 1}</Text>
+                  </View>
+                  <Text style={styles.pitchNextStepText}>{step}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.pitchCtaBox}>
+              <Text style={styles.pitchCtaText}>{data.pitchDeck.slides[4].footer}</Text>
+            </View>
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>5 / 5</Text>
+            </View>
+          </Page>
+        </>
       )}
     </Document>
   );

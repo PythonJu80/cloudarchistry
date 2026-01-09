@@ -1483,6 +1483,8 @@ model AcademyPortfolio {
   diagramSvg          String?  @db.Text  // Pre-rendered SVG for PDF
   keyDecisions        Json     @default("[]")  // Architectural decisions
   complianceAchieved  Json     @default("[]")  // Compliance standards met
+  technicalHighlights Json     @default("[]")  // Technical accomplishments
+  pitchDeck           Json?    // {authorName, date, slides[]} for business presentation
   
   // Scoring/Stats from the challenge
   challengeScore      Int      @default(0)

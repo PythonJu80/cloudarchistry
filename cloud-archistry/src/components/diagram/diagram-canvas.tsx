@@ -1075,9 +1075,11 @@ function DiagramCanvasInner({
         
         // ✅ Valid placement inside container
         parentId = container.id;
+        // Calculate relative position using container's ABSOLUTE position
+        const containerAbsPos = getAbsolutePosition(container as DiagramNode, nodes as DiagramNode[]);
         relativePosition = {
-          x: position.x - container.position.x,
-          y: position.y - container.position.y,
+          x: position.x - containerAbsPos.x,
+          y: position.y - containerAbsPos.y,
         };
         
         // Award points for correct placement
@@ -1141,7 +1143,7 @@ function DiagramCanvasInner({
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [screenToFlowPosition, setNodes, findContainerAtPosition, showProTip, animateScore, diagramScore.currentStreak]
+    [screenToFlowPosition, setNodes, findContainerAtPosition, showProTip, animateScore, diagramScore.currentStreak, getAbsolutePosition, nodes]
   );
 
   // Delete selected node

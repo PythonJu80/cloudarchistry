@@ -27,6 +27,22 @@ interface DiagramEdge {
   label?: string;
 }
 
+interface PitchDeckSlide {
+  badge: string;
+  title: string;
+  subtitle: string;
+  content1: string;
+  content2: string;
+  content3: string;
+  footer: string;
+}
+
+interface PitchDeckData {
+  authorName: string;
+  date: string;
+  slides: PitchDeckSlide[];
+}
+
 interface Portfolio {
   id: string;
   title: string;
@@ -44,6 +60,7 @@ interface Portfolio {
   isExample: boolean;
   profileId: string | null;
   architectureDiagram: { nodes: DiagramNode[]; edges: DiagramEdge[] } | null;
+  pitchDeck: PitchDeckData | null;
 }
 
 /**
@@ -76,7 +93,8 @@ export async function GET(
         "createdAt",
         "isExample",
         "profileId",
-        "architectureDiagram"
+        "architectureDiagram",
+        "pitchDeck"
       FROM "AcademyPortfolio"
       WHERE id = ${id}
       LIMIT 1
@@ -117,6 +135,7 @@ export async function GET(
       technicalHighlights,
       createdAt: portfolio.createdAt.toISOString(),
       architectureDiagram: portfolio.architectureDiagram,
+      pitchDeck: portfolio.pitchDeck,
     };
 
     // Generate PDF
