@@ -84,9 +84,9 @@ IMPORTANT for technicalHighlights:
 Write with confidence and specificity. This portfolio represents real work the engineer can discuss in interviews."""
 
 
-PITCH_DECK_PROMPT = """You are a cloud solutions consultant creating a professional pitch deck for a prospective client.
+PITCH_DECK_PROMPT = """You are a senior cloud solutions consultant creating a comprehensive, professional pitch deck for a prospective client.
 
-Based on the completed architecture work, create a 5-slide pitch deck that the engineer can present to this business to win their cloud migration project.
+Based on the completed architecture work, create an 8-slide pitch deck that the engineer can present to this business to win their cloud migration project. This should be detailed enough to stand alone as a complete business proposal.
 
 ## Client Information
 **Company:** {company_name}
@@ -99,7 +99,7 @@ Based on the completed architecture work, create a 5-slide pitch deck that the e
 **Key Benefits:** {key_decisions}
 
 ## Your Task
-Generate a JSON response with exactly 5 slides for a professional pitch deck:
+Generate a JSON response with exactly 8 slides for a comprehensive professional pitch deck:
 
 {{
   "slides": [
@@ -108,61 +108,99 @@ Generate a JSON response with exactly 5 slides for a professional pitch deck:
       "title": "Cloud Migration Proposal for {company_name}",
       "subtitle": "Modernizing {industry} Infrastructure with AWS",
       "content1": "{company_name}",
-      "content2": "",
-      "content3": "",
+      "content2": "Prepared by [Your Name], AWS Solutions Architect",
+      "content3": "Transforming infrastructure for scalability, security, and cost efficiency",
       "footer": ""
     }},
     {{
       "badge": "THE CHALLENGE",
       "title": "Current Infrastructure Limitations",
-      "subtitle": "",
-      "content1": "• [Specific pain point 1 with business impact - be detailed and realistic]",
-      "content2": "• [Specific pain point 2 with business impact - be detailed and realistic]",
-      "content3": "• [Specific pain point 3 with business impact - be detailed and realistic]",
-      "footer": "These challenges cost {company_name} in [specific measurable ways - lost revenue, inefficiency, etc.]"
+      "subtitle": "Understanding the pain points holding {company_name} back",
+      "content1": "• [Specific pain point 1 - be detailed: e.g., 'Legacy on-premises servers experiencing 15+ hours of unplanned downtime monthly, resulting in lost revenue and customer trust']",
+      "content2": "• [Specific pain point 2 - e.g., 'Manual scaling processes taking 2-3 days to provision new capacity, missing critical business opportunities during peak demand']",
+      "content3": "• [Specific pain point 3 - e.g., 'Security vulnerabilities from outdated infrastructure putting sensitive customer data at risk of breach and regulatory non-compliance']",
+      "footer": "These challenges are costing {company_name} an estimated $XXX,XXX annually in lost productivity, missed opportunities, and operational overhead"
     }},
     {{
       "badge": "THE SOLUTION",
       "title": "AWS-Powered Architecture",
-      "subtitle": "[2-3 sentence summary of the proposed solution and its key benefits]",
-      "content1": "AWS Services: [List all services from the architecture]",
-      "content2": "[Key benefit 1] | [Key benefit 2]",
-      "content3": "[Key benefit 3] | [Key benefit 4]",
-      "footer": ""
+      "subtitle": "[3-4 sentence comprehensive summary of the proposed solution, its architecture approach, and transformative benefits for the business]",
+      "content1": "Core AWS Services: [List primary compute/database services] | Supporting Services: [List networking/security services]",
+      "content2": "✓ [Key benefit 1 with metric] | ✓ [Key benefit 2 with metric]",
+      "content3": "✓ [Key benefit 3 with metric] | ✓ [Key benefit 4 with metric]",
+      "footer": "This architecture delivers enterprise-grade reliability with startup-level agility"
     }},
     {{
-      "badge": "IMPLEMENTATION",
-      "title": "3-Phase Roadmap",
-      "subtitle": "[Phase 1 description - Foundation work] (2-3 weeks)",
-      "content1": "[Phase 2 description - Migration work] (4-6 weeks)",
-      "content2": "[Phase 3 description - Optimization] (ongoing)",
-      "content3": "[Quick win 1] | [Quick win 2] | [Quick win 3]",
-      "footer": "Total Timeline: 8-12 Weeks"
+      "badge": "ARCHITECTURE DEEP DIVE",
+      "title": "Technical Architecture Overview",
+      "subtitle": "How the AWS services work together to solve {company_name}'s challenges",
+      "content1": "**Compute Layer:** [Describe compute strategy - e.g., 'Auto-scaling EC2 instances behind Application Load Balancer for high availability and automatic capacity management']",
+      "content2": "**Data Layer:** [Describe data strategy - e.g., 'Multi-AZ RDS deployment with automated backups and read replicas for performance and disaster recovery']",
+      "content3": "**Security Layer:** [Describe security strategy - e.g., 'VPC with public/private subnet isolation, WAF protection, and IAM least-privilege access controls']",
+      "footer": "Built following AWS Well-Architected Framework best practices"
     }},
     {{
-      "badge": "INVESTMENT & NEXT STEPS",
-      "title": "Projected Costs & ROI",
-      "subtitle": "Monthly: $X,XXX | Yearly: $XX,XXX",
-      "content1": "Projected ROI: XX% cost reduction in Year 1",
-      "content2": "",
-      "content3": "",
-      "footer": "Let's transform {company_name}'s infrastructure together"
+      "badge": "SECURITY & COMPLIANCE",
+      "title": "Enterprise-Grade Security",
+      "subtitle": "Protecting {company_name}'s data and meeting regulatory requirements",
+      "content1": "• **Data Protection:** Encryption at rest (KMS) and in transit (TLS 1.3), automated key rotation, secure secrets management",
+      "content2": "• **Access Control:** IAM roles with least-privilege, MFA enforcement, CloudTrail audit logging, Security Hub monitoring",
+      "content3": "• **Compliance Ready:** Architecture designed for [relevant compliance - HIPAA/SOC2/GDPR/PCI-DSS] with automated compliance checks",
+      "footer": "Security is built-in, not bolted-on"
+    }},
+    {{
+      "badge": "IMPLEMENTATION ROADMAP",
+      "title": "3-Phase Delivery Plan",
+      "subtitle": "Phase 1: Foundation & Setup (Weeks 1-3)",
+      "content1": "Phase 2: Migration & Integration (Weeks 4-8) - [Describe migration approach: lift-and-shift, re-platform, or re-architect strategy with specific milestones]",
+      "content2": "Phase 3: Optimization & Handover (Weeks 9-12) - [Describe optimization: performance tuning, cost optimization, documentation, and team training]",
+      "content3": "**Quick Wins (Week 1):** [3 immediate improvements that show value fast - e.g., 'Automated backups | Monitoring dashboards | Security hardening']",
+      "footer": "Total Timeline: 10-12 Weeks | Minimal business disruption with parallel running"
+    }},
+    {{
+      "badge": "INVESTMENT & ROI",
+      "title": "Cost Analysis & Return on Investment",
+      "subtitle": "Monthly: $X,XXX - $X,XXX | Annual: $XX,XXX - $XX,XXX",
+      "content1": "**Cost Breakdown:** Compute: XX% | Storage: XX% | Data Transfer: XX% | Management: XX% — Includes Reserved Instance savings and Savings Plans optimization",
+      "content2": "**Projected Savings:** XX% reduction in infrastructure costs | XX% reduction in operational overhead | XX hours/month saved on maintenance",
+      "content3": "**ROI Timeline:** Break-even in X months | Year 1 net savings: $XX,XXX | 3-year TCO reduction: XX%",
+      "footer": "Pay only for what you use with full cost visibility and optimization recommendations"
+    }},
+    {{
+      "badge": "NEXT STEPS",
+      "title": "Let's Get Started",
+      "subtitle": "Your path to cloud transformation",
+      "content1": "1. **Discovery Call** (This Week) - Deep dive into your current infrastructure and requirements",
+      "content2": "2. **Detailed Proposal** (Week 2) - Finalized architecture, timeline, and investment breakdown",
+      "content3": "3. **Kickoff** (Week 3) - Begin Phase 1 implementation with your dedicated cloud team",
+      "footer": "Let's transform {company_name}'s infrastructure together — Contact: [your-email] | Schedule: [calendar-link]"
     }}
   ]
 }}
 
 IMPORTANT:
-- Be specific and use real details from the architecture
-- Make cost estimates realistic (small business: $500-2000/mo, medium: $2000-10000/mo, enterprise: $10000+/mo)
-- Frame everything as business value
-- Use professional, confident language
+- Be SPECIFIC and use real details from the architecture - no generic placeholders
+- Fill in ALL content fields with substantive, detailed information
+- Make cost estimates realistic based on industry: Healthcare/Finance: $5,000-15,000/mo, E-commerce: $2,000-8,000/mo, Startup: $500-2,000/mo
+- Include specific metrics and percentages where possible (e.g., "99.99% uptime", "40% cost reduction")
+- Frame everything as business value and outcomes
+- Use professional, confident, consultative language
+- The deck should be comprehensive enough to present to C-level executives
 - Return ONLY valid JSON"""
 
 
 def _extract_services_from_diagram(diagram: Dict[str, Any]) -> List[str]:
-    """Extract AWS service names from diagram nodes."""
+    """Extract AWS service names from diagram nodes, filtering out non-AWS items."""
     services = []
     nodes = diagram.get("nodes", [])
+    
+    # Non-AWS items to exclude (actors, generic items, etc.)
+    excluded_labels = {
+        "users", "user", "client", "clients", "customer", "customers",
+        "internet", "on-premises", "on-premise", "datacenter", "data center",
+        "mobile", "browser", "device", "devices", "application", "app",
+        "external", "third party", "3rd party", "partner", "partners",
+    }
     
     for node in nodes:
         node_type = node.get("type", "")
@@ -172,11 +210,16 @@ def _extract_services_from_diagram(diagram: Dict[str, Any]) -> List[str]:
         if node_type in ["vpc", "subnet"]:
             continue
         
-        # Get service label
+        # Get service label and serviceId
         label = data.get("label", "")
         service_id = data.get("serviceId", "")
         
-        if label and label not in services:
+        # Skip if it's a non-AWS item
+        if label.lower() in excluded_labels:
+            continue
+        
+        # Only include if it has a valid AWS serviceId or looks like an AWS service
+        if service_id and label and label not in services:
             services.append(label)
         elif service_id and service_id not in services:
             services.append(service_id)
@@ -391,10 +434,13 @@ async def generate_portfolio_content(
         content = response.choices[0].message.content
         result = json.loads(content)
         
-        # Ensure awsServicesUsed includes what we detected
-        detected_services = set(services_used)
-        ai_services = set(result.get("awsServicesUsed", []))
-        all_services = list(detected_services.union(ai_services))
+        # Use only services detected from the user's diagram (not AI suggestions)
+        all_services = list(services_used)
+        
+        # Calculate live pricing estimate based on services used
+        from services.aws_pricing import estimate_architecture_cost
+        pricing_estimate = estimate_architecture_cost(all_services)
+        logger.info(f"Pricing estimate: ${pricing_estimate['total_monthly']}/mo for {len(all_services)} services")
         
         # Now generate pitch deck content (second OpenAI call)
         pitch_deck = await _generate_pitch_deck(
@@ -406,6 +452,7 @@ async def generate_portfolio_content(
             services_used=", ".join(all_services) if all_services else "Various AWS services",
             solution_summary=result["solutionSummary"],
             key_decisions=", ".join(result["keyDecisions"][:3]) if result.get("keyDecisions") else "",
+            pricing_estimate=pricing_estimate,
         )
         
         return PortfolioContent(
@@ -438,9 +485,33 @@ async def _generate_pitch_deck(
     services_used: str,
     solution_summary: str,
     key_decisions: str,
+    pricing_estimate: Optional[Dict[str, Any]] = None,
 ) -> Optional[PitchDeckData]:
     """Generate pitch deck slides for business presentation."""
     from datetime import datetime
+    
+    # Build pricing context for the prompt
+    pricing_context = ""
+    if pricing_estimate:
+        monthly = pricing_estimate.get("total_monthly", 0)
+        yearly = pricing_estimate.get("total_yearly", 0)
+        breakdown = pricing_estimate.get("breakdown", [])
+        
+        pricing_context = f"""
+## REAL PRICING DATA (Use these exact figures)
+**Estimated Monthly Cost:** ${monthly:,.2f}
+**Estimated Yearly Cost:** ${yearly:,.2f}
+
+**Cost Breakdown by Service:**
+"""
+        for item in breakdown[:8]:  # Top 8 services
+            pricing_context += f"- {item['service']}: ${item['monthly_usd']:.2f}/month\n"
+        
+        pricing_context += f"""
+**Note:** {pricing_estimate.get('disclaimer', 'Estimates based on typical usage patterns.')}
+
+IMPORTANT: Use the EXACT pricing figures above in the Investment & ROI slide. Do NOT make up different numbers.
+"""
     
     try:
         prompt = PITCH_DECK_PROMPT.format(
@@ -451,6 +522,10 @@ async def _generate_pitch_deck(
             solution_summary=solution_summary,
             key_decisions=key_decisions,
         )
+        
+        # Inject pricing data into prompt
+        if pricing_context:
+            prompt = prompt.replace("## Your Task", f"{pricing_context}\n## Your Task")
         
         response = await openai_client.chat.completions.create(
             model=model,
@@ -478,14 +553,14 @@ async def _generate_pitch_deck(
                 footer=slide_data.get("footer", ""),
             ))
         
-        if len(slides) >= 5:
+        if len(slides) >= 5:  # Accept 5+ slides (we request 8 but accept fewer for backwards compatibility)
             return PitchDeckData(
                 authorName="Cloud Architect",
                 date=datetime.now().strftime("%B %Y"),
                 slides=slides,
             )
         else:
-            logger.warning(f"Pitch deck generation returned {len(slides)} slides, expected 5")
+            logger.warning(f"Pitch deck generation returned {len(slides)} slides, expected 8")
             return None
             
     except Exception as e:

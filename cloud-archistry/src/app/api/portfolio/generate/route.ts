@@ -393,6 +393,7 @@ export async function POST(request: NextRequest) {
       challengeProgressId: attempt.challengeProgress[0]?.id || null,
       locationSlug: location?.slug || null,
       architectureDiagram: finalDiagram ? JSON.stringify(finalDiagram) : null,
+      pitchDeck: learningAgentContent?.pitchDeck ? JSON.stringify(learningAgentContent.pitchDeck) : null,
       generatedAt: new Date(),
     };
 
@@ -426,6 +427,7 @@ export async function POST(request: NextRequest) {
         "challengeProgressId",
         "locationSlug",
         "architectureDiagram",
+        "pitchDeck",
         "generatedAt",
         "createdAt",
         "updatedAt"
@@ -455,6 +457,7 @@ export async function POST(request: NextRequest) {
         ${portfolioData.challengeProgressId},
         ${portfolioData.locationSlug},
         ${portfolioData.architectureDiagram}::jsonb,
+        ${portfolioData.pitchDeck}::jsonb,
         ${portfolioData.generatedAt},
         NOW(),
         NOW()

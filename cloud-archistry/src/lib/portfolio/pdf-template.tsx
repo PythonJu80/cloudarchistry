@@ -1057,68 +1057,79 @@ export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
       )}
 
       {/* ========== PITCH DECK SECTION (Business Presentation) ========== */}
-      {data.pitchDeck && data.pitchDeck.slides.length >= 5 && (
+      {data.pitchDeck && data.pitchDeck.slides.length >= 5 && (() => {
+        const totalSlides = data.pitchDeck!.slides.length;
+        return (
         <>
           {/* Pitch Slide 1: Title */}
           <Page size={[842, 595]} style={styles.pitchSlide}>
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
               <Text style={[styles.pitchBadge, { backgroundColor: "#f3e8ff", color: "#7c3aed" }]}>
-                {data.pitchDeck.slides[0].badge}
+                {data.pitchDeck!.slides[0].badge}
               </Text>
               <Text style={[styles.pitchTitle, { fontSize: 32, textAlign: "center", marginBottom: 10 }]}>
-                {data.pitchDeck.slides[0].title}
+                {data.pitchDeck!.slides[0].title}
               </Text>
-              <Text style={[styles.pitchSubtitle, { textAlign: "center", marginBottom: 25 }]}>
-                {data.pitchDeck.slides[0].subtitle}
+              <Text style={[styles.pitchSubtitle, { textAlign: "center", marginBottom: 15 }]}>
+                {data.pitchDeck!.slides[0].subtitle}
               </Text>
-              <Text style={{ fontSize: 18, color: "#7c3aed", fontWeight: "bold", marginBottom: 30 }}>
+              <Text style={{ fontSize: 18, color: "#7c3aed", fontWeight: "bold", marginBottom: 15 }}>
                 {data.companyName}
               </Text>
+              {data.pitchDeck!.slides[0].content2 && (
+                <Text style={{ fontSize: 11, color: "#475569", marginBottom: 8 }}>{data.pitchDeck!.slides[0].content2}</Text>
+              )}
+              {data.pitchDeck!.slides[0].content3 && (
+                <Text style={{ fontSize: 10, color: "#64748b", marginBottom: 20, textAlign: "center", maxWidth: 400 }}>{data.pitchDeck!.slides[0].content3}</Text>
+              )}
               <View style={{ flexDirection: "row", gap: 20 }}>
-                <Text style={{ fontSize: 10, color: "#64748b" }}>Prepared by {data.pitchDeck.authorName}</Text>
+                <Text style={{ fontSize: 10, color: "#64748b" }}>Prepared by {data.pitchDeck!.authorName}</Text>
                 <Text style={{ fontSize: 10, color: "#64748b" }}>•</Text>
-                <Text style={{ fontSize: 10, color: "#64748b" }}>{data.pitchDeck.date}</Text>
+                <Text style={{ fontSize: 10, color: "#64748b" }}>{data.pitchDeck!.date}</Text>
               </View>
             </View>
             <View style={styles.pitchFooter}>
               <Text style={styles.pitchFooterText}>Confidential</Text>
-              <Text style={styles.pitchFooterPage}>1 / 5</Text>
+              <Text style={styles.pitchFooterPage}>1 / {totalSlides}</Text>
             </View>
           </Page>
 
           {/* Pitch Slide 2: The Challenge */}
           <Page size={[842, 595]} style={styles.pitchSlide}>
             <Text style={[styles.pitchBadge, { backgroundColor: "#fef2f2", color: "#dc2626" }]}>
-              {data.pitchDeck.slides[1].badge}
+              {data.pitchDeck!.slides[1].badge}
             </Text>
-            <Text style={styles.pitchTitle}>{data.pitchDeck.slides[1].title}</Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[1].title}</Text>
+            {data.pitchDeck!.slides[1].subtitle && (
+              <Text style={[styles.pitchSubtitle, { marginBottom: 15 }]}>{data.pitchDeck!.slides[1].subtitle}</Text>
+            )}
             <View>
               <View style={styles.pitchCard}>
-                <Text style={styles.pitchCardText}>{data.pitchDeck.slides[1].content1}</Text>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[1].content1}</Text>
               </View>
               <View style={styles.pitchCard}>
-                <Text style={styles.pitchCardText}>{data.pitchDeck.slides[1].content2}</Text>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[1].content2}</Text>
               </View>
               <View style={styles.pitchCard}>
-                <Text style={styles.pitchCardText}>{data.pitchDeck.slides[1].content3}</Text>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[1].content3}</Text>
               </View>
             </View>
             <View style={styles.pitchImpactBox}>
-              <Text style={styles.pitchImpactText}>{data.pitchDeck.slides[1].footer}</Text>
+              <Text style={styles.pitchImpactText}>{data.pitchDeck!.slides[1].footer}</Text>
             </View>
             <View style={styles.pitchFooter}>
               <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
-              <Text style={styles.pitchFooterPage}>2 / 5</Text>
+              <Text style={styles.pitchFooterPage}>2 / {totalSlides}</Text>
             </View>
           </Page>
 
           {/* Pitch Slide 3: The Solution */}
           <Page size={[842, 595]} style={styles.pitchSlide}>
             <Text style={[styles.pitchBadge, { backgroundColor: "#f0fdf4", color: "#16a34a" }]}>
-              {data.pitchDeck.slides[2].badge}
+              {data.pitchDeck!.slides[2].badge}
             </Text>
-            <Text style={styles.pitchTitle}>{data.pitchDeck.slides[2].title}</Text>
-            <Text style={styles.pitchSubtitle}>{data.pitchDeck.slides[2].subtitle}</Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[2].title}</Text>
+            <Text style={styles.pitchSubtitle}>{data.pitchDeck!.slides[2].subtitle}</Text>
             <View style={{ flexDirection: "row", gap: 30 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>AWS Services</Text>
@@ -1134,80 +1145,277 @@ export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
                   <View style={styles.pitchBenefitCheck}>
                     <Text style={{ color: "#16a34a", fontSize: 10 }}>✓</Text>
                   </View>
-                  <Text style={styles.pitchBenefitText}>{data.pitchDeck.slides[2].content2}</Text>
+                  <Text style={styles.pitchBenefitText}>{data.pitchDeck!.slides[2].content2}</Text>
                 </View>
                 <View style={styles.pitchBenefitRow}>
                   <View style={styles.pitchBenefitCheck}>
                     <Text style={{ color: "#16a34a", fontSize: 10 }}>✓</Text>
                   </View>
-                  <Text style={styles.pitchBenefitText}>{data.pitchDeck.slides[2].content3}</Text>
+                  <Text style={styles.pitchBenefitText}>{data.pitchDeck!.slides[2].content3}</Text>
                 </View>
               </View>
             </View>
             <View style={styles.pitchFooter}>
               <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
-              <Text style={styles.pitchFooterPage}>3 / 5</Text>
+              <Text style={styles.pitchFooterPage}>3 / {totalSlides}</Text>
             </View>
           </Page>
 
-          {/* Pitch Slide 4: Implementation */}
+          {/* Pitch Slide 4: Architecture Deep Dive (NEW) */}
+          {data.pitchDeck!.slides[3] && (
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#fef3c7", color: "#d97706" }]}>
+              {data.pitchDeck!.slides[3].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[3].title}</Text>
+            {data.pitchDeck!.slides[3].subtitle && (
+              <Text style={[styles.pitchSubtitle, { marginBottom: 15 }]}>{data.pitchDeck!.slides[3].subtitle}</Text>
+            )}
+            <View style={{ gap: 12 }}>
+              <View style={[styles.pitchCard, { backgroundColor: "#eff6ff", borderLeftColor: "#3b82f6", borderLeftWidth: 3 }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[3].content1}</Text>
+              </View>
+              <View style={[styles.pitchCard, { backgroundColor: "#f0fdf4", borderLeftColor: "#22c55e", borderLeftWidth: 3 }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[3].content2}</Text>
+              </View>
+              <View style={[styles.pitchCard, { backgroundColor: "#fef2f2", borderLeftColor: "#ef4444", borderLeftWidth: 3 }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[3].content3}</Text>
+              </View>
+            </View>
+            {data.pitchDeck!.slides[3].footer && (
+              <View style={[styles.pitchTimelineBox, { marginTop: 15 }]}>
+                <Text style={styles.pitchTimelineText}>{data.pitchDeck!.slides[3].footer}</Text>
+              </View>
+            )}
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>4 / {totalSlides}</Text>
+            </View>
+          </Page>
+          )}
+
+          {/* Pitch Slide 5: Security & Compliance (NEW) */}
+          {data.pitchDeck!.slides[4] && (
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#fef2f2", color: "#dc2626" }]}>
+              {data.pitchDeck!.slides[4].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[4].title}</Text>
+            {data.pitchDeck!.slides[4].subtitle && (
+              <Text style={[styles.pitchSubtitle, { marginBottom: 15 }]}>{data.pitchDeck!.slides[4].subtitle}</Text>
+            )}
+            <View style={{ gap: 10 }}>
+              <View style={[styles.pitchCard, { backgroundColor: "#f8fafc" }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[4].content1}</Text>
+              </View>
+              <View style={[styles.pitchCard, { backgroundColor: "#f8fafc" }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[4].content2}</Text>
+              </View>
+              <View style={[styles.pitchCard, { backgroundColor: "#f8fafc" }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[4].content3}</Text>
+              </View>
+            </View>
+            {data.pitchDeck!.slides[4].footer && (
+              <View style={[styles.pitchImpactBox, { backgroundColor: "#f0fdf4", marginTop: 15 }]}>
+                <Text style={[styles.pitchImpactText, { color: "#16a34a" }]}>{data.pitchDeck!.slides[4].footer}</Text>
+              </View>
+            )}
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>5 / {totalSlides}</Text>
+            </View>
+          </Page>
+          )}
+
+          {/* Pitch Slide 6: Implementation Roadmap */}
+          {data.pitchDeck!.slides[5] && (
           <Page size={[842, 595]} style={styles.pitchSlide}>
             <Text style={[styles.pitchBadge, { backgroundColor: "#eff6ff", color: "#2563eb" }]}>
-              {data.pitchDeck.slides[3].badge}
+              {data.pitchDeck!.slides[5].badge}
             </Text>
-            <Text style={styles.pitchTitle}>{data.pitchDeck.slides[3].title}</Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[5].title}</Text>
             <View style={styles.pitchPhaseRow}>
               <View style={[styles.pitchPhaseCard, { backgroundColor: "#eff6ff" }]}>
                 <Text style={[styles.pitchPhaseNumber, { color: "#2563eb" }]}>PHASE 1</Text>
                 <Text style={styles.pitchPhaseTitle}>Foundation</Text>
-                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck.slides[3].subtitle}</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck!.slides[5].subtitle}</Text>
               </View>
               <View style={[styles.pitchPhaseCard, { backgroundColor: "#f3e8ff" }]}>
                 <Text style={[styles.pitchPhaseNumber, { color: "#7c3aed" }]}>PHASE 2</Text>
                 <Text style={styles.pitchPhaseTitle}>Migration</Text>
-                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck.slides[3].content1}</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck!.slides[5].content1}</Text>
               </View>
               <View style={[styles.pitchPhaseCard, { backgroundColor: "#f0fdf4" }]}>
                 <Text style={[styles.pitchPhaseNumber, { color: "#16a34a" }]}>PHASE 3</Text>
                 <Text style={styles.pitchPhaseTitle}>Optimization</Text>
-                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck.slides[3].content2}</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck!.slides[5].content2}</Text>
               </View>
             </View>
             <View style={styles.pitchTimelineBox}>
-              <Text style={styles.pitchTimelineText}>{data.pitchDeck.slides[3].footer}</Text>
+              <Text style={styles.pitchTimelineText}>{data.pitchDeck!.slides[5].footer}</Text>
             </View>
             <View style={{ marginTop: 15 }}>
               <Text style={{ fontSize: 11, fontWeight: "bold", color: "#0f172a", marginBottom: 8 }}>Quick Wins</Text>
-              <Text style={{ fontSize: 10, color: "#475569" }}>{data.pitchDeck.slides[3].content3}</Text>
+              <Text style={{ fontSize: 10, color: "#475569" }}>{data.pitchDeck!.slides[5].content3}</Text>
             </View>
             <View style={styles.pitchFooter}>
               <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
-              <Text style={styles.pitchFooterPage}>4 / 5</Text>
+              <Text style={styles.pitchFooterPage}>6 / {totalSlides}</Text>
             </View>
           </Page>
+          )}
 
-          {/* Pitch Slide 5: Investment & Next Steps */}
+          {/* Pitch Slide 7: Investment & ROI */}
+          {data.pitchDeck!.slides[6] && (
           <Page size={[842, 595]} style={styles.pitchSlide}>
             <Text style={[styles.pitchBadge, { backgroundColor: "#f3e8ff", color: "#7c3aed" }]}>
-              {data.pitchDeck.slides[4].badge}
+              {data.pitchDeck!.slides[6].badge}
             </Text>
-            <Text style={styles.pitchTitle}>{data.pitchDeck.slides[4].title}</Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[6].title}</Text>
             <View style={styles.pitchCostRow}>
               <View style={[styles.pitchCostCard, { backgroundColor: "#f8fafc" }]}>
                 <Text style={styles.pitchCostLabel}>Estimated Monthly</Text>
                 <Text style={[styles.pitchCostValue, { color: "#0f172a" }]}>
-                  {data.pitchDeck.slides[4].subtitle.split("|")[0]?.replace("Monthly:", "").trim() || "$5,000"}
+                  {data.pitchDeck!.slides[6].subtitle.split("|")[0]?.replace("Monthly:", "").trim() || "$5,000"}
                 </Text>
               </View>
               <View style={[styles.pitchCostCard, { backgroundColor: "#f0fdf4" }]}>
                 <Text style={styles.pitchCostLabel}>Estimated Yearly</Text>
                 <Text style={[styles.pitchCostValue, { color: "#16a34a" }]}>
-                  {data.pitchDeck.slides[4].subtitle.split("|")[1]?.replace("Yearly:", "").trim() || "$60,000"}
+                  {data.pitchDeck!.slides[6].subtitle.split("|")[1]?.replace("Yearly:", "").replace("Annual:", "").trim() || "$60,000"}
+                </Text>
+              </View>
+            </View>
+            <View style={{ gap: 8, marginTop: 10 }}>
+              <View style={[styles.pitchCard, { backgroundColor: "#f8fafc" }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[6].content1}</Text>
+              </View>
+              <View style={[styles.pitchCard, { backgroundColor: "#f0fdf4" }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[6].content2}</Text>
+              </View>
+              <View style={[styles.pitchCard, { backgroundColor: "#eff6ff" }]}>
+                <Text style={styles.pitchCardText}>{data.pitchDeck!.slides[6].content3}</Text>
+              </View>
+            </View>
+            {data.pitchDeck!.slides[6].footer && (
+              <View style={[styles.pitchTimelineBox, { marginTop: 10 }]}>
+                <Text style={styles.pitchTimelineText}>{data.pitchDeck!.slides[6].footer}</Text>
+              </View>
+            )}
+            {/* Pricing Disclaimer */}
+            <View style={{ marginTop: 8, paddingHorizontal: 20 }}>
+              <Text style={{ fontSize: 7, color: "#94a3b8", fontStyle: "italic", textAlign: "center" }}>
+                *Cost estimates based on typical usage patterns and current AWS pricing. Actual costs vary based on usage, configuration, region, and pricing changes. A detailed cost analysis will be provided during discovery.
+              </Text>
+            </View>
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>7 / {totalSlides}</Text>
+            </View>
+          </Page>
+          )}
+
+          {/* Pitch Slide 8: Next Steps */}
+          {data.pitchDeck!.slides[7] && (
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#f0fdf4", color: "#16a34a" }]}>
+              {data.pitchDeck!.slides[7].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[7].title}</Text>
+            {data.pitchDeck!.slides[7].subtitle && (
+              <Text style={[styles.pitchSubtitle, { marginBottom: 20 }]}>{data.pitchDeck!.slides[7].subtitle}</Text>
+            )}
+            <View style={{ gap: 12 }}>
+              <View style={styles.pitchNextStepRow}>
+                <View style={[styles.pitchNextStepNum, { backgroundColor: "#eff6ff" }]}>
+                  <Text style={[styles.pitchNextStepNumText, { color: "#2563eb" }]}>1</Text>
+                </View>
+                <Text style={[styles.pitchNextStepText, { flex: 1 }]}>{data.pitchDeck!.slides[7].content1}</Text>
+              </View>
+              <View style={styles.pitchNextStepRow}>
+                <View style={[styles.pitchNextStepNum, { backgroundColor: "#f3e8ff" }]}>
+                  <Text style={[styles.pitchNextStepNumText, { color: "#7c3aed" }]}>2</Text>
+                </View>
+                <Text style={[styles.pitchNextStepText, { flex: 1 }]}>{data.pitchDeck!.slides[7].content2}</Text>
+              </View>
+              <View style={styles.pitchNextStepRow}>
+                <View style={[styles.pitchNextStepNum, { backgroundColor: "#f0fdf4" }]}>
+                  <Text style={[styles.pitchNextStepNumText, { color: "#16a34a" }]}>3</Text>
+                </View>
+                <Text style={[styles.pitchNextStepText, { flex: 1 }]}>{data.pitchDeck!.slides[7].content3}</Text>
+              </View>
+            </View>
+            <View style={styles.pitchCtaBox}>
+              <Text style={styles.pitchCtaText}>{data.pitchDeck!.slides[7].footer}</Text>
+            </View>
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>8 / {totalSlides}</Text>
+            </View>
+          </Page>
+          )}
+
+          {/* Fallback for old 5-slide format - Slide 4 as Implementation if no slide 5+ */}
+          {!data.pitchDeck!.slides[5] && data.pitchDeck!.slides[3] && (
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#eff6ff", color: "#2563eb" }]}>
+              {data.pitchDeck!.slides[3].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[3].title}</Text>
+            <View style={styles.pitchPhaseRow}>
+              <View style={[styles.pitchPhaseCard, { backgroundColor: "#eff6ff" }]}>
+                <Text style={[styles.pitchPhaseNumber, { color: "#2563eb" }]}>PHASE 1</Text>
+                <Text style={styles.pitchPhaseTitle}>Foundation</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck!.slides[3].subtitle}</Text>
+              </View>
+              <View style={[styles.pitchPhaseCard, { backgroundColor: "#f3e8ff" }]}>
+                <Text style={[styles.pitchPhaseNumber, { color: "#7c3aed" }]}>PHASE 2</Text>
+                <Text style={styles.pitchPhaseTitle}>Migration</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck!.slides[3].content1}</Text>
+              </View>
+              <View style={[styles.pitchPhaseCard, { backgroundColor: "#f0fdf4" }]}>
+                <Text style={[styles.pitchPhaseNumber, { color: "#16a34a" }]}>PHASE 3</Text>
+                <Text style={styles.pitchPhaseTitle}>Optimization</Text>
+                <Text style={styles.pitchPhaseDesc}>{data.pitchDeck!.slides[3].content2}</Text>
+              </View>
+            </View>
+            <View style={styles.pitchTimelineBox}>
+              <Text style={styles.pitchTimelineText}>{data.pitchDeck!.slides[3].footer}</Text>
+            </View>
+            <View style={{ marginTop: 15 }}>
+              <Text style={{ fontSize: 11, fontWeight: "bold", color: "#0f172a", marginBottom: 8 }}>Quick Wins</Text>
+              <Text style={{ fontSize: 10, color: "#475569" }}>{data.pitchDeck!.slides[3].content3}</Text>
+            </View>
+            <View style={styles.pitchFooter}>
+              <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
+              <Text style={styles.pitchFooterPage}>4 / {totalSlides}</Text>
+            </View>
+          </Page>
+          )}
+
+          {/* Fallback for old 5-slide format - Slide 5 as Investment if no slide 6+ */}
+          {!data.pitchDeck!.slides[6] && data.pitchDeck!.slides[4] && (
+          <Page size={[842, 595]} style={styles.pitchSlide}>
+            <Text style={[styles.pitchBadge, { backgroundColor: "#f3e8ff", color: "#7c3aed" }]}>
+              {data.pitchDeck!.slides[4].badge}
+            </Text>
+            <Text style={styles.pitchTitle}>{data.pitchDeck!.slides[4].title}</Text>
+            <View style={styles.pitchCostRow}>
+              <View style={[styles.pitchCostCard, { backgroundColor: "#f8fafc" }]}>
+                <Text style={styles.pitchCostLabel}>Estimated Monthly</Text>
+                <Text style={[styles.pitchCostValue, { color: "#0f172a" }]}>
+                  {data.pitchDeck!.slides[4].subtitle.split("|")[0]?.replace("Monthly:", "").trim() || "$5,000"}
+                </Text>
+              </View>
+              <View style={[styles.pitchCostCard, { backgroundColor: "#f0fdf4" }]}>
+                <Text style={styles.pitchCostLabel}>Estimated Yearly</Text>
+                <Text style={[styles.pitchCostValue, { color: "#16a34a" }]}>
+                  {data.pitchDeck!.slides[4].subtitle.split("|")[1]?.replace("Yearly:", "").trim() || "$60,000"}
                 </Text>
               </View>
             </View>
             <View style={styles.pitchRoiBox}>
-              <Text style={styles.pitchRoiText}>{data.pitchDeck.slides[4].content1}</Text>
+              <Text style={styles.pitchRoiText}>{data.pitchDeck!.slides[4].content1}</Text>
             </View>
             <View>
               <Text style={{ fontSize: 12, fontWeight: "bold", color: "#0f172a", marginBottom: 10 }}>Next Steps</Text>
@@ -1221,15 +1429,23 @@ export function PortfolioPDF({ data }: { data: PortfolioPDFData }) {
               ))}
             </View>
             <View style={styles.pitchCtaBox}>
-              <Text style={styles.pitchCtaText}>{data.pitchDeck.slides[4].footer}</Text>
+              <Text style={styles.pitchCtaText}>{data.pitchDeck!.slides[4].footer}</Text>
+            </View>
+            {/* Pricing Disclaimer */}
+            <View style={{ marginTop: 8, paddingHorizontal: 20 }}>
+              <Text style={{ fontSize: 7, color: "#94a3b8", fontStyle: "italic", textAlign: "center" }}>
+                *Cost estimates based on typical usage patterns and current AWS pricing. Actual costs vary based on usage, configuration, region, and pricing changes.
+              </Text>
             </View>
             <View style={styles.pitchFooter}>
               <Text style={styles.pitchFooterText}>{data.companyName} • Cloud Migration Proposal</Text>
-              <Text style={styles.pitchFooterPage}>5 / 5</Text>
+              <Text style={styles.pitchFooterPage}>5 / {totalSlides}</Text>
             </View>
           </Page>
+          )}
         </>
-      )}
+        );
+      })()}
     </Document>
   );
 }

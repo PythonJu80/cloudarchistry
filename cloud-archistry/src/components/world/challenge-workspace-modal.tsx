@@ -2380,9 +2380,9 @@ export function ChallengeWorkspaceModal({
                                             title: "🎓 Portfolio Generated!",
                                             description: "Redirecting to your profile...",
                                           });
-                                          // Close modal and redirect to profile page
+                                          // Close modal and redirect to dashboard
                                           onClose();
-                                          router.push("/dashboard/settings");
+                                          router.push("/dashboard");
                                         } else {
                                           const errorData = await portfolioResponse.json();
                                           toast({
@@ -2515,9 +2515,9 @@ export function ChallengeWorkspaceModal({
                                           title: "🎓 Portfolio Generated!",
                                           description: "Redirecting to your profile...",
                                         });
-                                        // Close modal and redirect to profile page
+                                        // Close modal and redirect to dashboard
                                         onClose();
-                                        router.push("/dashboard/settings");
+                                        router.push("/dashboard");
                                       } else {
                                         const errorData = await portfolioResponse.json();
                                         toast({
